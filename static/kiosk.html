@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#09131f">
+<title>Ski Valet · Self check-in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Ski Valet — guest kiosk (self pre-check-in on a touch screen, landscape).
+   The guest enters room, name and how many items; the valet confirms it at
+   the counter. The page is drawn at 1280×800 and scaled to fit the screen.
+   ========================================================================== */
+:root{
+  --night:#09131f; --slab:#132333; --slab2:#1a3042; --line:#2b4357;
+  --frost:#f1f7fc; --mist:#a8bdcf; --dim:#71899e;
+  --signal:#FF6A2B; --signal-d:#E2551A; --glacier:#5EC8F2; --ok:#35C36A; --bad:#FF4D4D;
+  --r:22px; --r-s:14px;
+  --display:"Barlow Condensed", "Oswald", Impact, sans-serif;
+  --body:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0; height:100%}
+body{background:var(--night); color:var(--frost); font-family:var(--body); overflow:hidden;
+  user-select:none; -webkit-user-select:none; touch-action:manipulation; overscroll-behavior:none}
+input{user-select:text; -webkit-user-select:text}
+.kiosk{width:1280px; height:800px; position:absolute; left:50%; top:50%; transform-origin:center; overflow:hidden;
+  background:radial-gradient(1200px 700px at 85% -10%, #173a55 0%, transparent 60%), var(--night)}
+
+.top{position:absolute; top:0; left:0; right:0; height:96px; display:flex; align-items:center; padding:0 40px; gap:24px}
+.brand{font-family:var(--display); font-weight:700; font-size:34px; letter-spacing:.5px; display:flex; align-items:center; gap:12px}
+.brand i{width:14px; height:14px; border-radius:4px; background:var(--signal); display:inline-block}
+.steps{flex:1; display:flex; justify-content:center; gap:10px}
+.steps span{width:56px; height:6px; border-radius:3px; background:var(--line)}
+.steps span.on{background:var(--signal)}
+.steps span.done{background:var(--glacier)}
+.pill{height:56px; padding:0 24px; border-radius:999px; border:1px solid var(--line); background:var(--slab);
+  color:var(--frost); font:600 20px var(--body); cursor:pointer}
+.screen{position:absolute; inset:96px 0 0 0; padding:20px 64px 40px; display:none; flex-direction:column}
+.screen.on{display:flex; animation:in .25s ease}
+@keyframes in{from{opacity:.2; transform:translateX(24px)} to{opacity:1; transform:none}}
+h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; margin:0 0 10px; letter-spacing:.3px}
+.sub{font-size:24px; color:var(--mist); margin:0; line-height:1.4}
+.body{flex:1; display:flex; gap:48px; align-items:center; min-height:0}
+.foot{display:flex; justify-content:space-between; align-items:center; gap:20px}
+.btn{height:88px; min-width:220px; padding:0 40px; border-radius:var(--r); border:0; cursor:pointer;
+  font:700 28px var(--body); display:inline-flex; align-items:center; justify-content:center; gap:12px; color:var(--frost)}
+.btn.go{background:var(--signal); color:#fff; box-shadow:0 10px 30px rgba(255,106,43,.35)}
+.btn.go:active{background:var(--signal-d)}
+.btn.go:disabled{background:var(--slab2); color:var(--dim); box-shadow:none; cursor:default}
+.btn.ghost{background:transparent; border:2px solid var(--line); color:var(--mist)}
+.btn:active{transform:scale(.98)}
+.warn{color:#ffb38f; font-size:20px; min-height:28px; text-align:center; flex:1}
+
+/* welcome */
+.welcome{justify-content:center; align-items:center; text-align:center}
+.welcome h1{font-size:96px}
+.welcome .sub{font-size:28px; margin-bottom:56px}
+.langs{display:grid; grid-template-columns:repeat(4, 240px); gap:20px}
+.lang{height:150px; border-radius:var(--r); background:var(--slab); border:2px solid var(--line); color:var(--frost);
+  cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px}
+.lang b{font-size:36px; font-weight:700}
+.lang span{font-size:18px; color:var(--mist)}
+.lang:active{border-color:var(--signal); background:#24170f}
+.tapnote{margin-top:48px; font-size:22px; color:var(--dim)}
+
+/* number pad (room number, pairing code) */
+.display{width:440px; height:150px; border-radius:var(--r); background:var(--slab); border:2px solid var(--line);
+  font:700 96px var(--display); letter-spacing:6px; display:flex; align-items:center; justify-content:center}
+.display.empty{color:var(--dim); font-size:40px; letter-spacing:0; font-family:var(--body); font-weight:500}
+.pad{display:grid; grid-template-columns:repeat(3, 132px); gap:14px}
+.pad button{height:96px; border-radius:var(--r-s); border:0; background:var(--slab2); color:var(--frost);
+  font:600 40px var(--body); cursor:pointer}
+.pad button:active{background:var(--line)}
+.pad .fn{font-size:22px; color:var(--mist)}
+
+/* name */
+.fields{display:flex; flex-direction:column; gap:28px; width:780px}
+.names{display:flex; gap:20px}
+.names .field{flex:1}
+.names.family-first .last{order:-1}   /* ja / zh / ko: family name first */
+.field span{display:block; font-size:22px; color:var(--mist); margin-bottom:10px}
+.field input{width:100%; height:96px; border-radius:var(--r); border:2px solid var(--line); background:var(--slab);
+  color:var(--frost); font:600 40px var(--body); padding:0 28px; outline:none; color-scheme:dark}
+.field input:focus{border-color:var(--glacier)}
+.field small{display:block; font-size:18px; color:var(--dim); margin-top:8px}
+.kb-note{width:300px; color:var(--dim); font-size:20px; line-height:1.5; border:2px dashed var(--line); border-radius:var(--r);
+  padding:28px; align-self:center}
+
+/* equipment */
+.eq{display:grid; grid-template-columns:repeat(3, 1fr); gap:28px; width:100%}
+.card{background:var(--slab); border:2px solid var(--line); border-radius:var(--r); padding:28px; display:flex;
+  flex-direction:column; align-items:center; gap:18px; transition:border-color .15s}
+.card.has{border-color:var(--glacier)}
+.card svg{width:96px; height:96px; color:var(--glacier)}
+.card b{font-size:30px}
+.card .unit{font-size:18px; color:var(--mist); margin-top:-12px}
+.count{display:flex; align-items:center; gap:20px}
+.count button{width:84px; height:84px; border-radius:50%; border:2px solid var(--line); background:var(--slab2);
+  color:var(--frost); font:500 44px var(--body); cursor:pointer; line-height:1}
+.count button.plus{background:var(--signal); border-color:var(--signal); color:#fff}
+.count button:disabled{opacity:.35}
+.count output{font:700 72px var(--display); width:72px; text-align:center}
+
+/* identification photo */
+.cam{width:440px; height:440px; border-radius:50%; background:#0b1a28; border:4px solid var(--line); position:relative;
+  overflow:hidden; flex:none; display:grid; place-items:center}
+.cam.shot{border-color:var(--ok)}
+.cam > svg{width:62%; color:#29445c}
+.cam video, .cam img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none}
+.cam video{transform:scaleX(-1)}             /* a mirror is what people expect to see */
+.cam.live video, .cam.shot img{display:block}
+.cam .oval{position:absolute; inset:36px 70px; border:3px dashed rgba(94,200,242,.6); border-radius:50%; pointer-events:none}
+.cam.shot .oval{display:none}
+.cam .flash{position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none}
+.cam .flash.go{animation:flash .35s ease}
+@keyframes flash{0%{opacity:.9} 100%{opacity:0}}
+.photo-side{display:flex; flex-direction:column; gap:24px; max-width:560px}
+.consent{display:flex; gap:18px; align-items:flex-start; font-size:22px; line-height:1.45; cursor:pointer; text-align:left;
+  background:var(--slab); border:2px solid var(--line); border-radius:var(--r); padding:22px; color:var(--frost); font-family:var(--body)}
+.consent.on{border-color:var(--glacier)}
+.box{width:44px; height:44px; flex:none; border-radius:10px; border:3px solid var(--mist); display:grid; place-items:center}
+.consent.on .box{background:var(--glacier); border-color:var(--glacier)}
+.box svg{width:28px; display:none; color:var(--night)}
+.consent.on .box svg{display:block}
+.privacy{font-size:18px; color:var(--dim); line-height:1.5}
+
+/* review */
+.sum{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:22px}
+.sum .it{background:var(--slab); border:2px solid var(--line); border-radius:var(--r); padding:22px 26px; display:flex;
+  align-items:center; gap:20px; min-height:120px}
+.sum .it div{flex:1}
+.sum .it span{display:block; font-size:18px; color:var(--mist); margin-bottom:6px}
+.sum .it b{font-size:32px}
+.sum .face{width:76px; height:76px; flex:none !important; border-radius:50%; border:3px solid var(--ok); object-fit:cover}
+.sum .it .edit{height:56px; padding:0 22px; border-radius:999px; border:2px solid var(--line); background:transparent;
+  color:var(--glacier); font:600 20px var(--body); cursor:pointer}
+
+/* done */
+.done{justify-content:center; align-items:center; text-align:center}
+.tick{width:150px; height:150px; border-radius:50%; background:var(--ok); display:grid; place-items:center; margin-bottom:28px}
+.tick svg{width:84px; color:#fff}
+.bigroom{font:700 120px var(--display); color:var(--signal); line-height:1; margin:20px 0}
+.done .sub{max-width:900px}
+.reset{margin-top:40px; color:var(--dim); font-size:22px}
+
+/* idle warning */
+.idle{position:absolute; inset:0; background:rgba(5,11,18,.82); display:none; place-items:center; z-index:5}
+.idle.on{display:grid}
+.idle .dlg{width:620px; background:var(--slab); border:2px solid var(--line); border-radius:28px; padding:48px; text-align:center}
+.idle h2{font:700 52px var(--display); margin:0 0 12px}
+.idle .sub{margin-bottom:36px}
+</style>
+</head>
+<body>
+<div class="kiosk" id="kiosk">
+
+  <div class="top">
+    <div class="brand"><i></i>Ski Valet</div>
+    <div class="steps" id="steps"></div>
+    <button class="pill" id="restart" data-t="startover" style="visibility:hidden"></button>
+  </div>
+
+  <!-- setup: pair this screen (staff only, English) -->
+  <section class="screen" data-s="setup">
+    <h1>Set up this screen</h1>
+    <p class="sub">Enter the 6-digit code from the admin console (Kiosks → Add screen or New code).</p>
+    <div class="body" style="justify-content:center">
+      <div class="display empty" id="codeDisp"></div>
+      <div class="pad" data-pad="code"></div>
+    </div>
+    <div class="foot"><span class="warn" id="codeWarn"></span><button class="btn go" id="pairBtn">Pair screen</button></div>
+  </section>
+
+  <!-- 0 · welcome / language -->
+  <section class="screen welcome" data-s="0">
+    <h1 data-t="welcome"></h1>
+    <p class="sub" data-t="welcome_sub"></p>
+    <div class="langs">
+      <button class="lang" data-lang="en"><b>English</b><span>Start</span></button>
+      <button class="lang" data-lang="ja"><b>日本語</b><span>はじめる</span></button>
+      <button class="lang" data-lang="zh"><b>中文</b><span>开始</span></button>
+      <button class="lang" data-lang="ko"><b>한국어</b><span>시작</span></button>
+    </div>
+    <div class="tapnote">Ski · Snowboard · Boots</div>
+  </section>
+
+  <!-- 1 · room number -->
+  <section class="screen" data-s="1">
+    <h1 data-t="room_t"></h1>
+    <p class="sub" data-t="room_h"></p>
+    <div class="body" style="justify-content:center">
+      <div class="display empty" id="roomDisp"></div>
+      <div class="pad" data-pad="room"></div>
+    </div>
+    <div class="foot"><button class="btn ghost" data-go="-1" data-t="back"></button><button class="btn go" data-go="1" id="roomNext" data-t="next"></button></div>
+  </section>
+
+  <!-- 2 · name + departure -->
+  <section class="screen" data-s="2">
+    <h1 data-t="name_t"></h1>
+    <p class="sub" data-t="name_h"></p>
+    <div class="body">
+      <div class="fields">
+        <div class="names" id="names">
+          <label class="field"><span data-t="firstname"></span><input id="first" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="60"></label>
+          <label class="field last"><span data-t="lastname"></span><input id="last" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="60"></label>
+        </div>
+        <label class="field"><span data-t="checkout"></span><input id="dep" type="date"><small data-t="optional"></small></label>
+      </div>
+      <div class="kb-note" data-t="kb_note"></div>
+    </div>
+    <div class="foot"><button class="btn ghost" data-go="-1" data-t="back"></button><button class="btn go" data-go="1" id="nameNext" data-t="next"></button></div>
+  </section>
+
+  <!-- 3 · equipment -->
+  <section class="screen" data-s="3">
+    <h1 data-t="eq_t"></h1>
+    <p class="sub" data-t="eq_h"></p>
+    <div class="body"><div class="eq" id="eq"></div></div>
+    <div class="foot"><button class="btn ghost" data-go="-1" data-t="back"></button>
+      <span class="warn" id="eqWarn"></span>
+      <button class="btn go" data-go="1" id="eqNext" data-t="next"></button></div>
+  </section>
+
+  <!-- 4 · identification photo (optional, with consent) -->
+  <section class="screen" data-s="4">
+    <h1 data-t="ph_t"></h1>
+    <p class="sub" data-t="ph_h"></p>
+    <div class="body" style="justify-content:center">
+      <div class="cam" id="cam">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8.5" r="4.5"/><path d="M3 22c0-5 4-8 9-8s9 3 9 8z"/></svg>
+        <video id="video" playsinline muted></video><img id="faceImg" alt="">
+        <div class="oval"></div><div class="flash" id="flash"></div>
+      </div>
+      <div class="photo-side">
+        <button class="consent" id="consent"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12.5l5 5L20 6.5"/></svg></div><div data-t="consent"></div></button>
+        <button class="btn go" id="shoot" style="width:100%"></button>
+        <div class="privacy" id="privacy"></div>
+      </div>
+    </div>
+    <div class="foot"><button class="btn ghost" data-go="-1" data-t="back"></button><button class="btn ghost" data-go="1" id="photoNext"></button></div>
+  </section>
+
+  <!-- 5 · review + send -->
+  <section class="screen" data-s="5">
+    <h1 data-t="rv_t"></h1>
+    <p class="sub" data-t="rv_h"></p>
+    <div class="body"><div class="sum" id="sum"></div></div>
+    <div class="foot"><button class="btn ghost" data-go="-1" data-t="back"></button>
+      <span class="warn" id="sendWarn"></span>
+      <button class="btn go" id="send" style="min-width:320px"></button></div>
+  </section>
+
+  <!-- 6 · done -->
+  <section class="screen done" data-s="6">
+    <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+    <h1 data-t="done_t"></h1>
+    <div class="bigroom" id="doneRoom"></div>
+    <p class="sub" data-t="done_h"></p>
+    <div class="reset" id="reset"></div>
+  </section>
+
+  <div class="idle" id="idle"><div class="dlg">
+    <h2 data-t="idle_t"></h2>
+    <p class="sub" id="idleSub"></p>
+    <button class="btn go" id="stay" data-t="idle_b" style="width:100%"></button>
+  </div></div>
+
+</div>
+
+<script>
+"use strict";
+const T = {
+  en:{welcome:"Welcome", welcome_sub:"Ski & snowboard storage — self check-in. Choose your language to begin.",
+    room_t:"What is your room number?", room_h:"You'll find it on your room key.", clear:"Clear",
+    name_t:"Your name", name_h:"As on your hotel reservation, in English letters.", firstname:"First name", lastname:"Last name",
+    checkout:"Hotel check-out date", optional:"Optional", kb_note:"The screen keyboard opens when you tap a name box.",
+    eq_t:"What are you leaving with us?", eq_h:"Tap + for each item. We store boots, skis (with poles) and snowboards.",
+    boots:"Boots", boots_u:"pairs", skis:"Skis + poles", skis_u:"sets", snowboards:"Snowboard", snowboards_u:"boards", need:"Add at least one item.",
+    ph_t:"A photo for your security", ph_h:"Staff will check it when you pick up your equipment. This step is optional.",
+    consent:"I agree to my photo being used to confirm my identity at pickup.",
+    privacy:"Only valet staff can see it. It is deleted when you collect your equipment for the last time.",
+    cam_off:"The camera is not available. You can skip this step.", take:"Take photo", retake:"Retake", skip:"Skip",
+    need_ok:"Tick the box to use the camera", photo:"Photo", photo_ok:"Taken", photo_no:"Not taken",
+    rv_t:"Check your details", rv_h:"Tap Edit to change anything.", room:"Room", name:"Name", leave:"Check-out",
+    equipment:"Equipment", edit:"Edit", send:"Send", sending:"Sending…",
+    err_net:"No connection. Please try again, or go to the valet counter.", err:"Something went wrong. Please go to the valet counter.", busy:"This screen is busy. Please wait a moment and tap Send again.",
+    done_t:"You're pre-registered!", done_h:"Take your equipment to the valet counter and tell the staff your room number.",
+    reset:"This screen resets in {n} s", idle_t:"Are you still there?", idle_s:"For your privacy, this screen resets in {n} s.",
+    idle_b:"Continue", back:"Back", next:"Next", startover:"Start over"},
+  ja:{welcome:"ようこそ", welcome_sub:"スキー・スノーボード預かり — セルフチェックイン。言語を選んで始めてください。",
+    room_t:"お部屋番号を入力してください", room_h:"ルームキーに記載されています。", clear:"消去",
+    name_t:"お名前", name_h:"ホテルのご予約名をローマ字でご入力ください。", firstname:"名（ローマ字）", lastname:"姓（ローマ字）",
+    checkout:"ホテルのチェックアウト日", optional:"任意", kb_note:"入力欄をタップすると画面キーボードが表示されます。",
+    eq_t:"お預けになる用具は？", eq_h:"＋で数を選んでください。ブーツ、スキー（ストック含む）、スノーボードをお預かりします。",
+    boots:"ブーツ", boots_u:"足", skis:"スキー＋ストック", skis_u:"セット", snowboards:"スノーボード", snowboards_u:"本", need:"1点以上選んでください。",
+    ph_t:"本人確認用の写真", ph_h:"用具のお受け取り時にスタッフが確認します。この手順は任意です。",
+    consent:"お受け取り時の本人確認に写真を使用することに同意します。",
+    privacy:"写真はバレースタッフのみが閲覧できます。最後に用具をお受け取りになった時点で削除されます。",
+    cam_off:"カメラを使用できません。この手順はスキップできます。", take:"撮影する", retake:"撮り直す", skip:"スキップ",
+    need_ok:"カメラを使うにはチェックを入れてください", photo:"写真", photo_ok:"撮影済み", photo_no:"なし",
+    rv_t:"内容をご確認ください", rv_h:"変更する場合は「修正」をタップしてください。", room:"部屋番号", name:"お名前", leave:"チェックアウト",
+    equipment:"用具", edit:"修正", send:"送信する", sending:"送信中…",
+    err_net:"接続できません。もう一度お試しいただくか、バレーカウンターへお越しください。", err:"エラーが発生しました。バレーカウンターへお越しください。", busy:"ただいま混み合っています。少しお待ちいただき、もう一度「送信する」をタップしてください。",
+    done_t:"事前登録が完了しました", done_h:"用具をお持ちのうえ、バレーカウンターでスタッフにお部屋番号をお伝えください。",
+    reset:"{n}秒後に最初の画面に戻ります", idle_t:"操作を続けますか？", idle_s:"プライバシー保護のため、{n}秒後にリセットされます。",
+    idle_b:"続ける", back:"戻る", next:"次へ", startover:"最初から"},
+  zh:{welcome:"欢迎", welcome_sub:"滑雪板与单板寄存 — 自助登记。请选择语言开始。",
+    room_t:"请输入您的房间号", room_h:"房卡上印有房间号。", clear:"清除",
+    name_t:"您的姓名", name_h:"请用拼音填写，与酒店预订信息一致。", firstname:"名（拼音）", lastname:"姓（拼音）",
+    checkout:"酒店退房日期", optional:"选填", kb_note:"点击姓名栏即可打开屏幕键盘。",
+    eq_t:"您要寄存哪些装备？", eq_h:"点击 ＋ 选择数量。可寄存雪鞋、双板（含雪杖）和单板。",
+    boots:"雪鞋", boots_u:"双", skis:"双板＋雪杖", skis_u:"套", snowboards:"单板", snowboards_u:"块", need:"请至少选择一件。",
+    ph_t:"安全验证照片", ph_h:"取回装备时工作人员会核对。此步骤为选填。",
+    consent:"我同意在取回装备时使用照片核验本人身份。",
+    privacy:"仅寄存工作人员可以查看。最后一次取回装备后照片将被删除。",
+    cam_off:"摄像头不可用，可以跳过此步骤。", take:"拍照", retake:"重拍", skip:"跳过",
+    need_ok:"请先勾选同意以使用摄像头", photo:"照片", photo_ok:"已拍摄", photo_no:"未拍摄",
+    rv_t:"请确认信息", rv_h:"点击“修改”可更改内容。", room:"房间", name:"姓名", leave:"退房",
+    equipment:"装备", edit:"修改", send:"提交", sending:"提交中…",
+    err_net:"无法连接。请重试，或前往寄存柜台。", err:"出现错误。请前往寄存柜台。", busy:"当前使用人数较多，请稍等片刻后再次点击“提交”。",
+    done_t:"预登记完成！", done_h:"请携带装备前往寄存柜台，并告知工作人员您的房间号。",
+    reset:"{n} 秒后返回首页", idle_t:"您还在吗？", idle_s:"为保护您的隐私，{n} 秒后将重置。",
+    idle_b:"继续", back:"返回", next:"下一步", startover:"重新开始"},
+  ko:{welcome:"환영합니다", welcome_sub:"스키·스노보드 보관 — 셀프 체크인. 언어를 선택해 시작하세요.",
+    room_t:"객실 번호를 입력하세요", room_h:"객실 키에 적혀 있습니다.", clear:"지우기",
+    name_t:"성함", name_h:"호텔 예약과 같이 영문으로 입력하세요.", firstname:"이름 (영문)", lastname:"성 (영문)",
+    checkout:"호텔 체크아웃 날짜", optional:"선택", kb_note:"이름 칸을 누르면 화면 키보드가 열립니다.",
+    eq_t:"맡기실 장비를 선택하세요", eq_h:"+ 를 눌러 수량을 선택하세요. 부츠, 스키(폴 포함), 스노보드를 보관합니다.",
+    boots:"부츠", boots_u:"켤레", skis:"스키 + 폴", skis_u:"세트", snowboards:"스노보드", snowboards_u:"개", need:"한 개 이상 선택하세요.",
+    ph_t:"보안용 사진", ph_h:"장비를 찾으실 때 직원이 확인합니다. 이 단계는 선택 사항입니다.",
+    consent:"장비 수령 시 본인 확인을 위해 사진을 사용하는 데 동의합니다.",
+    privacy:"발레 직원만 볼 수 있습니다. 장비를 마지막으로 찾으시면 삭제됩니다.",
+    cam_off:"카메라를 사용할 수 없습니다. 이 단계는 건너뛸 수 있습니다.", take:"사진 찍기", retake:"다시 찍기", skip:"건너뛰기",
+    need_ok:"카메라를 사용하려면 동의에 체크하세요", photo:"사진", photo_ok:"촬영 완료", photo_no:"없음",
+    rv_t:"내용을 확인하세요", rv_h:"변경하려면 '수정'을 누르세요.", room:"객실", name:"이름", leave:"체크아웃",
+    equipment:"장비", edit:"수정", send:"보내기", sending:"보내는 중…",
+    err_net:"연결할 수 없습니다. 다시 시도하시거나 발레 카운터로 가 주세요.", err:"오류가 발생했습니다. 발레 카운터로 가 주세요.", busy:"사용자가 많습니다. 잠시 후 '보내기'를 다시 눌러 주세요.",
+    done_t:"사전 등록 완료!", done_h:"장비를 가지고 발레 카운터로 가셔서 직원에게 객실 번호를 말씀해 주세요.",
+    reset:"{n}초 후 처음 화면으로 돌아갑니다", idle_t:"계속하시겠어요?", idle_s:"개인정보 보호를 위해 {n}초 후 초기화됩니다.",
+    idle_b:"계속", back:"이전", next:"다음", startover:"처음부터"}
+};
+const ICON = {
+  boots:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"><path d="M18 8h18l2 22 14 8v10H12V36z"/><path d="M12 48v6h40v-6M20 18h16M20 26h17"/></svg>',
+  skis:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M18 6c-3 0-4 3-4 6v46M28 6c-3 0-4 3-4 6v46M42 10l4 48M52 10l-4 48"/><path d="M38 14h12"/></svg>',
+  snowboards:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5"><rect x="22" y="4" width="20" height="56" rx="10"/><path d="M26 22h12M26 42h12"/></svg>'
+};
+const ITEMS = ["boots", "skis", "snowboards"];
+const FAMILY_FIRST = ["ja", "zh", "ko"];
+const LAST = 6, PHOTO = 4, IDLE_AFTER = 60, IDLE_GRACE = 15, DONE_RESET = 10;
+const blank = () => ({lang:"en", step:0, room:"", first:"", last:"", dep:"", eq:{boots:0, skis:0, snowboards:0},
+  consent:false, face:null, camErr:false, sending:false, err:""});
+let S = blank(), paired = false, code = "", pairing = false;
+
+const $ = q => document.querySelector(q);
+const t = (k, n) => (T[S.lang][k] ?? T.en[k]).replace("{n}", n);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const nameOk = () => !!(S.first.trim() && S.last.trim());
+const fullName = () => (FAMILY_FIRST.includes(S.lang) ? [S.last, S.first] : [S.first, S.last]).map(x => x.trim()).join(" ");
+const total = () => ITEMS.reduce((n, k) => n + S.eq[k], 0);
+
+async function api(path, body){
+  const opts = {method: body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", headers: {}};
+  if(body){ opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+  let r;
+  try{ r = await fetch(path, opts); }
+  catch(_){ const e = new Error("offline"); e.offline = true; throw e; }
+  let data = null; try{ data = await r.json(); }catch(_){}
+  if(!r.ok){ const e = new Error((data && data.error) || "Server error " + r.status); e.status = r.status; throw e; }
+  return data;
+}
+
+/* fit the 1280×800 layout to whatever screen this is */
+function fit(){
+  const s = Math.min(innerWidth / 1280, innerHeight / 800);
+  $("#kiosk").style.transform = `translate(-50%, -50%) scale(${s})`;
+}
+addEventListener("resize", fit);
+
+function pad(kind, label){
+  return [1,2,3,4,5,6,7,8,9].map(n => `<button data-${kind}="${n}">${n}</button>`).join("")
+    + `<button class="fn" data-${kind}="c">${label}</button><button data-${kind}="0">0</button><button class="fn" data-${kind}="b">⌫</button>`;
+}
+
+function render(){
+  document.documentElement.lang = S.lang;
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
+  const step = paired ? S.step : "setup";
+  document.querySelectorAll(".screen").forEach(el => el.classList.toggle("on", el.dataset.s === String(step)));
+  const mid = paired && S.step > 0 && S.step < LAST;
+  $("#restart").style.visibility = mid ? "visible" : "hidden";
+  $("#steps").innerHTML = mid ? [1,2,3,4,5].map(i => `<span class="${i < S.step ? "done" : i === S.step ? "on" : ""}"></span>`).join("") : "";
+  // setup
+  $("#codeDisp").textContent = code || "— — — — — —";
+  $("#codeDisp").classList.toggle("empty", !code);
+  $('[data-pad="code"]').innerHTML = pad("code", "Clear");
+  $("#pairBtn").disabled = code.length !== 6 || pairing;
+  // room
+  $("#roomDisp").textContent = S.room || "— — —";
+  $("#roomDisp").classList.toggle("empty", !S.room);
+  $('[data-pad="room"]').innerHTML = pad("room", t("clear"));
+  $("#roomNext").disabled = !S.room;
+  // name
+  $("#names").classList.toggle("family-first", FAMILY_FIRST.includes(S.lang));
+  $("#nameNext").disabled = !nameOk();
+  // equipment
+  $("#eq").innerHTML = ITEMS.map(k => `<div class="card ${S.eq[k] ? "has" : ""}">
+      ${ICON[k]}<b>${t(k)}</b><div class="unit">${t(k + "_u")}</div>
+      <div class="count"><button data-eq="${k}" data-d="-1" ${S.eq[k] ? "" : "disabled"}>−</button>
+      <output>${S.eq[k]}</output><button class="plus" data-eq="${k}" data-d="1" ${S.eq[k] >= 9 ? "disabled" : ""}>+</button></div></div>`).join("");
+  $("#eqNext").disabled = !total();
+  $("#eqWarn").textContent = total() ? "" : t("need");
+  // photo
+  $("#cam").classList.toggle("live", !!stream && !S.face);
+  $("#cam").classList.toggle("shot", !!S.face);
+  $("#faceImg").src = S.face || "";
+  $("#consent").classList.toggle("on", S.consent);
+  $("#shoot").textContent = S.camErr ? t("cam_off") : !S.consent ? t("need_ok") : S.face ? t("retake") : t("take");
+  $("#shoot").disabled = S.camErr || !S.consent || (!S.face && !stream);
+  $("#shoot").className = "btn " + (S.face ? "ghost" : "go");
+  $("#privacy").textContent = t("privacy");
+  $("#photoNext").textContent = S.face ? t("next") : t("skip");
+  $("#photoNext").className = "btn " + (S.face ? "go" : "ghost");
+  // review
+  const eqTxt = ITEMS.filter(k => S.eq[k]).map(k => `${S.eq[k]} × ${t(k)}`).join(" · ");
+  $("#sum").innerHTML = [
+    ["room", S.room, 1], ["name", fullName(), 2], ["equipment", eqTxt, 3],
+    ["photo", S.face ? t("photo_ok") : t("photo_no"), PHOTO, S.face ? `<img class="face" src="${S.face}" alt="">` : ""],
+    ...(S.dep ? [["leave", new Date(S.dep + "T00:00").toLocaleDateString(S.lang, {month:"short", day:"numeric"}), 2]] : [])
+  ].map(([k, v, s, pre]) => `<div class="it">${pre || ""}<div><span>${t(k)}</span><b>${esc(v)}</b></div>
+      <button class="edit" data-jump="${s}">${t("edit")}</button></div>`).join("");
+  $("#send").textContent = S.sending ? t("sending") : t("send");
+  $("#send").disabled = S.sending;
+  $("#sendWarn").textContent = S.err;
+  $("#doneRoom").textContent = S.room;
+}
+
+function go(step){
+  S.step = Math.max(0, Math.min(LAST, step));
+  S.err = "";
+  if(S.step === PHOTO) startCam(); else stopCam();
+  render();
+  if(S.step === 2) setTimeout(() => $(FAMILY_FIRST.includes(S.lang) ? "#last" : "#first").focus(), 50);
+  if(S.step === LAST) doneCountdown();
+}
+function resetAll(){
+  clearInterval(doneTimer);
+  if(document.activeElement) document.activeElement.blur();
+  stopCam();
+  S = blank();
+  $("#first").value = ""; $("#last").value = ""; $("#dep").value = "";
+  hideIdle(); go(0);
+}
+
+/* camera: front camera, live only while the guest has agreed and is on the photo step */
+let stream = null;
+async function startCam(){
+  if(stream || S.face || !S.consent || S.camErr) return;
+  try{
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no camera");
+    const st = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user", width:{ideal:960}, height:{ideal:960}}, audio:false});
+    if(S.step !== PHOTO || !S.consent || S.face){ st.getTracks().forEach(x => x.stop()); return; }   // the guest moved on meanwhile
+    stream = st;
+    const v = $("#video"); v.srcObject = stream; await v.play();
+  }catch(_){ S.camErr = true; stopCam(); }
+  render();
+}
+function stopCam(){
+  if(stream){ stream.getTracks().forEach(x => x.stop()); stream = null; }
+  const v = $("#video"); if(v) v.srcObject = null;
+}
+function shoot(){
+  const v = $("#video");
+  if(!stream || !v.videoWidth) return;
+  const n = Math.min(v.videoWidth, v.videoHeight), c = document.createElement("canvas");
+  c.width = c.height = 480;                          // a square crop is plenty to recognise a face
+  c.getContext("2d").drawImage(v, (v.videoWidth - n) / 2, (v.videoHeight - n) / 2, n, n, 0, 0, 480, 480);
+  S.face = c.toDataURL("image/jpeg", 0.8);
+  const f = $("#flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  stopCam(); render();
+}
+
+async function send(){
+  if(S.sending) return;
+  S.sending = true; S.err = ""; render();
+  try{
+    const r = await api("/api/kiosk/precheck", {room_number:S.room, first_name:S.first, last_name:S.last,
+      departure:S.dep || null, lang:S.lang, ...S.eq,
+      ...(S.face && S.consent ? {face_photo:S.face, consent:true} : {})});
+    S.room = r.room_number; S.sending = false; go(LAST);
+  }catch(e){
+    S.sending = false;
+    if(e.status === 401){ paired = false; resetAll(); return; }      // the admin removed this screen
+    S.err = e.offline ? t("err_net") : e.status === 429 ? t("busy") : e.status === 400 ? e.message : t("err");
+    render();
+  }
+}
+
+async function pair(){
+  if(code.length !== 6 || pairing) return;
+  pairing = true; $("#codeWarn").textContent = ""; render();
+  try{ await api("/api/kiosk/pair", {code}); paired = true; code = ""; resetAll(); }
+  catch(e){ $("#codeWarn").textContent = e.offline ? "No connection to the server" : e.message; code = ""; }
+  finally{ pairing = false; render(); }
+}
+
+let doneTimer;
+function doneCountdown(){
+  clearInterval(doneTimer);
+  let n = DONE_RESET;
+  $("#reset").textContent = t("reset", n);
+  doneTimer = setInterval(() => { n--; $("#reset").textContent = t("reset", n); if(n <= 0) resetAll(); }, 1000);
+}
+
+/* inactivity: warn after IDLE_AFTER s, reset IDLE_GRACE s later — nothing stays on screen for the next guest */
+let idleAt = Date.now(), idleTimer = null;
+const poke = () => { idleAt = Date.now(); };
+function hideIdle(){ $("#idle").classList.remove("on"); clearInterval(idleTimer); idleTimer = null; poke(); }
+function showIdle(){
+  let n = IDLE_GRACE;
+  if(document.activeElement) document.activeElement.blur();
+  $("#idle").classList.add("on"); $("#idleSub").textContent = t("idle_s", n);
+  idleTimer = setInterval(() => { n--; $("#idleSub").textContent = t("idle_s", n); if(n <= 0) resetAll(); }, 1000);
+}
+setInterval(() => {
+  if(!paired || S.step === 0 || S.step === LAST || idleTimer || S.sending) return;
+  if(Date.now() - idleAt > IDLE_AFTER * 1000) showIdle();
+}, 1000);
+
+document.addEventListener("pointerdown", poke);
+document.addEventListener("keydown", poke);
+document.addEventListener("contextmenu", e => e.preventDefault());
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  const d = b.dataset;
+  if(d.lang){ S.lang = d.lang; go(1); }
+  else if(d.go) go(S.step + +d.go);
+  else if(d.jump) go(+d.jump);
+  else if(d.room){ S.room = d.room === "c" ? "" : d.room === "b" ? S.room.slice(0, -1) : (S.room + d.room).slice(0, 6); render(); }
+  else if(d.code){ code = d.code === "c" ? "" : d.code === "b" ? code.slice(0, -1) : (code + d.code).slice(0, 6); render(); }
+  else if(d.eq){ S.eq[d.eq] = Math.max(0, Math.min(9, S.eq[d.eq] + +d.d)); render(); }
+  else if(b.id === "send") send();
+  else if(b.id === "consent"){ S.consent = !S.consent; if(!S.consent){ S.face = null; stopCam(); render(); } else { render(); startCam(); } }
+  else if(b.id === "shoot"){ if(S.face){ S.face = null; render(); startCam(); } else shoot(); }
+  else if(b.id === "pairBtn") pair();
+  else if(b.id === "restart") resetAll();
+  else if(b.id === "stay") hideIdle();
+});
+["first", "last"].forEach(k => $("#" + k).addEventListener("input", e => { S[k] = e.target.value; $("#nameNext").disabled = !nameOk(); }));
+$("#dep").addEventListener("input", e => { S.dep = e.target.value; });
+$("#first").addEventListener("keydown", e => { if(e.key === "Enter") $(FAMILY_FIRST.includes(S.lang) ? "#first" : "#last").focus(); });
+$("#last").addEventListener("keydown", e => { if(e.key === "Enter" && nameOk()) go(3); });
+
+(async () => {
+  fit(); render();
+  try{ paired = !!(await api("/api/kiosk/me")).kiosk; }
+  catch(e){ paired = !!e.offline; }      // offline at start: keep working, sending tells if it is still paired
+  resetAll();
+})();
+</script>
+</body>
+</html>

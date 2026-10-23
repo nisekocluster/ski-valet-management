@@ -1,0 +1,2495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1621">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ski Valet">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='38' fill='%230E1621'/%3E%3Crect x='38' y='30' width='18' height='104' rx='9' fill='%23FF6A2B'/%3E%3Crect x='72' y='30' width='18' height='104' rx='9' fill='%235EC8F2'/%3E%3Crect x='106' y='30' width='18' height='104' rx='9' fill='%23E7EEF5'/%3E%3Crect x='30' y='140' width='120' height='14' rx='7' fill='%2327394B'/%3E%3C/svg%3E">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Ski Valet Storage","short_name":"Ski Valet","display":"standalone","orientation":"any","background_color":"%230E1621","theme_color":"%230E1621","start_url":"./","icons":[{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 180 180%27%3E%3Crect width=%27180%27 height=%27180%27 rx=%2738%27 fill=%27%230E1621%27/%3E%3Crect x=%2738%27 y=%2730%27 width=%2718%27 height=%27104%27 rx=%279%27 fill=%27%23FF6A2B%27/%3E%3Crect x=%2772%27 y=%2730%27 width=%2718%27 height=%27104%27 rx=%279%27 fill=%27%235EC8F2%27/%3E%3Crect x=%27106%27 y=%2730%27 width=%2718%27 height=%27104%27 rx=%279%27 fill=%27%23E7EEF5%27/%3E%3C/svg%3E","sizes":"any","type":"image/svg+xml"}]}'>
+<title>Ski Valet · Storage Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SKI VALET — design tokens
+   night/slab: glacier navy hall   signal: piste marker orange
+   glacier: ice blue information   status: trail-sign colours
+   ============================================================ */
+:root{
+  --night:#0E1621; --slab:#16222F; --slab2:#1D2C3B; --line:#27394B;
+  --frost:#E7EEF5; --mist:#90A4B8; --dim:#63798F;
+  --signal:#FF6A2B; --signal-d:#E2551A; --glacier:#5EC8F2;
+
+  --st-available:#64748B; --st-preparing:#F0A93B; --st-occupied:#5EC8F2;
+  --st-ready:#35C36A; --st-guest:#A98BF5; --st-attention:#FF4D4D; --st-closed:#3C4A5A;
+
+  --r:14px; --r-s:10px;
+  --sh:0 6px 24px rgba(0,0,0,.35);
+  --tap:56px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --display:"Barlow Condensed", "Oswald", Impact, sans-serif;
+  --body:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--night);color:var(--frost);font-family:var(--body);
+  font-size:16px;line-height:1.45;overscroll-behavior-y:none;-webkit-text-size-adjust:100%}
+body{min-height:100vh;min-height:100dvh}
+button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.hidden{display:none !important}
+::selection{background:var(--signal);color:#fff}
+:focus-visible{outline:3px solid var(--glacier);outline-offset:2px;border-radius:6px}
+
+/* ---------- shell ---------- */
+#shell{max-width:1100px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:rgba(14,22,33,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line)}
+.topbar .tb-btn{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
+  background:var(--slab);border:1px solid var(--line);font-size:22px;color:var(--frost);flex:none}
+.topbar .tb-btn:active{background:var(--slab2)}
+.tb-title{flex:1;min-width:0}
+.tb-title b{display:block;font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:.4px;
+  text-transform:uppercase;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-title span{display:block;font-size:11px;color:var(--dim);letter-spacing:1.4px;text-transform:uppercase}
+.who{display:flex;align-items:center;gap:8px;background:var(--slab);border:1px solid var(--line);
+  border-radius:999px;padding:5px 12px 5px 6px;font-size:13px;font-weight:600;flex:none}
+.who i{width:28px;height:28px;border-radius:50%;background:var(--signal);color:#111;display:grid;
+  place-items:center;font-style:normal;font-family:var(--display);font-size:16px;font-weight:700}
+main{flex:1;padding:16px 14px calc(28px + var(--safe-b))}
+
+/* ---------- type ---------- */
+h2.sec{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-spacing:1.6px;
+  font-size:14px;color:var(--mist);margin:26px 0 10px;display:flex;align-items:center;gap:10px}
+h2.sec:first-child{margin-top:4px}
+h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+.num{font-family:var(--display);font-variant-numeric:tabular-nums;letter-spacing:.5px}
+
+/* ---------- ski-check tag (signature) ---------- */
+.tag{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(180deg,#F3F7FB,#D6E2EC);
+  color:#0E1621;border-radius:8px;padding:8px 14px 8px 10px;font-family:var(--display);font-weight:700;
+  font-size:26px;letter-spacing:1px;line-height:1;box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
+.tag::before{content:"";width:11px;height:11px;border-radius:50%;background:var(--night);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.8);flex:none}
+.tag.sm{font-size:18px;padding:5px 10px 5px 7px;border-radius:6px}
+.tag.sm::before{width:8px;height:8px}
+.tag.ghost{background:none;border:1px dashed var(--line);color:var(--dim);box-shadow:none}
+.tag.ghost::before{background:none;box-shadow:inset 0 0 0 1px var(--line)}
+
+/* ---------- cards / panels ---------- */
+.panel{background:var(--slab);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.panel + .panel{margin-top:10px}
+.row{display:flex;align-items:center;gap:12px}
+.row.between{justify-content:space-between}
+.muted{color:var(--mist)}
+.tiny{font-size:12px;letter-spacing:.4px}
+.eyebrow{font-family:var(--display);text-transform:uppercase;letter-spacing:1.6px;font-size:12px;color:var(--dim)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1px}
+
+/* ---------- status ---------- */
+.chip{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:5px 12px;
+  font-family:var(--display);font-weight:600;text-transform:uppercase;letter-spacing:1.2px;font-size:13px;
+  background:var(--slab2);border:1px solid var(--line);white-space:nowrap}
+.chip .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none}
+.s-available{color:var(--st-available)} .s-preparing{color:var(--st-preparing)}
+.s-occupied{color:var(--st-occupied)} .s-ready{color:var(--st-ready)}
+.s-guest_using{color:var(--st-guest)} .s-attention{color:var(--st-attention)} .s-closed{color:var(--st-closed)}
+.chip.solid{color:#0E1621;border:0}
+.chip.solid.s-ready{background:var(--st-ready)} .chip.solid.s-occupied{background:var(--st-occupied)}
+.chip.solid.s-preparing{background:var(--st-preparing)} .chip.solid.s-guest_using{background:var(--st-guest)}
+.chip.solid.s-attention{background:var(--st-attention);color:#fff} .chip.solid.s-available{background:var(--st-available);color:#fff}
+.chip.solid.s-closed{background:var(--st-closed);color:#fff}
+.chip.solid .dot{display:none}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:var(--tap);
+  padding:0 18px;border-radius:var(--r-s);background:var(--slab2);border:1px solid var(--line);
+  font-family:var(--display);font-weight:600;font-size:19px;letter-spacing:1.1px;text-transform:uppercase;
+  color:var(--frost);width:100%;transition:transform .06s ease,background .15s ease}
+.btn:active{transform:scale(.985);background:#243549}
+.btn.primary{background:var(--signal);border-color:var(--signal);color:#160B04}
+.btn.primary:active{background:var(--signal-d)}
+.btn.go{background:var(--st-ready);border-color:var(--st-ready);color:#06210F}
+.btn.danger{background:transparent;border-color:#5A2530;color:#FF8080}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:42px;font-size:15px;padding:0 12px;width:auto}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.btn-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.btn-grid.one{grid-template-columns:1fr}
+@media(max-width:360px){.btn{font-size:17px}}
+
+/* ---------- dashboard hero ---------- */
+.hero{position:relative;border-radius:18px;padding:22px 18px;overflow:hidden;
+  background:linear-gradient(145deg,#1B2C3D 0%,#12202D 55%,#0E1621 100%);border:1px solid var(--line)}
+.hero::after{content:"";position:absolute;inset:auto -40px -70px auto;width:230px;height:230px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,106,43,.20),transparent 65%)}
+.hero .eyebrow{color:var(--signal)}
+.hero h1{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  font-size:clamp(30px,8vw,44px);line-height:.95;margin:6px 0 14px}
+.scan-cta{position:relative;z-index:2;display:flex;align-items:center;gap:16px;width:100%;
+  background:var(--signal);color:#160B04;border-radius:14px;padding:16px 18px;text-align:left}
+.scan-cta:active{background:var(--signal-d)}
+.scan-cta .rd{width:52px;height:52px;border-radius:14px;background:rgba(0,0,0,.18);display:grid;place-items:center;flex:none}
+.scan-cta .rd::before{content:"";width:20px;height:20px;border-radius:50%;border:3px solid #160B04;
+  border-right-color:transparent;border-bottom-color:transparent;animation:rot 2.6s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.scan-cta .rd.ic{font-size:26px}
+.scan-cta .rd.ic::before{display:none}
+.scan-cta b{display:block;font-family:var(--display);font-size:27px;letter-spacing:1.2px;text-transform:uppercase;line-height:1}
+.scan-cta span{font-size:13px;font-weight:600;opacity:.72}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:620px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{background:var(--slab);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;
+  border-left:4px solid var(--c,var(--glacier));text-align:left;width:100%}
+.stat b{display:block;font-family:var(--display);font-size:38px;line-height:.9;font-variant-numeric:tabular-nums;color:var(--c,var(--frost))}
+.stat span{display:block;font-size:11px;letter-spacing:1.1px;text-transform:uppercase;color:var(--mist);margin-top:6px}
+
+/* ---------- action grid ---------- */
+.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:620px){.actions{grid-template-columns:repeat(4,1fr)}}
+.action{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:96px;padding:14px;
+  background:var(--slab);border:1px solid var(--line);border-radius:var(--r);text-align:left}
+.action:active{background:var(--slab2)}
+.action .ico{font-size:24px;line-height:1}
+.action b{font-family:var(--display);font-weight:600;font-size:19px;letter-spacing:1px;text-transform:uppercase;line-height:1}
+.action small{color:var(--dim);font-size:11px;letter-spacing:.6px}
+
+/* ---------- alerts ---------- */
+.alert{display:flex;gap:12px;align-items:flex-start;background:var(--slab);border:1px solid var(--line);
+  border-left:4px solid var(--st-preparing);border-radius:var(--r-s);padding:12px 14px;width:100%;text-align:left}
+.alert.hot{border-left-color:var(--st-attention)}
+.alert.pc{border-left-color:var(--glacier)}
+.panel.pc-on{border-color:var(--glacier);margin-top:10px}
+.panel.pc-on .eyebrow,.panel.pc-wait .eyebrow{color:var(--glacier)}
+.panel.pc-wait{margin-top:10px}
+.panel.id-check{margin:0 0 12px;border-color:var(--glacier)}
+.panel.id-check .eyebrow{color:var(--glacier)}
+.panel.id-check .row{gap:10px;margin-top:8px;flex-wrap:wrap}
+.panel.id-check img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--glacier);background:var(--night)}
+.alert + .alert{margin-top:8px}
+.alert b{font-family:var(--display);letter-spacing:1px;text-transform:uppercase;font-size:15px;display:block}
+.alert p{margin:2px 0 0;font-size:13px;color:var(--mist)}
+
+/* ---------- list rows ---------- */
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:12px;background:var(--slab);border:1px solid var(--line);
+  border-radius:var(--r-s);padding:11px 12px;width:100%;text-align:left;min-height:64px}
+.item:active{background:var(--slab2)}
+.item .body{flex:1;min-width:0}
+.item .body b{font-family:var(--display);font-size:19px;letter-spacing:.6px;display:block;line-height:1.1}
+.item .body small{color:var(--mist);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .arr{color:var(--dim);font-size:20px}
+
+/* ---------- map ---------- */
+.map-area{margin-bottom:20px}
+.map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
+.cell{aspect-ratio:1;border-radius:12px;background:var(--slab);border:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:4px;
+  position:relative;overflow:hidden}
+.cell:active{transform:scale(.96)}
+.cell .n{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:.5px}
+.cell .k{font-size:10px;color:var(--dim);letter-spacing:.5px;text-transform:uppercase}
+.cell::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--c,var(--st-available))}
+.cell.on{border-color:var(--c)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-bottom:14px}
+.legend span{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mist);letter-spacing:.6px;text-transform:uppercase}
+.legend i{width:10px;height:10px;border-radius:3px;display:block}
+/* storage map: compact cells so a whole area fits on a phone screen */
+#mapCells .map-grid{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+#mapCells .cell{aspect-ratio:auto;min-height:52px;border-radius:10px;gap:2px}
+#mapCells .cell .n{font-size:16px}
+#mapCells .cell::before{height:4px}
+
+/* ---------- forms ---------- */
+label.f{display:block;margin-bottom:12px}
+label.f > span{display:block;font-family:var(--display);text-transform:uppercase;letter-spacing:1.4px;
+  font-size:12px;color:var(--mist);margin-bottom:6px}
+.input{width:100%;min-height:var(--tap);background:var(--night);border:1px solid var(--line);
+  border-radius:var(--r-s);padding:0 14px;color:var(--frost);font-size:18px;font-weight:600}
+.input:focus{border-color:var(--glacier);outline:none}
+textarea.input{padding:12px 14px;min-height:90px;font-weight:400;font-size:15px}
+.input.big{font-family:var(--display);font-size:30px;letter-spacing:2px;text-align:center;min-height:66px}
+select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mist) 50%),linear-gradient(135deg,var(--mist) 50%,transparent 50%);
+  background-position:calc(100% - 20px) 26px,calc(100% - 14px) 26px;background-size:6px 6px;background-repeat:no-repeat}
+.hint{font-size:12px;color:var(--dim);margin-top:6px}
+
+/* ---------- scan pad ---------- */
+.pad{position:relative;border-radius:20px;border:1px solid var(--line);background:
+  radial-gradient(120% 80% at 50% 0%,#1E3245,#101B26);padding:30px 18px;text-align:center;overflow:hidden}
+.pad .ring{width:132px;height:132px;margin:0 auto 16px;border-radius:50%;border:2px solid rgba(94,200,242,.35);
+  display:grid;place-items:center;position:relative}
+.pad .ring::before,.pad .ring::after{content:"";position:absolute;inset:-2px;border-radius:50%;
+  border:2px solid var(--glacier);opacity:0;animation:ping 2.4s ease-out infinite}
+.pad .ring::after{animation-delay:1.2s}
+@keyframes ping{0%{transform:scale(.72);opacity:.75}80%{transform:scale(1.28);opacity:0}100%{opacity:0}}
+.pad .card3d{width:78px;height:50px;border-radius:8px;background:linear-gradient(150deg,#F3F7FB,#B9CBD9);
+  position:relative;box-shadow:0 6px 16px rgba(0,0,0,.45)}
+.pad .card3d::after{content:"";position:absolute;left:9px;top:16px;width:16px;height:13px;border-radius:3px;
+  background:linear-gradient(180deg,#D8A83E,#B9862A)}
+.pad h3{font-family:var(--display);font-size:26px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 4px}
+.pad p{margin:0;color:var(--mist);font-size:14px}
+.pad.ok{border-color:var(--st-ready)}
+.nfc-state{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:12px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--mist);font-family:var(--display)}
+.nfc-state i{width:9px;height:9px;border-radius:50%;background:var(--st-preparing)}
+.nfc-state.live i{background:var(--st-ready)} .nfc-state.off i{background:var(--st-closed)}
+
+/* ---------- equipment ---------- */
+.eq{display:flex;align-items:center;gap:12px;background:var(--slab);border:1px solid var(--line);
+  border-radius:var(--r-s);padding:10px 12px}
+.eq + .eq{margin-top:8px}
+.eq .ic{width:40px;height:40px;border-radius:10px;background:var(--slab2);display:grid;place-items:center;font-size:20px;flex:none}
+.eq .body{flex:1;min-width:0}
+.eq .body b{font-family:var(--display);font-size:18px;letter-spacing:.6px;display:block;line-height:1.15}
+.eq .body small{color:var(--mist);font-size:12px}
+.stepper{display:flex;align-items:center;gap:2px;background:var(--night);border:1px solid var(--line);border-radius:10px;flex:none}
+.stepper button{width:40px;height:44px;font-size:22px;font-family:var(--display);color:var(--frost);display:grid;place-items:center}
+.stepper button:active{background:var(--slab2)}
+.stepper .q{min-width:34px;text-align:center;font-family:var(--display);font-size:22px;font-variant-numeric:tabular-nums}
+.quick{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media(min-width:520px){.quick{grid-template-columns:repeat(4,1fr)}}
+.qbtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:12px;
+  background:var(--slab);border:1px solid var(--line);min-height:80px;justify-content:center}
+.qbtn .ic{font-size:22px}
+.qbtn b{font-family:var(--display);font-size:14px;letter-spacing:.8px;text-transform:uppercase;text-align:center;line-height:1.05}
+.qbtn.on{border-color:var(--signal);background:rgba(255,106,43,.14)}
+.qbtn .cnt{font-family:var(--display);font-size:13px;color:var(--signal)}
+.thumb{width:44px;height:44px;border-radius:9px;overflow:hidden;flex:none;padding:0;border:1px solid var(--line);background:var(--night)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.ci-item{background:var(--slab);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:10px}
+.ci-item .hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.ci-item .hd b{flex:1;font-family:var(--display);font-size:20px;letter-spacing:.6px;text-transform:uppercase}
+.ci-item .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ci-item label.f{margin-bottom:8px}
+.ci-photo{display:flex;align-items:center;gap:10px;margin:4px 0 8px}
+.ci-photo img{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:600;font-size:15px}
+.check input{width:22px;height:22px;accent-color:var(--signal)}
+.pick-list{display:flex;flex-direction:column;gap:10px}
+.pick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:520px){.pick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.ptile{position:relative;display:flex;flex-direction:column;border:2px solid var(--line);border-radius:14px;overflow:hidden;background:var(--slab2);cursor:pointer}
+.ptile input{position:absolute;opacity:0;pointer-events:none}
+.ptile .img{height:130px;display:flex;align-items:center;justify-content:center;background:var(--night)}
+.ptile .img img{width:100%;height:100%;object-fit:cover;display:block}
+.ptile .img .ic{font-size:44px}
+.ptile .cap{padding:8px 10px;display:flex;flex-direction:column;min-width:0}
+.ptile .cap b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptile .cap small{color:var(--mist);font-size:12px}
+.ptile .tick{position:absolute;top:8px;left:8px;width:28px;height:28px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.35);
+  color:transparent;display:flex;align-items:center;justify-content:center;font-weight:800}
+.ptile .zoom{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,.55);font-size:15px;cursor:pointer}
+.ptile:has(input:checked){border-color:var(--signal)}
+.ptile:has(input:checked) .tick{background:var(--signal);border-color:var(--signal);color:#fff}
+.lightbox{position:fixed;inset:0;z-index:110;background:rgba(3,8,12,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:12px}
+.lightbox img{max-width:100%;max-height:80vh;max-height:80dvh;border-radius:12px;object-fit:contain}
+.lightbox p{margin:0;color:var(--mist);font-size:14px;text-align:center}
+.lightbox .sheet-x{position:absolute;top:16px;right:16px;float:none;margin:0}
+.pick-head{margin-top:6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.pick-head b{font-family:var(--display);font-size:18px;letter-spacing:.8px;text-transform:uppercase}
+.dest{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dest select{flex:1;min-width:150px}
+.kinds{display:flex;flex-wrap:wrap;gap:8px}
+.kinds span{background:var(--slab);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+.kinds span b{font-family:var(--display);font-size:17px;margin-right:4px}
+.kinds span.none{border-color:var(--st-attention);color:#FF8080}
+
+/* ---------- history ---------- */
+.hist{border-left:2px solid var(--line);margin-left:6px;padding-left:16px;position:relative}
+.hev{position:relative;padding:0 0 16px}
+.hev::before{content:"";position:absolute;left:-23px;top:5px;width:10px;height:10px;border-radius:50%;
+  background:var(--glacier);box-shadow:0 0 0 3px var(--night)}
+.hev .t{font-family:var(--display);letter-spacing:1px;font-size:13px;color:var(--dim);text-transform:uppercase}
+.hev b{font-family:var(--display);font-size:17px;letter-spacing:.6px;display:block;line-height:1.2}
+.hev p{margin:2px 0 0;font-size:13px;color:var(--mist)}
+
+/* ---------- modal / toast ---------- */
+.modal{position:fixed;inset:0;z-index:90;display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(6,10,15,.72);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);padding:0}
+@media(min-width:640px){.modal{align-items:center;padding:20px}}
+.sheet{width:100%;max-width:560px;max-height:92vh;max-height:92dvh;overflow:auto;background:var(--slab);
+  border:1px solid var(--line);border-radius:20px 20px 0 0;padding:18px 16px calc(20px + var(--safe-b));
+  animation:up .18s ease-out}
+@media(min-width:640px){.sheet{border-radius:20px}}
+@keyframes up{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.sheet-x{float:right;position:sticky;top:0;z-index:2;width:36px;height:36px;margin:-6px -4px 6px 10px;border-radius:50%;
+  border:1px solid var(--line);background:var(--slab);color:var(--mist);font-size:16px;line-height:1;cursor:pointer}
+.sheet-x:hover{color:inherit;border-color:var(--mist)}
+.sheet h3{font-family:var(--display);font-size:24px;letter-spacing:1.2px;text-transform:uppercase;margin:0 0 4px}
+.sheet .sub{color:var(--mist);font-size:14px;margin:0 0 16px}
+#toast{position:fixed;left:0;right:0;bottom:calc(18px + var(--safe-b));z-index:120;display:flex;
+  flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 14px}
+.toast{background:var(--st-ready);color:#06210F;border-radius:12px;padding:13px 18px;font-weight:700;
+  font-family:var(--display);font-size:19px;letter-spacing:.8px;text-transform:uppercase;box-shadow:var(--sh);
+  animation:up .16s ease-out;max-width:520px;text-align:center}
+.toast.err{background:var(--st-attention);color:#fff}
+.toast.info{background:var(--glacier);color:#052637}
+
+/* ---------- login ---------- */
+.login{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;padding:26px 18px calc(26px + var(--safe-b));max-width:460px;margin:0 auto}
+.brand{font-family:var(--display);text-transform:uppercase;line-height:.92;margin-bottom:26px}
+.brand .a{font-size:13px;letter-spacing:5px;color:var(--signal)}
+.brand .b{font-size:clamp(42px,13vw,60px);font-weight:700;letter-spacing:1px}
+.brand .c{font-size:15px;letter-spacing:3.4px;color:var(--mist)}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}
+.keypad button{min-height:60px;border-radius:12px;background:var(--slab);border:1px solid var(--line);
+  font-family:var(--display);font-size:26px}
+.keypad button:active{background:var(--slab2)}
+.pins{display:flex;gap:10px;justify-content:center;margin:16px 0 4px}
+.pins i{width:15px;height:15px;border-radius:50%;border:2px solid var(--line);display:block}
+.pins i.f{background:var(--signal);border-color:var(--signal)}
+.rolebar{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.rolebar button{flex:none;padding:10px 14px;border-radius:999px;background:var(--slab);border:1px solid var(--line);
+  font-family:var(--display);letter-spacing:1px;text-transform:uppercase;font-size:15px}
+.rolebar button.on{background:var(--frost);color:var(--night);border-color:var(--frost)}
+
+/* ---------- misc ---------- */
+.empty{text-align:center;padding:40px 16px;color:var(--dim)}
+.empty .ic{font-size:34px;display:block;margin-bottom:10px;opacity:.6}
+.searchbar{display:flex;gap:8px;align-items:center;background:var(--slab);border:1px solid var(--line);
+  border-radius:14px;padding:0 14px;min-height:var(--tap)}
+.searchbar input{flex:1;background:none;border:0;outline:none;font-size:17px;font-weight:600;min-width:0}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.kv:last-child{border-bottom:0}
+.kv span{color:var(--mist)}
+.kv b{font-family:var(--display);font-size:17px;letter-spacing:.6px}
+.pill-list{display:flex;flex-wrap:wrap;gap:8px}
+.pill{background:var(--night);border:1px solid var(--line);border-radius:8px;padding:8px 11px;
+  font-family:ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+.pill .x{color:var(--dim);font-size:16px}
+@media(prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+
+/* ---------- tablet / landscape ---------- */
+@media(min-width:760px){
+  main{padding:22px 22px calc(40px + var(--safe-b))}
+  .hero{padding:30px 26px}
+  .map-grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+  .cell .n{font-size:20px}
+  .item{min-height:72px}
+  .two-col{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start}
+  .two-col > *{min-width:0}
+}
+/* phone in landscape — keep the scan pad from eating the screen */
+@media(max-height:480px) and (orientation:landscape){
+  .pad{padding:16px 14px}
+  .pad .ring{width:88px;height:88px;margin-bottom:10px}
+  .pad .card3d{width:58px;height:38px}
+  .hero h1{font-size:26px}
+}
+/* installed as a home-screen app: no browser chrome, so pad the top */
+@media(display-mode:standalone){ .topbar{padding-top:calc(10px + env(safe-area-inset-top,0px))} }
+
+/* ---------- visual refinement ---------- */
+:root{--night:#09131f;--slab:#132333;--slab2:#1a3042;--line:#2b4357;--frost:#f1f7fc;--mist:#a8bdcf;--dim:#71899e;--r:16px;--r-s:11px;--sh:0 14px 34px rgba(0,0,0,.28)}
+html,body{background:radial-gradient(1100px 600px at 10% -10%,#1c3b50 0%,transparent 58%),var(--night)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:linear-gradient(120deg,rgba(94,200,242,.035),transparent 34%,rgba(255,106,43,.045));}
+.topbar{box-shadow:0 8px 24px rgba(3,10,17,.2);border-color:rgba(112,151,178,.28)}
+.topbar .tb-btn,.who,.panel,.stat,.action,.item,.eq,.qbtn,.cell,.searchbar,.pad{box-shadow:0 8px 20px rgba(2,10,17,.14)}
+.panel,.stat,.action,.item,.eq,.qbtn,.cell{border-color:rgba(112,151,178,.3)}
+.panel{background:linear-gradient(145deg,rgba(27,48,66,.98),rgba(17,34,48,.98))}
+.hero{border-color:rgba(118,175,204,.35);box-shadow:var(--sh);background:linear-gradient(135deg,#23465d 0%,#152c3d 54%,#0d1b29 100%)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,.07),transparent 35%)}
+.scan-cta{box-shadow:0 12px 24px rgba(221,78,24,.26);transition:transform .18s ease,box-shadow .18s ease}
+.scan-cta:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(221,78,24,.34)}
+.btn,.action,.item,.qbtn,.cell,.stat{transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease}
+@media(hover:hover){.btn:hover{transform:translateY(-1px);border-color:#49677e;box-shadow:0 8px 18px rgba(0,0,0,.2)}.btn.primary:hover{border-color:#ff8b5c;background:#ff7a42}.action:hover,.item:hover,.qbtn:hover,.cell:hover,.stat:hover{transform:translateY(-2px);border-color:#49677e;background:#1b3143;box-shadow:0 12px 22px rgba(0,0,0,.18)}.cell.on:hover{border-color:var(--c)}}
+.stat{overflow:hidden;position:relative}.stat::after{content:"";position:absolute;width:80px;height:80px;border-radius:50%;right:-38px;top:-38px;background:var(--c,var(--glacier));opacity:.07}
+.tag{box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),0 5px 12px rgba(0,0,0,.18)}
+.input,.searchbar{border-color:rgba(112,151,178,.34)}.input{background:rgba(5,15,24,.55);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}.input:focus{background:#0b1926;box-shadow:0 0 0 4px rgba(94,200,242,.12)}
+.chip{box-shadow:inset 0 1px rgba(255,255,255,.04)}
+.modal{background:rgba(3,10,16,.78)}.sheet{box-shadow:0 -8px 36px rgba(0,0,0,.4);border-color:rgba(112,151,178,.42)}
+@media(min-width:760px){#shell{max-width:1180px}.topbar{margin:10px 12px 0;border:1px solid rgba(112,151,178,.3);border-radius:16px}.hero{border-radius:22px}.panel{padding:18px}.stats{gap:12px}.actions{gap:12px}}
+</style>
+</head>
+<body>
+<div id="shell"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast"></div>
+
+<script src="sync.js"></script>
+<script>
+"use strict";
+/* ==========================================================================
+   1. PERSISTENCE — PostgreSQL on the server (Flask on Railway) is the single
+      source of truth, shared with admin.html. save() pushes only the records
+      that changed (see sync.js); nothing is stored in the browser.
+   ========================================================================== */
+function save(){ SkiSync.save(); }
+const COLLECTIONS = ["rooms","storages","cards","equipment","users","history","prechecks"];
+function normaliseDB(db){
+  if(!db || typeof db!=="object" || Array.isArray(db)) db = {};
+  COLLECTIONS.forEach(k=>{ if(!Array.isArray(db[k])) db[k]=[]; });
+  return db;
+}
+/* Access model: each valet can have a personal PIN (set by the admin) that signs
+   them in directly; members without one use the shared staff PIN and tap their
+   name. ONE admin login (username + password). All checked by the server and
+   stored there only as hashes. */
+const validPin = p => /^\d{4}$/.test(String(p??""));
+const adminAcc = () => DB.users.find(u=>u.shared==="admin");
+const staffAcc = () => DB.users.find(u=>u.shared==="staff");
+const members  = () => DB.users.filter(u=>!u.shared&&!u.retired&&!u.archived).sort((a,b)=>String(a.name).localeCompare(b.name));
+const archived = () => DB.users.filter(u=>!u.shared&&u.archived);
+const nameTaken = (name,except) => members().some(u=>u!==except&&String(u.name).trim().toLowerCase()===name.trim().toLowerCase());
+function credError(user,pw,pw2){
+  if(!/^[A-Za-z0-9._-]{3,32}$/.test(user)) return "Username: 3–32 letters, numbers, . _ -";
+  if(pw.length<8) return "Password must be at least 8 characters";
+  if(pw!==pw2) return "The passwords do not match";
+  return null;
+}
+
+
+/* ==========================================================================
+   2. DOMAIN
+   ========================================================================== */
+const STATUS = {
+  available:{label:"Available", c:"var(--st-available)"},
+  preparing:{label:"Preparing", c:"var(--st-preparing)"},
+  occupied :{label:"Stored",    c:"var(--st-occupied)"},
+  ready    :{label:"Ready",     c:"var(--st-ready)"},
+  guest_using:{label:"Guest using", c:"var(--st-guest)"},
+  attention:{label:"Needs attention", c:"var(--st-attention)"},
+  closed   :{label:"Closed",    c:"var(--st-closed)"}
+};
+/* Only three things are stored: boots, skis (with their poles) and snowboards.
+   The others are kept so records from older versions still display. */
+const CATS = {
+  boots:{label:"Boots", ic:"🥾", size:"Size"},
+  skis:{label:"Skis + poles", short:"Skis", ic:"🎿", size:"Length (cm)"},
+  snowboard:{label:"Snowboard", short:"Board", ic:"🏂", size:"Length (cm)"},
+  poles:{label:"Poles", ic:"🥢", size:"Length (cm)", old:true},
+  sbboots:{label:"Snowboard boots", ic:"🥾", size:"Size", old:true},
+  helmet:{label:"Helmet", ic:"⛑️", size:"Size", old:true},
+  goggles:{label:"Goggles", ic:"🥽", old:true},
+  other:{label:"Other", ic:"📦", size:"Detail", old:true}
+};
+const STORED = ["boots","skis","snowboard"];
+/* Every area of the hall holds one kind of equipment. Each item gets its own location. */
+const KINDS = {boots:"Boots", ski:"Ski", ski_kids:"Kids", snowboard:"Snowboard", vip:"VIP"};
+/* The hall as drawn on the floor plan (viewBox 100 × 54). Keyed by area name: an
+   area renamed in Hall setup simply drops off the drawing, nothing breaks. */
+const HALL_PLAN = {
+  "Boots 1":  {x:2,  y:3,  w:27, h:12, where:"top row, left"},
+  "Boots 2":  {x:32, y:3,  w:17, h:12, where:"top row, middle"},
+  "Snowboard":{x:52, y:3,  w:16, h:12, where:"top row, right"},
+  "Ski 1":    {x:70, y:3,  w:10, h:12, where:"top row, next to Snowboard"},
+  "Ski 2":    {x:86, y:3,  w:11, h:46, where:"right wall"},
+  "Boots 3":  {x:2,  y:37, w:27, h:12, where:"bottom row, left"},
+  "Boots 4":  {x:32, y:37, w:15, h:12, where:"bottom row, middle"},
+  "VIP":      {x:50, y:37, w:11, h:12, where:"bottom row, next to Kids"},
+  "Kids":     {x:63, y:37, w:20, h:12, where:"bottom row, right"}
+};
+const KIND_COLOR = {boots:"#A98BF5", ski:"#5EC8F2", ski_kids:"#35C36A", snowboard:"#F0A93B", vip:"#FF6A2B"};
+const whereOf = s => HALL_PLAN[s && s.section] ? HALL_PLAN[s.section].where : "";
+/* mini floor plan, areas tinted by what they hold; mark = area names to highlight */
+function hallPlan(mark){
+  const areas=Object.keys(HALL_PLAN).filter(a=>DB.storages.some(s=>s.section===a));
+  if(!areas.length) return "";
+  const hi=new Set(mark||[]), any=hi.size>0;
+  const kinds=[...new Set(areas.map(a=>kindOf(DB.storages.find(s=>s.section===a))).filter(Boolean))];
+  return `<svg viewBox="0 0 100 52" role="img" aria-label="Hall plan" style="width:100%;display:block;background:var(--night);border:1px solid var(--line);border-radius:14px">
+    ${areas.map(a=>{ const p=HALL_PLAN[a], k=kindOf(DB.storages.find(s=>s.section===a)), c=KIND_COLOR[k]||"#90A4B8", on=hi.has(a);
+      const cx=p.x+p.w/2, cy=p.y+p.h/2, tall=p.h>p.w*2, room=(tall?p.h:p.w)-2;
+      const fs=Math.min(3.4,room/Math.max(a.length,1)*1.7);
+      return `<g data-act="plan-area" data-area="${esc(a)}" style="cursor:pointer" opacity="${any&&!on?.35:1}">
+        <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="1.6" fill="${c}" fill-opacity="${on?.55:.22}" stroke="${on?"#fff":c}" stroke-width="${on?.9:.45}"/>
+        <text x="${cx}" y="${cy}" dy="${(fs*.35).toFixed(2)}" text-anchor="middle" font-size="${fs.toFixed(2)}" font-weight="700" fill="#F1F7FC"
+          ${tall?`transform="rotate(-90 ${cx} ${cy})"`:""}>${esc(a)}</text></g>`; }).join("")}
+  </svg>
+  <div class="legend" style="margin:8px 0 0">${kinds.map(k=>`<span><i style="background:${KIND_COLOR[k]}"></i>${esc(KINDS[k])}</span>`).join("")}</div>`;
+}
+
+/* --- camera: live preview in the page, photo taken with a tap --- */
+let camStream=null;
+function stopCamera(){ if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; } }
+/* opens the camera inside box (an element); onShot(dataUrl) gets the photo */
+async function cameraInto(box,onShot,onCancel){
+  const fallback = msg => {          // no camera API (old browser, http) or permission refused: native picker
+    box.innerHTML=`<div class="hint" style="margin:0 0 8px">${esc(msg)}</div>
+      <label class="btn">📷 Open camera / gallery<input type="file" accept="image/*" capture="environment" hidden></label>
+      <button class="btn ghost" style="margin-top:8px" data-cam="cancel">Cancel</button>`;
+    box.querySelector("input").onchange=async e=>{ const f=e.target.files[0]; if(!f) return;
+      try{ onShot(await shrinkPhoto(f)); }catch(err){ toast(err.message,"err"); } };
+    box.querySelector('[data-cam="cancel"]').onclick=()=>onCancel&&onCancel();
+  };
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||!window.isSecureContext){ fallback("This browser can't open the camera here."); return; }
+  box.innerHTML=`<div class="hint" style="margin:0 0 8px">Starting the camera…</div>`;
+  stopCamera();
+  try{ camStream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1440}}}); }
+  catch(err){ fallback("Camera not allowed — allow it in the browser settings, or use the button below."); return; }
+  box.innerHTML=`<video autoplay playsinline muted style="width:100%;max-height:60vh;object-fit:cover;border-radius:12px;background:#000;display:block"></video>
+    <div class="btn-grid" style="margin-top:10px"><button class="btn" data-cam="cancel">Cancel</button>
+      <button class="btn primary" data-cam="shot">📷 Take photo</button></div>`;
+  const v=box.querySelector("video"); v.srcObject=camStream;
+  box.querySelector('[data-cam="cancel"]').onclick=()=>{ stopCamera(); onCancel&&onCancel(); };
+  box.querySelector('[data-cam="shot"]').onclick=()=>{
+    if(!v.videoWidth){ toast("The camera is not ready yet","info"); return; }
+    const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight)), c=document.createElement("canvas");
+    c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
+    c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+    stopCamera(); onShot(c.toDataURL("image/jpeg",0.72));
+  };
+}
+/* check-in item: the camera opens in its own sheet */
+function itemCamera(key){
+  openSheet(`<h3>Photo</h3><p class="sub">Take a photo of the equipment</p><div id="camBox"></div>`);
+  cameraInto($("#camBox"),url=>{ const p=stowParams(), i=p&&p.d.items.find(x=>x.key===key);
+      closeSheet(); if(i){ i.photo=url; i.photo_id=null; drawItems(); } },
+    ()=>closeSheet());
+}
+let DB = null, SESSION = null, nav = [], scanCtx = null;
+
+/* ids are unique across devices (clock + random, see sync.js) */
+const uid = () => newId();
+const now = () => Date.now();
+
+/* Empty hall (used by "Erase everything"; accounts are kept). */
+function emptyDB(users){
+  return {rooms:[],storages:[],cards:[],equipment:[],users:users||[],prechecks:DB&&DB.prechecks||[],
+    history:[{id:uid(),user_id:null,action:"Hall created",room_id:null,storage_id:null,key_card_id:null,
+      equipment_id:null,timestamp:now(),notes:"Empty database",prev:null,next:null}]};
+}
+
+/* --- lookups --- */
+const room   = id => DB.rooms.find(r=>r.id===id);
+const stor   = id => DB.storages.find(s=>s.id===id);
+const card   = id => DB.cards.find(c=>c.id===id);
+const user   = id => DB.users.find(u=>u.id===id);
+const roomByNumber = n => DB.rooms.find(r=>String(r.room_number??"").trim().toLowerCase()===String(n).trim().toLowerCase());
+/* "S-127", "s127" and "S 127" are the same location */
+const storByNumber = n => { const k=normCode(n); return k ? DB.storages.find(s=>normCode(s.storage_number)===k) : undefined; };
+const cardByCode   = c => { const k=normCode(c); return k ? DB.cards.find(x=>normCode(x.card_code)===k) : undefined; };
+const cardsOfStorage = id => DB.cards.filter(c=>c.storage_id===id);
+
+/* --- kiosk pre-check-ins: a guest declares room, name and how many items on a
+   kiosk screen; the valet checks them at the counter and confirms the check-in --- */
+const PRECHECK_MAX_AGE = 24*36e5;      // the server expires pending ones after PRECHECK_HOURS (24 by default)
+const PC_ITEMS = [["boots","boots"],["skis","skis"],["snowboards","snowboard"]];   // precheck field -> category
+const precheck = id => DB.prechecks.find(p=>p.id===id);
+const pendingPrechecks = () => DB.prechecks.filter(p=>p.status==="pending"&&now()-(p.created_at||0)<PRECHECK_MAX_AGE)
+  .sort((a,b)=>(b.created_at||0)-(a.created_at||0));
+const prechecksOfRoom = n => { const k=String(n??"").trim().toLowerCase();
+  return k ? pendingPrechecks().filter(p=>String(p.room_number??"").toLowerCase()===k) : []; };
+const pcGuest = p => [p.first_name,p.last_name].map(x=>String(x||"").trim()).filter(Boolean).join(" ");
+/* the guest's ID photos taken at the kiosk; the server deletes them at check-out */
+const idPhotos = r => r && r.status!=="checked_out" ? (r.face_photo_ids||[]) : [];
+const idCheck = r => idPhotos(r).length ? `<div class="panel id-check"><div class="eyebrow">Check it's the guest</div>
+  <div class="row">${idPhotos(r).map(id=>`<img src="${photoUrl(id)}" alt="Guest ID photo">`).join("")}</div></div>` : "";
+const pcItems = p => PC_ITEMS.filter(([f])=>+p[f]>0).map(([f,k])=>`${+p[f]} × ${catInfo(k).short||catInfo(k).label}`).join(" · ");
+const cardsOfRoom    = id => DB.cards.filter(c=>c.room_id===id);
+const eqOf   = id => DB.equipment.filter(e=>e.storage_id===id);
+const eqCount= id => eqOf(id).reduce((a,e)=>a+(+e.quantity||0),0);
+const storagesOfRoom = id => DB.storages.filter(s=>s.room_id===id);
+
+/* Room order everywhere: rooms with a storage first, then rooms with only key
+   cards, then empty rooms — each group by room number. */
+const roomRank = r => storagesOfRoom(r.id).length ? 0 : cardsOfRoom(r.id).length ? 1 : 2;
+const byRoom = (a,b) => roomRank(a)-roomRank(b) || String(a.room_number??"").localeCompare(String(b.room_number??""),undefined,{numeric:true});
+/* a checked-out room has no guest — the name only lives on in the history */
+const guestOf = r => r && r.status!=="checked_out" ? (r.guest_name||"") : "";
+function normCode(s){ return String(s??"").toUpperCase().replace(/[^A-Z0-9]/g,""); }
+const stInfo = k => STATUS[k] || {label:String(k||"Unknown"), c:"var(--st-attention)"};
+const catInfo = k => CATS[k] || CATS.other;
+const eqLabel = e => catInfo(e.category).label+(e.kids?" (kids)":"")+(e.owner?" · "+e.owner:"");
+/* names already given to this room's items: offered again so a family's names stay consistent */
+const ownersOfRoom = (roomId,extra=[]) => [...new Set([...extra,...storagesOfRoom(roomId).flatMap(s=>eqOf(s.id)).map(e=>e.owner)]
+  .map(x=>String(x||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+const ownerList = (id,names) => `<datalist id="${id}">${names.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>`;
+
+/* --- storage kinds and automatic assignment --- */
+function kindFromName(n){
+  n=String(n||"").toLowerCase();
+  if(/vip/.test(n)) return "vip";
+  if(/snow/.test(n)) return "snowboard";
+  if(/boot|bota/.test(n)) return "boots";
+  if(/kid|niñ|child|junior/.test(n)) return "ski_kids";
+  if(/ski|esqu/.test(n)) return "ski";
+  return null;
+}
+/* areas from the default layout carry their kind; others are read from the area name */
+const kindOf = s => KINDS[s.kind] ? s.kind : kindFromName(s.section);
+const isFree = s => s.status==="available" && s.room_id==null && !eqCount(s.id);
+const byNumber = (a,b) => String(a.section||"").localeCompare(String(b.section||""),undefined,{numeric:true})
+  || String(a.storage_number??"").localeCompare(String(b.storage_number??""),undefined,{numeric:true});
+/* where an item may go, best first: VIP guests use the VIP area while it has room,
+   kids' skis use Kids, then the regular area of that kind */
+function kindsFor(item,vip){
+  const kids = item.kids && !vip;   // a VIP guest has no Kids option
+  const k = item.category==="skis" ? (kids?["ski_kids","ski"]:["ski"])
+    : item.category==="snowboard" ? (kids?["ski_kids","snowboard"]:["snowboard"])
+    : item.category==="boots" ? ["boots"] : [];
+  return vip ? ["vip",...k] : k;
+}
+/* may this item go in storage s? only in an area of its own kind (or VIP for a VIP guest) */
+const fitsItem = (item,s,vip) => !!s && kindsFor(item,vip).includes(kindOf(s));
+/* what a storage can hold, for adding equipment straight into it (null = area type not set) */
+function catsForStorage(s){
+  const k=kindOf(s);
+  return k==="boots"?["boots"] : k==="ski"?["skis"] : k==="snowboard"?["snowboard"]
+    : k==="ski_kids"?["skis","snowboard"] : k==="vip"?STORED : null;
+}
+/* picks a free location for every item without a manual choice; never twice the same */
+function autoAssign(items,vip){
+  items.forEach(i=>{ if(i.storage_id && !fitsItem(i,stor(i.storage_id),vip)) i.storage_id=null; });
+  const taken=new Set(items.filter(i=>i.storage_id).map(i=>i.storage_id));
+  const free=DB.storages.filter(isFree).sort(byNumber);
+  items.forEach(i=>{
+    i.auto=null; if(i.storage_id) return;
+    for(const k of kindsFor(i,vip)){
+      const s=free.find(x=>kindOf(x)===k && !taken.has(x.id));
+      if(s){ i.auto=s.id; taken.add(s.id); return; }
+    }
+  });
+}
+const freeByKind = () => { const o={}; DB.storages.filter(isFree).forEach(s=>{ const k=kindOf(s)||"other"; o[k]=(o[k]||0)+1; }); return o; };
+
+/* --- photos: resized on the phone, stored on the server, rows keep only the id --- */
+const photoUrl = id => "/api/photos/"+encodeURIComponent(id);
+function shrinkPhoto(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{ const k=Math.min(1,1280/Math.max(img.naturalWidth,img.naturalHeight));
+      const c=document.createElement("canvas"); c.width=Math.round(img.naturalWidth*k); c.height=Math.round(img.naturalHeight*k);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg",0.72)); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error("That file is not a photo")); };
+    img.src=url;
+  });
+}
+async function uploadPhoto(dataUrl){ return (await API("/api/photos",{data:dataUrl})).id; }
+function openPhoto(id,caption){
+  openSheet(`<h3>Photo</h3>${caption?`<p class="sub">${esc(caption)}</p>`:""}
+    <img src="${photoUrl(id)}" alt="Equipment photo" style="width:100%;border-radius:12px;display:block;background:var(--night)">
+    <button class="btn" style="margin-top:14px" data-act="close-sheet">Close</button>`);
+}
+const thumb = (id,caption) => id?`<button class="thumb" data-act="photo" data-id="${esc(id)}" data-c="${esc(caption||"")}" aria-label="Open photo"><img src="${photoUrl(id)}" alt="" loading="lazy"></button>`:"";
+
+function log(action, o={}){
+  DB.history.unshift({id:uid(),user_id:SESSION?SESSION.id:null,action,
+    room_id:o.room_id??null,storage_id:o.storage_id??null,key_card_id:o.key_card_id??null,
+    equipment_id:o.equipment_id??null,timestamp:now(),notes:o.notes||"",prev:o.prev||null,next:o.next||null,
+    ...(o.photo_id?{photo_id:o.photo_id}:{})});
+  if(DB.history.length>5000) DB.history.length=5000;     // display cap only; the server keeps everything
+}
+function setStorageStatus(s,next,note){
+  if(!s || s.status===next) return;
+  const prev=s.status; s.status=next; s.updated_at=now();
+  log("Status changed",{storage_id:s.id,room_id:s.room_id,prev:stInfo(prev).label,next:stInfo(next).label,notes:note||""});
+}
+
+/* ==========================================================================
+   3. UTIL
+   ========================================================================== */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s => String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const todayISO = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+function fmtDay(iso){ if(!iso) return "—"; const [y,m,d]=iso.split("-"); return `${+d} ${MON[+m-1]}`; }
+function daysTo(iso){ if(!iso) return null;
+  const t=todayISO(); if(iso===t) return 0;
+  return Math.round((new Date(iso+"T12:00")-new Date(t+"T12:00"))/864e5); }
+function fmtDT(ts){ if(!ts) return "—"; const d=new Date(ts); return `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()} — ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
+function ago(ts){ if(!ts) return "—"; const m=Math.round((now()-ts)/6e4); if(m<1)return"just now"; if(m<60)return m+" min ago";
+  const h=Math.floor(m/60); if(h<24) return h+"h "+(m%60)+"m ago"; return Math.floor(h/24)+"d ago"; }
+function toast(msg,kind){ const t=document.createElement("div"); t.className="toast"+(kind?" "+kind:"");
+  t.textContent=msg; $("#toast").appendChild(t); setTimeout(()=>t.remove(),2600);
+  if(navigator.vibrate) try{navigator.vibrate(kind==="err"?[40,60,40]:25)}catch(e){} }
+function statusChip(st,solid){ const s=stInfo(st);
+  return `<span class="chip ${solid?"solid ":""}s-${esc(st)}"><i class="dot"></i>${esc(s.label)}</span>`; }
+const firstName = u => String(u&&u.name||"").trim().split(/\s+/)[0] || "—";
+
+/* ==========================================================================
+   4. ROUTER
+   ========================================================================== */
+function go(view,params={}){ nav.push({view,params}); render(); }
+function replaceView(view,params={}){ nav[nav.length-1]={view,params}; render(); }
+function back(){ if(nav.length>1){ nav.pop(); render(); } }
+function home(){ nav=[{view:"dash",params:{}}]; render(); }
+const current = ()=>nav[nav.length-1]||{view:"dash",params:{}};
+
+const VIEWS = {};
+function render(){
+  staleView=false;
+  const {view,params} = current();
+  if(!SESSION){ $("#shell").innerHTML = adminLogin ? viewAdminLogin() : pinOk ? viewPickName() : viewLogin(); return; }
+  const v = VIEWS[view] || VIEWS.dash;
+  const out = v(params||{});
+  $("#shell").innerHTML = `
+    <header class="topbar">
+      <button class="tb-btn" data-act="${nav.length>1?"back":"home"}" aria-label="${nav.length>1?"Back":"Home"}">${nav.length>1?"‹":"⌂"}</button>
+      <div class="tb-title"><b>${esc(out.title)}</b><span>${out.sub||""}</span></div>
+      ${nav.length>1?`<button class="tb-btn" data-act="home" aria-label="Dashboard">⌂</button>`:
+        `<button class="who" data-act="account"><i>${esc(firstName(SESSION)[0])}</i>${esc(firstName(SESSION))}</button>`}
+    </header>
+    <main>${out.body}</main>`;
+  window.scrollTo(0,0);
+  if(out.after) out.after();
+}
+
+/* ==========================================================================
+   5. LOGIN
+   ========================================================================== */
+let pin="", pendingHandOff=null, adminLogin=false, pinOk=false, busy=false;
+let AUTH = {staff_pin_set:false};          // from /api/me — shown on the PIN screen
+let PICK = [];                             // staff names returned after a correct PIN
+/* After the shared PIN: each valet taps their own name (added by the admin). */
+function viewPickName(){
+  return `<div class="login">
+    <div class="brand"><div class="a">Staff PIN accepted</div><div class="b">Who are you?</div><div class="c">Tap your name</div></div>
+    <div class="list">${PICK.map(u=>`<button class="item" data-act="pick-name" data-id="${u.id}"><span class="body"><b>${esc(u.name)}</b></span><span class="arr">›</span></button>`).join("")}</div>
+    <button class="btn ghost" data-act="pin-cancel" style="width:100%;margin-top:14px">Cancel</button>
+  </div>`;
+}
+/* The server has accepted the login: load the hall and open the dashboard. */
+async function afterSignIn(u){
+  try{ await SkiSync.start(); }
+  catch(e){ toast(e.message,"err"); SESSION=null; render(); return; }
+  SESSION = user(u.id) || u;
+  pinOk=false; pin=""; adminLogin=false; PICK=[];
+  log("Signed in",{}); save();
+  toast(SESSION.role==="admin" ? "Signed in as admin" : "Welcome, "+firstName(SESSION));
+  home(); flushHandOff();
+}
+async function signInAs(id){
+  if(busy) return; busy=true;
+  try{ const r=await API("/api/login/member",{id}); await afterSignIn(r.user); }
+  catch(e){ toast(e.message,"err"); pinOk=false; pin=""; render(); }
+  finally{ busy=false; }
+}
+function viewLogin(){
+  const noStaff=!AUTH.staff_pin_set;
+  return `<div class="login">
+    <div class="brand"><div class="a">Hotel operations</div><div class="b">Ski Valet</div><div class="c">Storage management</div></div>
+    <div class="pins">${[0,1,2,3].map(i=>`<i class="${pin.length>i?"f":""}"></i>`).join("")}</div>
+    <div class="keypad">
+      ${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="pin" data-n="${n}">${n}</button>`).join("")}
+      <button data-act="pin-clear">✕</button>
+      <button data-act="pin" data-n="0">0</button>
+      <button data-act="pin-del">⌫</button>
+    </div>
+    <p class="hint" style="text-align:center;margin-top:16px">${noStaff
+      ?"The staff PIN is not set yet. An admin has to sign in and set it under Access."
+      :"Enter your PIN."}</p>
+    <button class="btn ghost" data-act="admin-login" style="width:100%;margin-top:10px">Admin sign in</button>
+  </div>`;
+}
+function viewAdminLogin(){
+  return `<div class="login">
+    <div class="brand"><div class="a">Hotel operations</div><div class="b">Ski Valet</div><div class="c">Admin sign in</div></div>
+    <label class="f"><span>Username</span><input class="input" id="alUser" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+    <label class="f"><span>Password</span><input class="input" id="alPass" type="password" autocomplete="current-password"></label>
+    <button class="btn primary" data-act="admin-signin" style="width:100%">Sign in</button>
+    <button class="btn ghost" data-act="staff-login" style="width:100%;margin-top:10px">Back to staff PIN</button>
+  </div>`;
+}
+async function adminSignIn(){
+  if(busy) return; busy=true;
+  const u=$("#alUser").value, p=$("#alPass").value;
+  try{ const r=await API("/api/login/admin",{username:u,password:p}); await afterSignIn(r.user); }
+  catch(e){ toast(e.message,"err"); const f=$("#alPass"); if(f) f.value=""; }
+  finally{ busy=false; }
+}
+function flushHandOff(){
+  if(!pendingHandOff || !SESSION) return;
+  const c=pendingHandOff; pendingHandOff=null; receiveCard(c);
+}
+async function tryLogin(){
+  if(busy) return; busy=true;
+  const entered=pin; pin="";
+  try{
+    const r=await API("/api/login/pin",{pin:entered});
+    if(r.user){ await afterSignIn(r.user); return; }           // personal PIN, or no names yet → generic "Staff"
+    PICK=r.members||[]; pinOk=true; render();
+  }catch(e){
+    toast(e.message,"err");
+    if(e.status===400 && /not set/.test(e.message)) AUTH.staff_pin_set=false;
+    if(!SESSION) $("#shell").innerHTML=viewLogin();
+  }finally{ busy=false; }
+}
+async function signOut(){
+  closeSheet(); SESSION=null; pin=""; adminLogin=false; pinOk=false; nav=[];
+  if(SkiSync.pending()){ try{ await SkiSync.save(); }catch(_){} }
+  SkiSync.stop(); DB=normaliseDB(null);
+  try{ await API("/api/logout",{}); }catch(_){}
+  try{ AUTH=await API("/api/me"); }catch(_){}
+  render();
+}
+
+/* ==========================================================================
+   6. DASHBOARD
+   ========================================================================== */
+function alerts(){
+  const out=[];
+  DB.storages.forEach(s=>{
+    if(!s.room_id && eqCount(s.id)>0)
+      out.push({hot:false,t:"Storage without room",p:`${s.storage_number} holds ${eqCount(s.id)} items but no room is assigned.`,act:{view:"storage",id:s.id}});
+    if(s.status==="attention")
+      out.push({hot:true,t:"Storage needs attention",p:`${s.storage_number} is flagged for inspection.`,act:{view:"storage",id:s.id}});
+  });
+  DB.cards.forEach(c=>{
+    if(c.room_id && !storagesOfRoom(c.room_id).length)
+      out.push({hot:false,t:"Card without storage",p:`Card ${c.card_code} belongs to room ${room(c.room_id)?.room_number} but no equipment is checked in.`,act:{view:"room",id:c.room_id}});
+  });
+  departingRooms().forEach(({r,d,sts})=>{
+    const items=sts.reduce((a,x)=>a+eqCount(x.id),0);
+    if(d<0) out.push({hot:true,t:"Departure not closed",p:`Room ${r.room_number} left on ${fmtDay(r.departure)} — ${sts.map(x=>x.storage_number).join(", ")} still assigned${items?` with ${items} items`:""}.`,act:{view:"room",id:r.id}});
+    else if(d===0) out.push({hot:false,t:"Leaving today",p:`Room ${r.room_number} checks out today — ${items} items in ${sts.map(x=>x.storage_number).join(", ")}.`,act:{view:"room",id:r.id}});
+  });
+  DB.storages.filter(s=>s.status==="guest_using").forEach(s=>{
+    const h=DB.history.find(x=>x.storage_id===s.id&&x.action==="Equipment checked out");
+    const hrs=h?(now()-h.timestamp)/36e5:0;
+    if(hrs>=3) out.push({hot:true,t:"Equipment not returned",p:`Room ${room(s.room_id)?.room_number||"—"} checked out from ${s.storage_number} ${ago(h.timestamp)}.`,act:{view:"storage",id:s.id}});
+  });
+  return out;
+}
+VIEWS.dash = () => {
+  const total=DB.storages.length;
+  const avail=DB.storages.filter(s=>s.status==="available").length;
+  const occ=DB.storages.filter(s=>!["available","closed"].includes(s.status)).length;
+  const stored=DB.storages.filter(s=>["occupied","preparing","ready","attention"].includes(s.status)).reduce((a,s)=>a+eqCount(s.id),0);
+  const ready=DB.storages.filter(s=>s.status==="ready").reduce((a,s)=>a+eqCount(s.id),0);
+  const out=DB.storages.filter(s=>s.status==="guest_using").reduce((a,s)=>a+eqCount(s.id),0);
+  const guests=DB.rooms.filter(r=>storagesOfRoom(r.id).some(s=>s.status!=="available")).length;
+  const al=alerts(), recent=DB.history.slice(0,5);
+  const A=(act,ic,label,small)=>`<button class="action" data-act="nav" data-view="${act}"><span class="ico">${ic}</span><b>${label}</b><small>${small}</small></button>`;
+  return {title:"Ski Valet", sub:new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"short"}),
+  body:`
+    <section class="hero">
+      <div class="eyebrow">Start here</div>
+      <h1>Guest at the counter?<br>Ask the room number</h1>
+      <button class="scan-cta" data-act="nav" data-view="stow"><span class="rd ic">🚪</span>
+        <span><b>Check in by room</b><span>Kiosk pre-check-ins fill the form in for you</span></span></button>
+      <div class="btn-grid" style="margin-top:10px;position:relative;z-index:2">
+        <button class="btn" data-act="nav" data-view="rooms">Find by room</button>
+        <button class="btn ghost" data-act="scan" data-ctx="identify">Scan key card</button>
+      </div>
+    </section>
+
+    ${pcPanel()}
+
+    <h2 class="sec">Free locations</h2>
+    ${kindsBar()}
+
+    ${DB.storages.length?"":`
+    <div class="panel" style="margin-top:12px;border-color:var(--signal)">
+      <div class="eyebrow" style="color:var(--signal)">First run</div>
+      <b class="num" style="font-size:24px;display:block;margin:4px 0 6px">The hall is empty</b>
+      <p class="muted tiny" style="margin:0 0 12px">${SESSION.role==="admin"
+        ?"Create the storage areas of the floor plan: Boots 1–4, Snowboard, Ski 1–2, Kids and VIP."
+        :"An admin has to create the storage areas first (Hall setup)."}</p>
+      ${SESSION.role==="admin"&&SkiSync.missingLayout(DB).length?`<button class="btn primary" data-act="load-layout">Create storage areas</button>`:""}
+      <button class="btn ghost" style="margin-top:8px" data-act="nav" data-view="setup">Hall setup</button>
+    </div>`}
+
+    <h2 class="sec">Hall status</h2>
+    <div class="stats">
+      <button class="stat" style="--c:var(--st-occupied)" data-act="nav" data-view="active"><b class="num">${occ}</b><span>Occupied storages</span></button>
+      <button class="stat" style="--c:var(--st-available)" data-act="nav" data-view="storages"><b class="num">${avail}</b><span>Available of ${total}</span></button>
+      <button class="stat" style="--c:var(--st-ready)" data-act="nav" data-view="active"><b class="num">${ready}</b><span>Ready for pickup</span></button>
+      <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="active"><b class="num">${out}</b><span>Checked out</span></button>
+      <button class="stat" style="--c:var(--glacier)" data-act="nav" data-view="storages"><b class="num">${stored}</b><span>Items in the hall</span></button>
+      <button class="stat" style="--c:var(--signal)" data-act="nav" data-view="rooms"><b class="num">${guests}</b><span>Rooms using valet</span></button>
+      <button class="stat" style="--c:var(--st-preparing)" data-act="nav" data-view="storages"><b class="num">${DB.storages.filter(s=>s.status==="preparing").length}</b><span>Preparing</span></button>
+      <button class="stat" style="--c:var(--st-attention)" data-act="nav" data-view="departures"><b class="num">${departingRooms().filter(x=>x.d<=0).length}</b><span>Departing today</span></button>
+    </div>
+
+    <h2 class="sec">Actions</h2>
+    <div class="actions">
+      ${A("rooms","🚪","Search room","By room number")}
+      ${A("storages","🏷️","Search storage","All locations")}
+      ${A("stow","⬇️","Check in","By room number")}
+      ${A("checkout","⬆️","Check out","Release to guest")}
+      ${A("map","🗺️","Storage map","Hall layout")}
+      ${A("active","🎿","Active storage","In use now")}
+      ${A("search","🔎","Quick search","Card · room · item")}
+      ${A("departures","📅","Departures","Leaving the hotel")}
+      ${A("history","🕒","History","Full audit trail")}
+    </div>
+
+    <h2 class="sec">Attention ${al.length?`· ${al.length}`:""}</h2>
+    ${al.length? al.slice(0,6).map(a=>`<button class="alert ${a.hot?"hot":""}" data-act="nav" data-view="${a.act.view}" data-id="${a.act.id}">
+        <span style="font-size:20px">${a.hot?"⛔":"⚠️"}</span><span><b>${esc(a.t)}</b><p>${esc(a.p)}</p></span></button>`).join("")
+      : `<div class="panel muted" style="text-align:center">Nothing needs attention. The hall is clean.</div>`}
+
+    <h2 class="sec">Recent activity</h2>
+    <div class="hist">${recent.map(h=>histEvent(h)).join("")||`<div class="muted">No activity yet.</div>`}</div>
+    <button class="btn ghost" data-act="nav" data-view="history" style="margin-top:6px">Open full history</button>
+  `};
+};
+function pcPanel(){
+  const list=pendingPrechecks(); if(!list.length) return "";
+  return `<h2 class="sec">Pre-check-ins · ${list.length}</h2>
+    ${list.slice(0,6).map(p=>`<button class="alert pc" data-act="pc-open" data-id="${p.id}"><span style="font-size:20px">📝</span>
+      <span><b>Room ${esc(p.room_number)} · ${esc(pcGuest(p))}</b><p>${esc(pcItems(p))} · ${ago(p.created_at)}</p></span></button>`).join("")}
+    ${list.length>6?`<div class="hint">${list.length-6} more — type the room number in Check in to see its pre-check-ins.</div>`:""}`;
+}
+function kindsBar(){
+  const f=freeByKind();
+  return `<div class="kinds">${Object.entries(KINDS).map(([k,l])=>`<span class="${f[k]?"":"none"}"><b>${f[k]||0}</b>${esc(l)}</span>`).join("")}</div>`;
+}
+function histEvent(h){
+  const bits=[];
+  if(h.room_id) bits.push("Room "+(room(h.room_id)?.room_number||"—"));
+  if(h.storage_id) bits.push(stor(h.storage_id)?.storage_number||"—");
+  if(h.key_card_id) bits.push("Card "+(card(h.key_card_id)?.card_code||"—"));
+  if(h.prev&&h.next) bits.push(h.prev+" → "+h.next);
+  if(h.notes) bits.push(h.notes);
+  return `<div class="hev"><div class="t">${fmtDT(h.timestamp)} · ${esc(h.user_id!=null&&user(h.user_id)?firstName(user(h.user_id)):"System")}</div>
+    <b>${esc(h.action)}</b><p>${esc(bits.join(" · "))}</p>${h.photo_id?`<div style="margin-top:6px">${thumb(h.photo_id,h.notes)}</div>`:""}</div>`;
+}
+
+/* ==========================================================================
+   7. SCAN
+   --------------------------------------------------------------------------
+   NATIVE BRIDGE — for the iOS wrapper app.
+   iPhones cannot read NFC from the browser (WebKit has no Web NFC), but Core
+   NFC can read the card UID from a native shell. A WKWebView / Capacitor
+   wrapper only has to do two things:
+
+     1) When the user taps "Scan with iPhone", we call:
+            window.webkit.messageHandlers.skivalet.postMessage({action:"scan"})
+        (or window.SkiValetNative.scan() for a Capacitor plugin)
+        The native side opens NFCTagReaderSession and reads the tag identifier.
+
+     2) When the UID comes back, the native side injects it:
+            window.SkiValet.scan("04A2B7C19E3F80")
+        That single call drives the exact same flow as an Android NFC tap.
+
+   Nothing else in the app needs to change.
+   ========================================================================== */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+const hasNativeBridge = () => !!(window.SkiValetNative ||
+  (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.skivalet));
+function askNativeScan(){
+  try{
+    if(window.SkiValetNative && window.SkiValetNative.scan) window.SkiValetNative.scan();
+    else window.webkit.messageHandlers.skivalet.postMessage({action:"scan"});
+    setNfc("live","Hold the card against the top of the iPhone");
+  }catch(err){ toast("The native reader did not respond","err"); }
+}
+window.SkiValet = {
+  scan(code){ receiveCard(code); },                // native side calls this
+  version:"1.0",
+  get ready(){ return !!SESSION; }
+};
+/* Capacitor bridge — active only inside the iOS wrapper, ignored in a browser. */
+(function(){
+  const plugin = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SkiValetNFC;
+  if(!plugin()) return;
+  window.SkiValetNative = {
+    scan(){
+      plugin().scan()
+        .then(res => { if(res && res.uid) window.SkiValet.scan(res.uid);
+                       else if(res && res.cancelled) setNfc("off","Scan cancelled — tap to try again"); })
+        .catch(err => { setNfc("off","Reader error: "+(err && err.message ? err.message : "unknown")); });
+    }
+  };
+})();
+
+
+let nfcReader=null, nfcState="idle", wedge="", wedgeT=null;
+const canReadNfc = () => hasNativeBridge() || (!IS_IOS && "NDEFReader" in window && window.isSecureContext);
+const CTX_LABEL={identify:"Identify card",add_card:"Add key card",checkin:"Check in equipment",checkout:"Check out equipment",move:"Scan card"};
+VIEWS.scan = (p) => {
+  scanCtx = p;
+  const target = p.ctx==="add_card" ? `<div class="panel" style="margin-bottom:12px"><div class="eyebrow">Will be linked to</div>
+      <div class="row between" style="margin-top:8px"><b class="num" style="font-size:24px">Room ${esc(room(p.room_id)?.room_number||"—")}</b>
+      ${stor(p.storage_id)?`<span class="tag sm">${esc(stor(p.storage_id).storage_number)}</span>`:`<span class="tag sm ghost">No storage</span>`}</div></div>` : "";
+  return {title:CTX_LABEL[p.ctx]||"Scan key card", sub:"Step 1 of "+(p.ctx==="identify"?"1":"2"),
+  body:`
+    ${target}
+    <div class="pad" id="pad">
+      <div class="ring"><div class="card3d"></div></div>
+      <h3>Tap the card</h3>
+      <p>Hold the key card against the reader</p>
+      <div class="nfc-state" id="nfcState"><i></i><span>Checking reader…</span></div>
+    </div>
+    <div class="btn-grid one" style="margin-top:14px">
+      ${hasNativeBridge()
+        ? `<button class="btn primary" data-act="native-scan">Scan with iPhone NFC</button>`
+        : IS_IOS
+          ? `<div class="alert"><span></span><span><b>iPhone: no NFC in the browser</b>
+             <p>Apple does not allow web pages to read cards. Pair a Bluetooth card reader — it types the code straight into the field below — or install the wrapper app.</p></span></div>`
+          : `<button class="btn primary" data-act="nfc-start">Enable NFC reader</button>`}
+    </div>
+    ${p.ctx==="checkin"?`<button class="btn ${canReadNfc()?"ghost":"primary"}" style="margin-top:10px" data-act="nav" data-view="stow">No NFC? Check in by room number</button>`
+      : p.ctx!=="add_card"?`<button class="btn ${canReadNfc()?"ghost":"primary"}" style="margin-top:10px" data-act="nav" data-view="rooms">No NFC? Find by room number</button>`:""}
+    <h2 class="sec">Or enter the code</h2>
+    <div class="panel">
+      <input class="input big" id="codeIn" placeholder="Card UID, e.g. 04A2B7C19E3F80" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <div class="hint">USB / Bluetooth readers that type the code work here automatically — the field stays focused.</div>
+      <div class="btn-grid" style="margin-top:12px">
+        <button class="btn" data-act="paste-code">Paste from clipboard</button>
+        <button class="btn go" data-act="submit-code">Read card</button>
+      </div>
+    </div>
+    <h2 class="sec">How cards are read</h2>
+    <div class="panel tiny muted">Android reads cards directly. iPhone needs either a paired Bluetooth reader in keyboard mode or the wrapper app.
+      Either way the app uses only the card's public UID / serial number, exactly as the device exposes it.
+      Encrypted or proprietary data on hotel cards is never read, decrypted or copied. If your lock system offers an
+      authorised API, the card code can be mapped to it later.</div>
+  `,
+  after(){
+    const inp=$("#codeIn"); if(inp){ inp.focus(); inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); submitCode(); }}); }
+    setNfc(nfcState==="live"?"live":"idle", nfcState==="live"?"Reader active — waiting for a card":( "NDEFReader" in window ? "Reader ready — tap Enable" : "NFC not available on this device"));
+    if(hasNativeBridge()) setNfc("live","Native iPhone reader connected");
+    else if(IS_IOS) setNfc("off","iPhone — pair a Bluetooth reader or type the code");
+    else if(!("NDEFReader" in window)) setNfc("off","No NFC on this device — use a reader or the code field");
+  }};
+};
+function setNfc(state,msg){ nfcState=state; const el=$("#nfcState"); if(!el)return;
+  el.className="nfc-state "+(state==="live"?"live":state==="off"?"off":""); el.querySelector("span").textContent=msg; }
+async function startNFC(){
+  if(!("NDEFReader" in window)){ setNfc("off","No NFC here — Web NFC needs Chrome on Android. Use a reader or the code field"); return; }
+  if(!window.isSecureContext){ setNfc("off","NFC needs the app to be opened over https://"); return; }
+  if(nfcReader && nfcState==="live"){ setNfc("live","Reader active — waiting for a card"); return; }  // one reader only
+  try{
+    nfcReader = new NDEFReader();
+    await nfcReader.scan();
+    setNfc("live","Reader active — waiting for a card");
+    let lastCode="", lastAt=0;
+    nfcReader.onreading = ev => {
+      // only the tag UID is used; NDEF record contents are never treated as a card code
+      const code = normCode(ev.serialNumber);
+      if(!code){ toast("This card has no readable UID in the browser","err"); return; }
+      if(code===lastCode && now()-lastAt<1500) return;   // the same tap fires more than once
+      lastCode=code; lastAt=now();
+      receiveCard(code);
+    };
+    nfcReader.onreadingerror = () => {
+      // Chrome only exposes the serial number for NDEF-readable tags. Hotel cards
+      // are often not NDEF-formatted, in which case this fires every time and the
+      // browser cannot give us the UID at all — the Android wrapper app can.
+      toast("This card is not readable from the browser","err");
+      setNfc("off","Card not NDEF — needs the Android wrapper app or a reader");
+    };
+  }catch(err){ nfcReader=null; setNfc("off","Reader blocked — allow NFC in the browser, or type the code"); }
+}
+/* Every card that arrives from outside the scan screen (NFC tap, iOS bridge,
+   URL hand-off) goes through here, so it never lands in a stale context such
+   as "add a card to room X" from a screen the user already left. */
+function receiveCard(raw){
+  const code=normCode(raw); if(!code) return;
+  if(!SESSION){ pendingHandOff=code; toast("Sign in to open card "+code,"info"); return; }
+  if(current().view!=="scan"){ closeSheet(); scanCtx={ctx:"identify"}; go("scan",{ctx:"identify"}); }
+  else if(!$("#modal").classList.contains("hidden")) closeSheet();
+  handleCard(code);
+}
+/* Free fallback for iPhones without the wrapper app: read the UID in any
+   App Store NFC utility, copy it, and paste it here. */
+async function pasteCode(){
+  try{
+    const txt = await navigator.clipboard.readText();
+    const code = normCode(txt);
+    if(!code){ toast("Clipboard is empty","err"); return; }
+    handleCard(code);
+  }catch(err){
+    toast("Allow clipboard access, or type the code","err");
+    $("#codeIn")?.focus();
+  }
+}
+/* External hand-off: any app or Shortcut that can open a URL may pass a card
+   as  ...index.html?card=04A2B7C19E3F80  and the app picks it up on load. */
+function consumeUrlCard(){
+  try{
+    const q = new URLSearchParams(location.search);
+    const raw = q.get("card") || q.get("uid");
+    if(!raw) return null;
+    history.replaceState(null,"",location.pathname);   // don't re-scan on refresh
+    return normCode(raw) || null;
+  }catch(e){ return null; }
+}
+function submitCode(){ const v=normCode($("#codeIn")?.value); if(!v){ toast("Enter a card code","err"); return; } handleCard(v); }
+/* Enter submits the admin / first-run forms */
+document.addEventListener("keydown", e=>{
+  if(SESSION || e.key!=="Enter") return;
+  if(e.target.closest && e.target.closest(".login")){ const b=$('.login [data-act="admin-signin"], .login [data-act="first-admin"]'); if(b){ e.preventDefault(); b.click(); } }
+});
+/* keyboard-wedge readers */
+document.addEventListener("keydown", e=>{
+  if(!SESSION || current().view!=="scan") return;
+  if(document.activeElement && document.activeElement.id==="codeIn") return;
+  if(!$("#modal").classList.contains("hidden")) return;   // a sheet is open
+  if(e.key==="Enter"){ if(wedge.length>=4) handleCard(wedge); wedge=""; return; }
+  if(e.key.length===1) { wedge+=e.key; clearTimeout(wedgeT); wedgeT=setTimeout(()=>wedge="",400); }
+});
+
+function handleCard(rawCode){
+  const code = normCode(rawCode);
+  if(!code) return;
+  if(navigator.vibrate) try{navigator.vibrate(30)}catch(e){}
+  const c = cardByCode(code);
+  const ctx = scanCtx || {ctx:"identify"};
+
+  if(ctx.ctx==="add_card"){
+    const roomId=ctx.room_id??null, storageId=stor(ctx.storage_id)?ctx.storage_id:null;
+    if(!room(roomId)){ toast("That room no longer exists","err"); home(); return; }
+    const inUse = c && c.status!=="released" && (c.room_id!=null || c.storage_id!=null);
+    if(inUse && c.room_id!==roomId){ askReassign(c, roomId, storageId); return; }
+    if(c){                                   // same room, or a released card being reused
+      const reused=c.status==="released";
+      Object.assign(c,{room_id:roomId,storage_id:storageId,status:"active",released_at:null,updated_at:now(),last_scanned_at:now()});
+      log(reused?"Key card reused":"Key card linked",{key_card_id:c.id,room_id:roomId,storage_id:storageId});
+      save(); addedCardSheet(c); return;
+    }
+    const nc={id:uid(),card_code:code,room_id:roomId,storage_id:storageId,status:"active",created_at:now(),updated_at:now(),last_scanned_at:now()};
+    DB.cards.push(nc);
+    log("Key card added",{key_card_id:nc.id,room_id:roomId,storage_id:storageId});
+    save(); addedCardSheet(nc);
+    return;
+  }
+  if(!c || c.status==="released"){ replaceView("register",{code, next:ctx.ctx}); return; }
+  c.last_scanned_at=now();
+  log("Key card scanned",{key_card_id:c.id,room_id:c.room_id,storage_id:c.storage_id});
+  save();
+  // a guest's items sit in several locations (one per item): the room is the guest's page
+  if(room(c.room_id)){
+    if(ctx.ctx==="checkin") replaceView("stow",{room_id:c.room_id});
+    else replaceView("room",{id:c.room_id, card_id:c.id, intent:ctx.ctx,
+      notice:storagesOfRoom(c.room_id).length?"":"No equipment checked in for this room yet."});
+  }
+  else if(stor(c.storage_id)) replaceView("storage",{id:c.storage_id, card_id:c.id, intent:ctx.ctx});
+  else replaceView("register",{code, next:ctx.ctx});
+}
+function addedCardSheet(nc){
+  openSheet(`<h3>Key card added</h3>
+    <p class="sub">Card <b class="mono">${esc(nc.card_code)}</b> ${nc.storage_id?"now opens the same storage.":"is linked to the room."}</p>
+    <div class="panel"><div class="row between"><b class="num" style="font-size:22px">Room ${esc(room(nc.room_id)?.room_number||"—")}</b>
+      ${stor(nc.storage_id)?`<span class="tag sm">${esc(stor(nc.storage_id).storage_number)}</span>`:`<span class="tag sm ghost">No storage</span>`}</div></div>
+    <div class="btn-grid" style="margin-top:14px">
+      <button class="btn" data-act="close-sheet">Scan another card</button>
+      <button class="btn primary" data-act="done-adding" data-id="${nc.room_id}">Done</button></div>`);
+}
+function askReassign(c,newRoomId,newStorageId){
+  const oldR=room(c.room_id), oldS=stor(c.storage_id);
+  openSheet(`<h3 style="color:var(--st-attention)">Card already in use</h3>
+    <p class="sub">Card <b class="mono">${esc(c.card_code)}</b> is currently linked to:</p>
+    <div class="panel"><div class="row between"><b class="num" style="font-size:22px">Room ${esc(oldR?.room_number||"—")}</b>
+      ${oldS?`<span class="tag sm">${esc(oldS.storage_number)}</span>`:`<span class="tag sm ghost">No storage</span>`}</div></div>
+    <p class="hint">Reassigning keeps the old room's other cards untouched and writes the change to the history.</p>
+    <div class="btn-grid" style="margin-top:14px">
+      <button class="btn" data-act="close-sheet">Cancel</button>
+      <button class="btn primary" data-act="do-reassign" data-card="${c.id}" data-room="${newRoomId}" data-storage="${newStorageId||""}">Reassign card</button></div>`);
+}
+function doReassign(cardId,roomId,storageId){
+  const c=card(cardId); if(!c) return;
+  const from=`Room ${room(c.room_id)?.room_number||"—"} / ${stor(c.storage_id)?.storage_number||"—"}`;
+  c.room_id=roomId; c.storage_id=storageId||null; c.status="active"; c.released_at=null; c.updated_at=now(); c.last_scanned_at=now();
+  const to=`Room ${room(roomId)?.room_number||"—"} / ${stor(storageId)?.storage_number||"—"}`;
+  log("Key card reassigned",{key_card_id:c.id,room_id:roomId,storage_id:storageId||null,prev:from,next:to});
+  save(); closeSheet(); toast("Card reassigned"); render();
+}
+
+/* ==========================================================================
+   8. REGISTER NEW CARD
+   ========================================================================== */
+VIEWS.register = (p) => {
+  const old = cardByCode(p.code);                       // released card coming back (rooms rotate, so no room is suggested)
+  return {title: old?"Returning card":"New key card", sub: old?"Released — ready to reuse":"Not registered yet",
+  body:`
+    <div class="panel" style="text-align:center;border-color:var(--st-ready)">
+      <div class="eyebrow">Card code detected</div>
+      <div class="mono" style="font-size:26px;font-weight:700;margin-top:6px">${esc(p.code)}</div>
+    </div>
+    <h2 class="sec">Link the card to a room</h2>
+    <div class="panel">
+      <label class="f"><span>Room number</span>
+        <input class="input" id="fRoom" placeholder="Room" autocomplete="off" inputmode="numeric"></label>
+      <label class="f"><span>Guest name (optional)</span>
+        <input class="input" id="fGuest" placeholder="Surname" autocomplete="off"></label>
+      <label class="f"><span>Hotel departure (optional)</span>
+        <input class="input" id="fOut" type="date" value=""></label>
+      <label class="check"><input type="checkbox" id="fVip"> VIP guest — use the VIP area</label>
+      <div class="hint">Storage locations are given item by item at check-in: boots, skis and snowboards each go to their own area.</div>
+    </div>
+    <div class="btn-grid one" style="margin-top:20px">
+      <button class="btn primary" data-act="save-card" data-code="${esc(p.code)}" data-next="${esc(p.next||"identify")}">Save key card</button>
+      <button class="btn ghost" data-act="back">Cancel</button>
+    </div>`,
+  after(){ setTimeout(()=>$("#fRoom")?.focus(),80); }};
+};
+/* finds or opens the room for a new stay; a checked-out room starts clean */
+function upsertRoom(num,guest,dep,vip){
+  let r=roomByNumber(num);
+  if(!r){ r={id:uid(),room_number:num,guest_name:guest,departure:dep,status:"staying",created_at:now(),updated_at:now()}; DB.rooms.push(r); }
+  else{ if(r.status==="checked_out"){ r.guest_name=guest; r.departure=dep; r.vip=false; } else { if(guest) r.guest_name=guest; if(dep) r.departure=dep; }
+    r.status="staying"; r.updated_at=now(); }
+  if(vip) r.vip=true;
+  return r;
+}
+function saveNewCard(code,next){
+  const rNum=$("#fRoom").value.trim(), guest=$("#fGuest").value.trim();
+  const dep=$("#fOut")?$("#fOut").value:"", vip=!!$("#fVip")?.checked;
+  if(!rNum){ toast("Enter the room number","err"); return; }
+  const r=upsertRoom(rNum,guest,dep,vip);
+  const s=storagesOfRoom(r.id)[0]||null;
+  let c = cardByCode(code), reused = false;
+  if(c){ reused = c.status==="released";
+    Object.assign(c,{room_id:r.id,storage_id:s?s.id:null,status:"active",released_at:null,updated_at:now(),last_scanned_at:now()});
+  }else{
+    c={id:uid(),card_code:normCode(code),room_id:r.id,storage_id:s?s.id:null,status:"active",
+      created_at:now(),updated_at:now(),last_scanned_at:now()};
+    DB.cards.push(c);
+  }
+  log(reused?"Key card reused":"Key card registered",
+    {key_card_id:c.id,room_id:c.room_id,storage_id:c.storage_id,notes:guest?"Guest: "+guest:""});
+  save(); toast("Key card registered");
+  if(next==="checkin" || !s) replaceView("stow",{room_id:r.id});
+  else replaceView("room",{id:r.id,card_id:c.id,intent:next});
+}
+
+/* ==========================================================================
+   8b. CHECK IN — by key card or by room number. Every item gets its own
+       location in the area of its kind (boots / ski / kids / snowboard /
+       VIP); the valet can change the suggestion and add a photo per item.
+   ========================================================================== */
+VIEWS.stow = (p) => {
+  const d = p.d = p.d || {room:"", guest:"", dep:"", vip:false, items:[]};
+  const r = room(p.room_id);
+  if(p.room_id && !r) return {title:"Check in", body:`<div class="empty">This room no longer exists.</div>`};
+  if(r && d.vip===false && r.vip && r.status!=="checked_out") d.vip=true;
+  const adding = r && storagesOfRoom(r.id).length>0;     // room already checked in: this adds items
+  return {title:adding?"Add equipment":"Check in", sub:r?"Room "+esc(r.room_number):"By room number",
+  body:`
+    ${r?`<div class="panel"><div class="row between"><b class="num" style="font-size:30px">Room ${esc(r.room_number)}</b>
+        ${storagesOfRoom(r.id).length?`<span class="chip">${storagesOfRoom(r.id).length} stored</span>`:""}</div>
+        <div class="muted tiny" style="margin-top:4px">${esc(guestOf(r)||"No guest name")}${r.departure?" · leaves "+fmtDay(r.departure):""}</div>
+        <label class="check" style="margin-top:6px"><input type="checkbox" id="ciVip" ${d.vip?"checked":""}> VIP guest — use the VIP area</label></div>`
+    :`<div class="panel">
+        <label class="f"><span>Room number</span><input class="input big" id="ciRoom" value="${esc(d.room)}" placeholder="Room" inputmode="numeric" autocomplete="off"></label>
+        <div class="hint" id="ciRoomHint" style="margin:-6px 0 10px"></div>
+        <label class="f"><span>Guest name (optional)</span><input class="input" id="ciGuest" value="${esc(d.guest)}" placeholder="Surname" autocomplete="off"></label>
+        <label class="f"><span>Hotel departure (optional)</span><input class="input" id="ciDep" type="date" value="${esc(d.dep)}"></label>
+        <label class="check"><input type="checkbox" id="ciVip" ${d.vip?"checked":""}> VIP guest — use the VIP area</label>
+      </div>`}
+    <div id="ciPc"></div>
+    <h2 class="sec">Equipment</h2>
+    <div id="ciItems"></div>
+    <div class="btn-grid" style="grid-template-columns:repeat(3,1fr)">
+      ${STORED.map(k=>`<button class="btn sm" style="width:100%;padding:0 6px" data-act="ci-add" data-k="${k}">+ ${catInfo(k).ic} ${esc(catInfo(k).short||catInfo(k).label)}</button>`).join("")}
+    </div>
+    <div class="hint">One line per item: a pair of boots, a pair of skis with their poles, one snowboard. Take its photo and check the storage — the first free one of its area is suggested.</div>
+    <div class="btn-grid one" style="margin-top:18px">
+      <button class="btn go" data-act="ci-save" id="ciSave">${adding?"Add to room":"Check in"}</button>
+      ${r?"":`<button class="btn ghost" data-act="scan" data-ctx="checkin">Optional: scan the key card</button>`}
+    </div>
+    <div class="hint">${r?"":"The key card is optional — add it later from the room page whenever the guest has it."}
+    </div>
+    <h2 class="sec">Free locations</h2>
+    ${kindsBar()}`,
+  after(){
+    const bind=(id,k,fn)=>{ const el=$(id); if(el) el.addEventListener(el.type==="checkbox"?"change":"input",()=>{ d[k]=el.type==="checkbox"?el.checked:el.value; if(fn) fn(); }); };
+    bind("#ciRoom","room",roomHint); bind("#ciGuest","guest"); bind("#ciDep","dep"); bind("#ciVip","vip",drawItems);
+    roomHint(); drawItems();
+    if(!r && !d.room) setTimeout(()=>$("#ciRoom")?.focus(),80);
+  }};
+};
+const newItem = k => ({key:uid(), category:k, kids:false, owner:"", size:"", note:"", storage_id:null, photo:null, photo_id:null});
+const stowParams = () => current().view==="stow" ? current().params : null;
+function roomHint(){
+  drawPc();
+  const el=$("#ciRoomHint"), d=stowParams()?.d; if(!el||!d) return;
+  const r=d.room.trim()?roomByNumber(d.room):null;
+  el.textContent = r && r.status!=="checked_out" && storagesOfRoom(r.id).length
+    ? `Room ${r.room_number} already has ${storagesOfRoom(r.id).length} location(s) — these items are added to it.` : "";
+}
+/* the pre-check-ins used for this check-in (a family may send one each), and
+   any others still waiting for the same room */
+function drawPc(){
+  const p=stowParams(), box=$("#ciPc"); if(!p||!box) return;
+  const d=p.d, r=room(p.room_id), used=(d.pcs||[]).map(precheck).filter(Boolean);
+  const others=prechecksOfRoom(r?r.room_number:d.room).filter(x=>!(d.pcs||[]).includes(x.id));
+  box.innerHTML = used.map(u=>`<div class="panel pc-on">
+      <div class="eyebrow">Kiosk pre-check-in · sent ${esc(ago(u.created_at))}</div>
+      <div class="row" style="gap:12px;margin-top:4px">${u.face_photo_id?thumb(u.face_photo_id,"ID photo · "+pcGuest(u)):""}
+        <div><b class="num" style="font-size:22px;display:block;margin-bottom:2px">${esc(pcGuest(u))}</b>
+        <div class="muted tiny">Declared: ${esc(pcItems(u))}${u.departure?" · leaves "+fmtDay(u.departure):""}</div></div></div>
+      <div class="row" style="gap:8px;margin-top:10px"><button class="btn sm ghost" data-act="pc-drop" data-id="${u.id}">Don't use it</button>
+        <button class="btn sm ghost" data-act="pc-dismiss" data-id="${u.id}">Dismiss</button></div></div>`).join("")
+    + (used.length?`<div class="hint">Count the items with the guest, take the photos and mark VIP / Kids before checking in.</div>`:"")
+    + others.map(x=>`<div class="panel pc-wait"><div class="eyebrow">Pre-check-in waiting · ${esc(ago(x.created_at))}</div>
+      <div class="row between" style="gap:10px;margin-top:4px"><span><b>${esc(pcGuest(x))}</b><br><span class="muted tiny">${esc(pcItems(x))}</span></span>
+      <button class="btn sm primary" style="width:auto" data-act="pc-use" data-id="${x.id}">${used.length?"Add too":"Use it"}</button></div></div>`).join("");
+}
+/* adds a pre-check-in to the check-in form: one line per declared item */
+function usePrecheck(id){
+  const p=stowParams(), pc=precheck(id); if(!p||!pc) return;
+  const d=p.d; d.pcs=d.pcs||[];
+  if(d.pcs.includes(pc.id)) return;
+  if(!p.room_id && !d.pcs.length){ d.room=pc.room_number; d.guest=pcGuest(pc); if(pc.departure) d.dep=pc.departure; }
+  d.pcs.push(pc.id);
+  // two of a kind = several people (a family registered together): the valet asks whose each item is
+  const owner = PC_ITEMS.some(([f])=>+pc[f]>1) ? "" : String(pc.first_name||"").trim();
+  PC_ITEMS.forEach(([f,k])=>{ for(let n=0;n<(+pc[f]||0);n++) d.items.push({...newItem(k),owner,pc:pc.id}); });
+  render();
+}
+function dropPrecheck(id){
+  const p=stowParams(); if(!p) return;
+  p.d.items=p.d.items.filter(i=>i.pc!==id); p.d.pcs=(p.d.pcs||[]).filter(x=>x!==id);
+}
+function openPrecheck(id){
+  const pc=precheck(id);
+  if(!pc||pc.status!=="pending"){ toast("This pre-check-in is no longer waiting","err"); render(); return; }
+  const r=roomByNumber(pc.room_number);
+  go("stow", r&&r.status!=="checked_out"&&storagesOfRoom(r.id).length ? {room_id:r.id} : {});
+  usePrecheck(id);
+}
+function dismissPrecheck(id){
+  const pc=precheck(id); if(!pc) return;
+  openSheet(`<h3>Dismiss pre-check-in</h3><p class="sub">Room ${esc(pc.room_number)} · ${esc(pcGuest(pc))} — ${esc(pcItems(pc))}. It disappears from every screen; nothing is checked in.</p>
+    <div class="btn-grid"><button class="btn" data-act="close-sheet">Cancel</button><button class="btn danger" data-act="pc-dismiss-ok" data-id="${pc.id}">Dismiss</button></div>`);
+}
+
+function drawItems(){
+  drawPc();
+  const p=stowParams(), box=$("#ciItems"); if(!p||!box) return;
+  const d=p.d; autoAssign(d.items,d.vip);
+  const freeAll=DB.storages.filter(isFree).sort(byNumber);
+  const r=room(p.room_id)||(d.room.trim()?roomByNumber(d.room):null);
+  const names=r?ownersOfRoom(r.id,d.items.map(i=>i.owner)):[...new Set(d.items.map(i=>String(i.owner||"").trim()).filter(Boolean))];
+  box.innerHTML = ownerList("ciOwners",names) + d.items.map((i,n)=>{
+    const c=catInfo(i.category), dest=stor(i.storage_id||i.auto);
+    const free=freeAll.filter(s=>fitsItem(i,s,d.vip)), areas=[...new Set(free.map(s=>s.section||"Unassigned area"))];
+    const want=kindsFor(i,false).map(k=>KINDS[k]).join(" / ");
+    const usedByOthers=new Set(d.items.filter(x=>x!==i).map(x=>x.storage_id||x.auto).filter(Boolean));
+    return `<div class="ci-item" data-key="${i.key}">
+      <div class="hd"><span style="font-size:22px">${c.ic}</span><b>${esc(c.label)}</b>
+        <button class="btn sm ghost" data-act="ci-del" data-key="${i.key}" aria-label="Remove">✕</button></div>
+      <input class="input" data-ci="owner" value="${esc(i.owner||"")}" list="ciOwners" placeholder="Whose is it? e.g. Maria, Dad, red jacket" autocomplete="off" style="margin-bottom:8px">
+      ${!d.vip&&(i.category==="skis"||i.category==="snowboard")?`<label class="check"><input type="checkbox" data-ci="kids" ${i.kids?"checked":""}> Kids use — goes to the Kids area</label>`:""}
+      <div class="ci-photo">
+        ${i.photo?`<img src="${i.photo}" alt="" data-act="ci-cam" data-key="${i.key}" style="cursor:pointer">`:""}
+        <button class="btn sm ${i.photo?"":"primary"}" style="width:auto;flex:1" data-act="ci-cam" data-key="${i.key}">📷 ${i.photo?"Retake photo":"Take photo"}</button>
+        ${i.photo?`<button class="btn sm ghost" data-act="ci-unphoto" data-key="${i.key}">Remove</button>`:""}
+      </div>
+      <div class="dest"><span class="eyebrow">Storage</span>
+        ${dest?`<span class="tag sm">${esc(dest.storage_number)}</span>`:`<span class="chip solid s-attention">No free ${esc(want)} location</span>`}
+        <select class="input" data-ci="storage_id" aria-label="Location">
+          <option value="">${i.auto?"Automatic · "+esc(stor(i.auto).storage_number+" · "+(stor(i.auto).section||"")):"Automatic"}</option>
+          ${areas.map(a=>`<optgroup label="${esc(a)}">${free.filter(s=>(s.section||"Unassigned area")===a&&!usedByOthers.has(s.id)).map(s=>
+            `<option value="${s.id}" ${i.storage_id===s.id?"selected":""}>${esc(s.storage_number)}</option>`).join("")}</optgroup>`).join("")}
+        </select></div>
+    </div>`;
+  }).join("") || `<div class="empty"><span class="ic">🎿</span>Add the guest's boots, skis or snowboard below.</div>`;
+}
+function ciItem(el){ const p=stowParams(), k=+el.closest("[data-key]")?.dataset.key; return p && p.d.items.find(i=>i.key===k); }
+document.addEventListener("input",e=>{
+  const f=e.target.dataset && e.target.dataset.ci; if(!f || f==="storage_id" || f==="kids") return;
+  const i=ciItem(e.target); if(i) i[f]=e.target.value;
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset && (t.dataset.ci==="storage_id" || t.dataset.ci==="kids")){
+    const i=ciItem(t); if(!i) return;
+    if(t.dataset.ci==="kids"){ i.kids=t.checked; i.storage_id=null; } else i.storage_id=t.value?+t.value:null;
+    drawItems();
+  }
+});
+async function stowSave(){
+  const p=stowParams(); if(!p||busy) return;
+  const d=p.d; let r=room(p.room_id);
+  if(p.room_id && !r){ toast("That room no longer exists","err"); home(); return; }
+  if(!r && !d.room.trim()){ toast("Enter the room number","err"); $("#ciRoom")?.focus(); return; }
+  if(!d.items.length){ toast("Add at least one item","err"); return; }
+  autoAssign(d.items,d.vip);
+  const lost=d.items.find(i=>!fitsItem(i,stor(i.storage_id||i.auto),d.vip));
+  if(lost){ toast(`No free location for ${catInfo(lost.category).label.toLowerCase()} — free one or pick another area`,"err"); drawItems(); return; }
+  const btn=$("#ciSave"); busy=true; if(btn) btn.disabled=true;
+  try{
+    // photos first: if an upload fails nothing has changed yet (done ones are not sent twice)
+    for(const i of d.items) if(i.photo && !i.photo_id){ if(btn) btn.textContent="Uploading photos…"; i.photo_id=await uploadPhoto(i.photo); }
+  }catch(err){ toast(err.message,"err"); busy=false; if(btn){ btn.disabled=false; btn.textContent=r&&storagesOfRoom(r.id).length?"Add to room":"Check in"; } return; }
+  busy=false;
+  // another device may have taken a location meanwhile
+  const gone=d.items.find(i=>{ const s=stor(i.storage_id||i.auto); return !s || !isFree(s); });
+  if(gone){ gone.storage_id=null; toast("A location was just taken on another device — check the new suggestion","err"); render(); return; }
+  if(!r) r=upsertRoom(d.room.trim(),d.guest.trim(),d.dep,d.vip);
+  else if(d.vip!==!!r.vip){ r.vip=d.vip; r.updated_at=now(); }
+  (d.pcs||[]).map(precheck).filter(pc=>pc&&pc.status==="pending").forEach(pc=>{
+    Object.assign(pc,{status:"confirmed",confirmed_at:now(),room_id:r.id,updated_at:now()});
+    if(!guestOf(r)){ r.guest_name=pcGuest(pc); r.updated_at=now(); }
+    if(!r.departure && pc.departure){ r.departure=pc.departure; r.updated_at=now(); }
+    // the guest's ID photo stays with the room until check-out (the server deletes it then)
+    if(pc.face_photo_id){ r.face_photo_ids=[...new Set([...(r.face_photo_ids||[]),pc.face_photo_id])]; r.updated_at=now(); }
+    log("Pre-check-in confirmed",{room_id:r.id,
+      notes:`${pcGuest(pc)} · declared ${pcItems(pc)} · room checked in with ${d.items.length} item${d.items.length===1?"":"s"}`});
+  });
+  const placed=[];
+  d.items.forEach(i=>{
+    const s=stor(i.storage_id||i.auto);
+    s.room_id=r.id; s.updated_at=now();
+    const e={id:uid(),storage_id:s.id,category:i.category,description:"",quantity:1,size:"",type:"",
+      status:"stored",created_at:now(),updated_at:now()};
+    if(i.kids && !d.vip) e.kids=true;
+    if(String(i.owner||"").trim()) e.owner=String(i.owner).trim();
+    if(i.photo_id) e.photo_id=i.photo_id;
+    DB.equipment.push(e);
+    setStorageStatus(s,"occupied","Check-in");
+    log("Equipment checked in",{storage_id:s.id,room_id:r.id,equipment_id:e.id,photo_id:i.photo_id,notes:`${eqLabel(e)} ×1`});
+    placed.push([e,s]);
+  });
+  // the room's key cards open the guest's first location (older screens expect one)
+  const first=storagesOfRoom(r.id)[0];
+  cardsOfRoom(r.id).forEach(c=>{ if(c.storage_id==null||!stor(c.storage_id)||stor(c.storage_id).room_id!==r.id){ c.storage_id=first?first.id:null; c.updated_at=now(); } });
+  save();
+  replaceView("room",{id:r.id});
+  openSheet(`<h3>Checked in · Room ${esc(r.room_number)}</h3>
+    <p class="sub">Put each item in its location:</p>
+    ${placed.map(([e,s])=>`<div class="eq"><div class="ic">${catInfo(e.category).ic}</div>
+      <div class="body"><b>${esc(eqLabel(e))}</b><small>${esc([s.section,whereOf(s)].filter(Boolean).join(" · "))}</small></div>
+      ${e.photo_id?thumb(e.photo_id,eqLabel(e)):""}<span class="tag sm">${esc(s.storage_number)}</span></div>`).join("")}
+    <div style="margin-top:12px">${hallPlan(placed.map(([,s])=>s.section))}</div>
+    <div class="btn-grid" style="margin-top:14px">
+      <button class="btn" data-act="scan" data-ctx="add_card" data-room="${r.id}" data-storage="${first?first.id:""}">+ Key card</button>
+      <button class="btn primary" data-act="close-sheet">Done</button></div>`);
+  toast(`${placed.length} item${placed.length===1?"":"s"} stored`);
+}
+
+/* ==========================================================================
+   9. STORAGE DETAIL
+   ========================================================================== */
+VIEWS.storage = (p) => {
+  const s = stor(p.id);
+  if(!s) return {title:"Storage", body:`<div class="empty">This storage no longer exists.</div>`};
+  const r = room(s.room_id), cards = cardsOfStorage(s.id), eq = eqOf(s.id), items=eqCount(s.id);
+  const scannedCard = p.card_id ? card(p.card_id) : null;
+  const hist = DB.history.filter(h=>h.storage_id===s.id).slice(0,6);
+  const isOut = s.status==="guest_using";
+  return {title:s.storage_number, sub:esc([s.section,KINDS[kindOf(s)]&&KINDS[kindOf(s)]!==s.section?KINDS[kindOf(s)]:""].filter(Boolean).join(" · ")),
+  body:`
+    ${scannedCard?`<div class="panel" style="border-color:var(--st-ready);margin-bottom:12px">
+      <div class="row between"><div><div class="eyebrow">Card scanned</div>
+      <div class="mono" style="font-size:17px;font-weight:700">${esc(scannedCard.card_code)}</div></div>
+      <span class="chip solid s-ready">Match</span></div></div>`:""}
+    ${p.notice?`<div class="alert" style="margin-bottom:12px"><span>⚠️</span><span><b>Heads up</b><p>${esc(p.notice)}</p></span></div>`:""}
+
+    <div class="panel">
+      <div class="row between" style="flex-wrap:wrap;gap:10px">
+        <span class="tag">${esc(s.storage_number)}</span>
+        ${statusChip(s.status,true)}
+      </div>
+      <div style="margin-top:14px">
+        <div class="kv"><span>Room</span><b>${r?`<button data-act="nav" data-view="room" data-id="${r.id}" style="font:inherit;color:inherit;padding:0;text-decoration:underline">${esc(r.room_number)}</button>${r.vip?" · VIP":""}`:"Not assigned"}</b></div>
+        <div class="kv"><span>Guest</span><b>${guestOf(r)?esc(guestOf(r)):"—"}</b></div>
+        ${whereOf(s)?`<div class="kv"><span>Where</span><b>${esc(s.section)} · ${esc(whereOf(s))}</b></div>`:""}
+        <div class="kv"><span>Key cards</span><b>${cards.length}</b></div>
+        <div class="kv"><span>Equipment</span><b>${items} item${items===1?"":"s"}</b></div>
+        <div class="kv"><span>Updated</span><b>${ago(s.updated_at)}</b></div>
+        <div class="kv"><span>Last handled by</span><b>${esc(hist[0]&&user(hist[0].user_id)?firstName(user(hist[0].user_id)):"—")}</b></div>
+      </div>
+    </div>
+
+    ${isOut?`<div class="alert hot" style="margin-top:10px"><span>🎿</span><span><b>Equipment is with the guest</b>
+      <p>Checked out ${ago((DB.history.find(h=>h.storage_id===s.id&&h.action==="Equipment checked out")||{timestamp:s.updated_at}).timestamp)}.</p></span></div>`:""}
+
+    <div class="btn-grid" style="margin-top:12px">
+      ${isOut
+        ? `<button class="btn go" data-act="return-eq" data-id="${s.id}" style="grid-column:1/-1">Return equipment</button>`
+        : `<button class="btn primary" data-act="checkin-here" data-id="${s.id}">Check in equipment</button>
+           <button class="btn" data-act="checkout-eq" data-id="${s.id}" ${items?"":"disabled"}>Hand to guest</button>`}
+      <button class="btn go" data-act="final-out" data-id="${s.id}" style="grid-column:1/-1" ${(items||cards.length)?"":"disabled"}>Check out &amp; release</button>
+    </div>
+
+    <div class="two-col"><div>
+    <h2 class="sec">Equipment ${items?`· ${items}`:""}</h2>
+    ${eq.length? eq.map(e=>eqRow(e)).join("") : `<div class="empty"><span class="ic">🎿</span>Nothing stored here yet.<br>Add the guest's equipment to start.</div>`}
+    <div class="btn-grid one" style="margin-top:10px">
+      <button class="btn" data-act="add-eq" data-id="${s.id}">Add equipment to ${esc(s.storage_number)}</button>
+    </div>
+
+    <h2 class="sec">Key cards · ${cards.length}</h2>
+    <div class="pill-list">
+      ${cards.map(c=>`<span class="pill">${esc(c.card_code)}<button class="x" data-act="unlink-card" data-id="${c.id}" aria-label="Remove card">✕</button></span>`).join("")||`<span class="muted">No cards linked.</span>`}
+    </div>
+    <button class="btn" style="margin-top:10px" data-act="scan" data-ctx="add_card" data-room="${r?r.id:""}" data-storage="${s.id}" ${r?"":"disabled"}>+ Add key card</button>
+    ${r?"":`<div class="hint">Assign a room first to link key cards.</div>`}
+
+    </div><div>
+    <h2 class="sec">Manage</h2>
+    <div class="btn-grid">
+      <button class="btn ghost" data-act="assign-room" data-id="${s.id}">${r?"Change room":"Assign room"}</button>
+      <button class="btn ghost" data-act="move-storage" data-id="${s.id}">Move storage</button>
+      <button class="btn ghost" data-act="set-status" data-id="${s.id}">Change status</button>
+      <button class="btn danger" data-act="release-storage" data-id="${s.id}">Close & clear</button>
+    </div>
+
+    <h2 class="sec">Storage history</h2>
+    <div class="hist">${hist.map(histEvent).join("")||`<div class="muted">Nothing logged yet.</div>`}</div>
+    </div></div>`,
+  after(){
+    if(p.intent==="checkin"){ p.intent=null; openCheckinSheet(s.id); }
+    if(p.intent==="checkout" && items && !isOut){ p.intent=null; confirmCheckout(s.id); }
+    if(p.intent==="checkout" && isOut){ p.intent=null; confirmReturn(s.id); }
+  }};
+};
+function eqMeta(e){ const c=catInfo(e.category);
+  return [e.type,e.size?`${c.size||"Size"} ${e.size}`:"",e.description].filter(Boolean).join(" · "); }
+function eqRow(e){
+  const c=catInfo(e.category);
+  return `<div class="eq"><div class="ic">${c.ic}</div>
+    <button class="body" style="text-align:left;padding:0" data-act="eq-edit" data-id="${e.id}"><b>${esc(eqLabel(e))}</b><small>${esc(eqMeta(e)||"No details")} · edit</small></button>
+    ${e.photo_id?thumb(e.photo_id,eqLabel(e)):""}
+    <div class="stepper">
+      <button data-act="eq-minus" data-id="${e.id}" aria-label="Less">−</button>
+      <span class="q">${esc(e.quantity)}</span>
+      <button data-act="eq-plus" data-id="${e.id}" aria-label="More">+</button>
+    </div></div>`;
+}
+
+/* ---- equipment sheets ---- */
+let eqPhoto=null;                          // photo taken in the equipment sheet, not uploaded yet
+function openEqSheet(storageId, editId){
+  const e = editId?DB.equipment.find(x=>x.id===editId):null;
+  const fit = catsForStorage(stor(+storageId)) || STORED;
+  const cat = e&&CATS[e.category]?e.category:fit[0];
+  const cats = fit.includes(cat)?fit:[...fit,cat];
+  eqPhoto=null;
+  openSheet(`<h3>${e?"Edit equipment":"Add equipment"}</h3>
+    <p class="sub">Storage ${esc(stor(+storageId)?.storage_number||"—")}</p>
+    <label class="f"><span>Category</span>
+      <select class="input" id="eCat">${cats.map(k=>`<option value="${k}" ${k===cat?"selected":""}>${CATS[k].ic}  ${CATS[k].label}</option>`).join("")}</select></label>
+    <label class="f"><span>Whose is it? (optional)</span><input class="input" id="eOwner" value="${esc(e&&e.owner||"")}" list="eqOwners" placeholder="e.g. Maria, Dad, red jacket" autocomplete="off"></label>
+    ${ownerList("eqOwners",stor(+storageId)?.room_id?ownersOfRoom(stor(+storageId).room_id):[])}
+    <label class="check"><input type="checkbox" id="eKids" ${(e?e.kids:kindOf(stor(+storageId))==="ski_kids")?"checked":""}> Kids use</label>
+    <div class="ci-photo">
+      <img id="eqPhotoImg" class="${e&&e.photo_id?"":"hidden"}" src="${e&&e.photo_id?photoUrl(e.photo_id):""}" alt="">
+      <button class="btn sm" style="width:auto;flex:1" data-act="eq-cam">📷 ${e&&e.photo_id?"Retake photo":"Take photo"}</button></div>
+    <div id="eqCam"></div>
+    <div class="btn-grid" style="margin-top:8px">
+      ${e?`<button class="btn danger" data-act="eq-delete" data-id="${e.id}">Remove</button>`:`<button class="btn" data-act="close-sheet">Cancel</button>`}
+      <button class="btn primary" data-act="eq-save" data-storage="${storageId}" data-id="${e?e.id:""}">Save</button>
+    </div>`);
+}
+function eqCamera(){
+  const box=$("#eqCam"); if(!box) return;
+  cameraInto(box,url=>{ eqPhoto=url; box.innerHTML=""; const im=$("#eqPhotoImg"); if(im){ im.src=url; im.classList.remove("hidden"); } },
+    ()=>{ box.innerHTML=""; });
+}
+async function saveEq(storageId,editId){
+  if(busy) return;
+  const cat=$("#eCat").value, kids=!!$("#eKids")?.checked, owner=($("#eOwner")?.value||"").trim();
+  if(!stor(+storageId)){ toast("That storage no longer exists","err"); closeSheet(); render(); return; }
+  const fit=catsForStorage(stor(+storageId));
+  if(fit && !fit.includes(cat) && !(editId && DB.equipment.find(x=>x.id===+editId)?.category===cat)){
+    toast(`${catInfo(cat).label} doesn't go in ${stor(+storageId).section||"this area"}`,"err"); return; }
+  let photo_id=null;
+  if(eqPhoto){ busy=true;
+    try{ photo_id=await uploadPhoto(eqPhoto); }catch(err){ toast(err.message,"err"); return; } finally{ busy=false; } }
+  eqPhoto=null;
+  if(editId){ const e=DB.equipment.find(x=>x.id===+editId); if(!e){ closeSheet(); render(); return; }
+    Object.assign(e,{category:cat,updated_at:now()});
+    if(kids) e.kids=true; else delete e.kids;
+    if(owner) e.owner=owner; else delete e.owner;
+    if(photo_id) e.photo_id=photo_id;
+    log(photo_id?"Equipment photo added":"Equipment updated",{storage_id:e.storage_id,room_id:stor(e.storage_id)?.room_id,equipment_id:e.id,photo_id,notes:`${eqLabel(e)} ×${e.quantity}`});
+  }else{
+    const e={id:uid(),storage_id:+storageId,category:cat,description:"",quantity:1,size:"",type:"",status:"stored",created_at:now(),updated_at:now()};
+    if(kids) e.kids=true;
+    if(owner) e.owner=owner;
+    if(photo_id) e.photo_id=photo_id;
+    DB.equipment.push(e);
+    log("Equipment added",{storage_id:e.storage_id,room_id:stor(e.storage_id).room_id,equipment_id:e.id,photo_id,notes:`${eqLabel(e)} ×1`});
+    const s=stor(+storageId); if(s.status==="available") setStorageStatus(s,"preparing");
+  }
+  save(); closeSheet(); toast("Equipment saved"); render();
+}
+/* "Boots ×1, Skis + poles ×1" — the admin Analytics page reads this format */
+const manifest = s => eqOf(s.id).map(e=>`${eqLabel(e)} ×${e.quantity}`).join(", ");
+const eqLine = e => `<div class="eq"><div class="ic">${catInfo(e.category).ic}</div>
+  <div class="body"><b>${esc(eqLabel(e))}${+e.quantity>1?" × "+esc(e.quantity):""}</b><small>${esc([stor(e.storage_id)?.storage_number,stor(e.storage_id)?.section,e.type,e.size].filter(Boolean).join(" · ")||"—")}</small></div>
+  ${e.photo_id?thumb(e.photo_id,eqLabel(e)):""}</div>`;
+/* from a storage, check-in means: more items for this guest, each to its own location */
+function openCheckinSheet(storageId){
+  const s=stor(+storageId); if(!s){ toast("That storage no longer exists","err"); return; }
+  if(room(s.room_id)) go("stow",{room_id:s.room_id});
+  else { toast("Assign a room first","info"); openAssignRoom(s.id); }
+}
+function confirmCheckout(storageId){
+  const s=stor(+storageId), eq=eqOf(s.id);
+  openSheet(`<h3>Release equipment</h3>
+    <p class="sub">Room ${esc(room(s.room_id)?.room_number||"—")} · Storage ${esc(s.storage_number)}</p>
+    ${eq.map(eqLine).join("")}
+    <div class="btn-grid" style="margin-top:14px">
+      <button class="btn" data-act="close-sheet">Cancel</button>
+      <button class="btn primary" data-act="do-checkout" data-id="${s.id}">Release equipment</button></div>`);
+}
+function doCheckout(id){
+  const s=stor(+id); if(!s){ closeSheet(); return; } setStorageStatus(s,"guest_using","Handed to guest");
+  log("Equipment checked out",{storage_id:s.id,room_id:s.room_id,notes:manifest(s)});
+  save(); closeSheet(); toast("Equipment checked out"); render();
+}
+function confirmReturn(storageId){
+  const s=stor(+storageId);
+  openSheet(`<h3>Return equipment</h3>
+    <p class="sub">Room ${esc(room(s.room_id)?.room_number||"—")} · Storage ${esc(s.storage_number)}</p>
+    <p class="hint">Confirm the equipment is back in the rack, then choose the next state.</p>
+    <div class="btn-grid" style="margin-top:8px">
+      <button class="btn" data-act="do-return" data-id="${s.id}" data-next="preparing">Returned · drying</button>
+      <button class="btn go" data-act="do-return" data-id="${s.id}" data-next="occupied">Returned · stored</button>
+    </div>
+    <button class="btn ghost" style="margin-top:10px" data-act="close-sheet">Cancel</button>`);
+}
+function doReturn(id,next){
+  const s=stor(+id); if(!s){ closeSheet(); return; } setStorageStatus(s,next,"Returned by guest");
+  log("Equipment returned",{storage_id:s.id,room_id:s.room_id,next:stInfo(next).label});
+  save(); closeSheet(); toast("Equipment returned"); render();
+}
+/* Final check-out: guest takes everything home. Frees the storage and unlinks
+   every key card from the room and the storage, so the same card can be used
+   again from scratch on the next visit. */
+function confirmFinalOut(storageId){
+  const s=stor(+storageId), r=room(s.room_id), eq=eqOf(s.id), cards=cardsOfStorage(s.id);
+  openSheet(`<h3>Check out &amp; release</h3>
+    <p class="sub">Room ${esc(r?.room_number||"—")} · Storage ${esc(s.storage_number)}</p>${idCheck(r)}
+    ${eq.length?eq.map(eqLine).join(""):`<div class="muted tiny">No equipment recorded.</div>`}
+    <div class="panel" style="margin-top:12px">
+      <div class="eyebrow">This will release</div>
+      <div class="kv"><span>Storage</span><b>${esc(s.storage_number)} → free</b></div>
+      <div class="kv"><span>Key cards</span><b>${cards.length} unlinked</b></div>
+      <div class="kv"><span>Equipment</span><b>${eqCount(s.id)} items handed over</b></div>
+    </div>
+    <p class="hint">Everything stays in the history. Scanning the card again starts a fresh check-in.</p>
+    <div class="btn-grid" style="margin-top:14px">
+      <button class="btn" data-act="do-final-out" data-id="${s.id}" data-next="preparing">Release · needs cleaning</button>
+      <button class="btn go" data-act="do-final-out" data-id="${s.id}" data-next="available">Release · free now</button>
+    </div>
+    <button class="btn ghost" style="margin-top:10px" data-act="close-sheet">Cancel</button>`);
+}
+/* Frees a storage: equipment records removed, every card of the storage (and
+   the room's cards, if this was its last storage) released for reuse. */
+/* A room with no storage and no cards is free: wipe the guest so the next stay
+   starts clean (the guest name stays in the history notes). */
+function freeRoom(r){
+  if(!r || storagesOfRoom(r.id).length || cardsOfRoom(r.id).length) return false;
+  r.status="checked_out"; r.guest_name=""; r.departure=""; r.updated_at=now();
+  return true;
+}
+function releaseAll(s,next){
+  const r=room(s.room_id);
+  s.room_id=null; s.status=next; s.updated_at=now();
+  const rest=r?storagesOfRoom(r.id):[];
+  const cards=new Set();
+  if(rest.length){      // the guest still has items elsewhere: the cards stay, pointing at another location
+    cardsOfStorage(s.id).forEach(c=>{ c.storage_id=rest[0].id; c.updated_at=now(); });
+  }else{
+    cardsOfStorage(s.id).forEach(c=>cards.add(c));
+    if(r) cardsOfRoom(r.id).forEach(c=>cards.add(c));
+  }
+  cards.forEach(c=>{
+    c.last_room_id=c.room_id??(r?r.id:null); c.last_storage_id=c.storage_id??s.id;
+    c.room_id=null; c.storage_id=null; c.status="released"; c.released_at=now(); c.updated_at=now();
+  });
+  DB.equipment=DB.equipment.filter(e=>e.storage_id!==s.id);
+  freeRoom(r);
+  return cards.size;
+}
+function doFinalOut(id,next){
+  const s=stor(+id); if(!s){ closeSheet(); home(); return; }
+  const r=room(s.room_id), eq=eqOf(s.id), guest=r?.guest_name||"";
+  const list=manifest(s)||"no items";
+  const prev=stInfo(s.status).label, roomId=s.room_id;
+  const n=releaseAll(s,next);
+  log("Checked out & released",{storage_id:s.id,room_id:roomId,prev,next:stInfo(next).label,
+    notes:`${list} · ${n} card${n===1?"":"s"} released${r?" · room "+r.room_number:""}${guest?" · "+guest:""}`});
+  save(); closeSheet(); toast("Checked out · "+s.storage_number+" released");
+  home();
+}
+function openStatusSheet(id){
+  const s=stor(+id); if(!s) return;
+  openSheet(`<h3>Change status</h3><p class="sub">Storage ${esc(s.storage_number)}</p>
+    <div class="list">${Object.entries(STATUS).map(([k,v])=>`
+      <button class="item" data-act="pick-status" data-id="${s.id}" data-s="${k}">
+        <span class="chip s-${k}"><i class="dot"></i>${esc(v.label)}</span>
+        <span class="body"></span>${s.status===k?`<span class="arr">✓</span>`:""}</button>`).join("")}</div>`);
+}
+function openMoveSheet(id){
+  const s=stor(+id); if(!s) return;
+  if(SESSION.role!=="admin"){ toast("Only an admin can move a storage","err"); return; }
+  const free=DB.storages.filter(x=>x.status==="available"&&x.id!==s.id);
+  openSheet(`<h3>Move storage</h3><p class="sub">The room and its key cards follow the equipment.</p>
+    <div class="row between panel" style="margin-bottom:12px"><span class="tag sm">${esc(s.storage_number)}</span><span class="num" style="font-size:22px">→</span><span class="tag sm ghost">Choose</span></div>
+    <label class="f"><span>Move to</span>
+      <select class="input" id="mTo">${free.map(x=>`<option value="${x.id}">${esc(x.storage_number)} — ${esc(x.section||"")}</option>`).join("")||`<option value="">No free storage</option>`}</select></label>
+    <div class="btn-grid" style="margin-top:8px"><button class="btn" data-act="close-sheet">Cancel</button>
+      <button class="btn primary" data-act="do-move" data-id="${s.id}">Confirm move</button></div>`);
+}
+function doMove(id){
+  const from=stor(+id), toId=+$("#mTo").value, to=stor(toId);
+  if(!from||!to){ toast("No target storage","err"); return; }
+  if(to.status!=="available"||to.room_id!=null){ toast(`${to.storage_number} is no longer free`,"err"); closeSheet(); render(); return; }
+  eqOf(from.id).forEach(e=>{ e.storage_id=to.id; e.updated_at=now(); });
+  cardsOfStorage(from.id).forEach(c=>{ c.storage_id=to.id; c.updated_at=now(); });
+  to.room_id=from.room_id; to.status=from.status; to.updated_at=now();
+  from.room_id=null; from.status="available"; from.updated_at=now();
+  log("Storage moved",{storage_id:to.id,room_id:to.room_id,prev:from.storage_number,next:to.storage_number});
+  save(); closeSheet(); toast(`Moved to ${to.storage_number}`); replaceView("storage",{id:to.id});
+}
+function openAssignRoom(id){
+  const s=stor(+id); if(!s) return; const cr=room(s.room_id);
+  openSheet(`<h3>${cr?"Change room":"Assign room"}</h3><p class="sub">Storage ${esc(s.storage_number)}</p>
+    <label class="f"><span>Room number</span><input class="input big" id="arRoom" value="${cr?esc(cr.room_number):""}"></label>
+    <label class="f"><span>Guest name (optional)</span><input class="input" id="arGuest" value="${esc(guestOf(cr))}"></label>
+    <label class="f"><span>Hotel departure</span><input class="input" id="arOut" type="date" value="${cr&&cr.status!=="checked_out"?esc(cr.departure||""):""}"></label>
+    <div class="btn-grid"><button class="btn" data-act="close-sheet">Cancel</button>
+      <button class="btn primary" data-act="do-assign-room" data-id="${s.id}">Save</button></div>`);
+}
+function doAssignRoom(id){
+  const s=stor(+id); if(!s){ closeSheet(); return; }
+  const num=$("#arRoom").value.trim(), guest=$("#arGuest").value.trim(), dep=$("#arOut").value;
+  if(!num){ toast("Enter a room number","err"); return; }
+  let r=roomByNumber(num);
+  if(!r){ r={id:uid(),room_number:num,guest_name:guest,departure:dep,status:"staying",created_at:now(),updated_at:now()}; DB.rooms.push(r); }
+  else { if(r.status==="checked_out"){ r.guest_name=guest; r.departure=dep; } else { if(guest) r.guest_name=guest; if(dep) r.departure=dep; }
+    r.status="staying"; r.updated_at=now(); }
+  const prev=room(s.room_id)?.room_number||"—";
+  s.room_id=r.id; s.updated_at=now();
+  if(s.status==="available") setStorageStatus(s,"preparing");
+  cardsOfStorage(s.id).forEach(c=>{ c.room_id=r.id; c.updated_at=now(); });
+  cardsOfRoom(r.id).forEach(c=>{ if(c.storage_id==null){ c.storage_id=s.id; c.updated_at=now(); } });
+  log("Room assigned",{storage_id:s.id,room_id:r.id,prev:"Room "+prev,next:"Room "+r.room_number});
+  save(); closeSheet(); toast("Room "+r.room_number+" assigned"); render();
+}
+function releaseStorage(id){
+  const s=stor(+id);
+  openSheet(`<h3 style="color:var(--st-attention)">Close and clear ${esc(s.storage_number)}</h3>
+    <p class="sub">Removes all equipment records, releases its key cards for reuse, and returns the storage to Available.</p>
+    <div class="btn-grid"><button class="btn" data-act="close-sheet">Cancel</button>
+      <button class="btn danger" data-act="do-release" data-id="${s.id}">Clear storage</button></div>`);
+}
+function doRelease(id){
+  const s=stor(+id); if(!s){ closeSheet(); return; }
+  const prev=stInfo(s.status).label, roomId=s.room_id, guest=room(s.room_id)?.guest_name||"";
+  const n=releaseAll(s,"available");
+  log("Storage cleared",{storage_id:s.id,room_id:roomId,prev,next:"Available",notes:`${n} card${n===1?"":"s"} released${guest?" · "+guest:""}`});
+  save(); closeSheet(); toast("Storage cleared"); replaceView("storages",{});
+}
+
+/* ==========================================================================
+   10. ROOM DETAIL / LIST
+   ========================================================================== */
+VIEWS.room = (p) => {
+  const r=room(p.id); if(!r) return {title:"Room", body:`<div class="empty">Room not found.</div>`};
+  const cards=cardsOfRoom(r.id), sts=storagesOfRoom(r.id).sort(byNumber);
+  const items=sts.reduce((a,s)=>a+eqCount(s.id),0);
+  const inHall=sts.filter(s=>s.status!=="guest_using"&&eqCount(s.id)), out=sts.filter(s=>s.status==="guest_using");
+  const scanned=p.card_id?card(p.card_id):null;
+  return {title:"Room "+r.room_number, sub:guestOf(r)?esc(guestOf(r)):(r.status==="checked_out"?"Checked out":"No guest name"),
+  body:`
+    ${scanned?`<div class="panel" style="border-color:var(--st-ready);margin-bottom:12px"><div class="row between"><div><div class="eyebrow">Card scanned</div>
+      <div class="mono" style="font-size:17px;font-weight:700">${esc(scanned.card_code)}</div></div><span class="chip solid s-ready">Match</span></div></div>`:""}
+    ${p.notice?`<div class="alert" style="margin-bottom:12px"><span>⚠️</span><span><b>Heads up</b><p>${esc(p.notice)}</p></span></div>`:""}
+    <div class="panel">
+      <div class="row between"><b class="num" style="font-size:34px">Room ${esc(r.room_number)}</b>
+        ${r.vip&&r.status!=="checked_out"?`<span class="chip solid s-preparing">VIP</span>`:""}</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span>Guest</span><b>${esc(guestOf(r)||"—")}</b></div>
+        ${idPhotos(r).length?`<div class="kv"><span>ID photo</span><b class="row" style="gap:6px;justify-content:flex-end">${idPhotos(r).map(id=>thumb(id,"ID photo · Room "+r.room_number)).join("")}</b></div>`:""}
+        <div class="kv"><span>Departure</span><b>${r.departure?fmtDay(r.departure)+(daysTo(r.departure)===0?" · today":daysTo(r.departure)<0?" · overdue":""):"Not set"}</b></div>
+        <div class="kv"><span>Locations</span><b>${sts.map(s=>esc(s.storage_number)).join(", ")||"—"}</b></div>
+        <div class="kv"><span>Equipment</span><b>${items} item${items===1?"":"s"}${out.length?` · ${out.length} with the guest`:""}</b></div>
+        <div class="kv"><span>Key cards</span><b>${cards.length}</b></div>
+      </div>
+      <button class="btn ghost sm" style="width:100%;margin-top:10px" data-act="edit-room" data-id="${r.id}">Edit guest · departure · VIP</button>
+    </div>
+
+    <div class="btn-grid" style="margin-top:12px">
+      <button class="btn ${sts.length?"":"primary"}" data-act="nav-stow" data-room="${r.id}" style="grid-column:1/-1">${sts.length?"+ Add more equipment":"Check in equipment"}</button>
+      ${out.length?`<button class="btn go" data-act="room-return" data-id="${r.id}" style="grid-column:1/-1">Return equipment · ${out.length}</button>`:""}
+      ${inHall.length?`<button class="btn" data-act="room-hand" data-id="${r.id}" style="grid-column:1/-1">Hand to guest · ${inHall.length}</button>`:""}
+      ${sts.length?`<button class="btn go" data-act="room-out" data-id="${r.id}" style="grid-column:1/-1">Check out &amp; release all</button>`:""}
+    </div>
+
+    <h2 class="sec">Equipment by location · ${sts.length}</h2>
+    ${sts.map(s=>`<div class="panel" style="padding:10px 12px">
+      <button class="row between" style="width:100%;padding:0;margin-bottom:${eqOf(s.id).length?"8px":"0"}" data-act="nav" data-view="storage" data-id="${s.id}">
+        <span class="row"><span class="tag sm">${esc(s.storage_number)}</span><span class="muted tiny">${esc(s.section||"")}</span></span>
+        <span class="row">${statusChip(s.status)}<span class="arr" style="color:var(--dim)">›</span></span></button>
+      ${eqOf(s.id).map(eqLine).join("")||`<div class="muted tiny">Empty</div>`}</div>`).join("")
+      ||`<div class="empty"><span class="ic">🎿</span>Nothing checked in for this room.</div>`}
+
+    <h2 class="sec">Key cards · ${cards.length}</h2>
+    <div class="pill-list">${cards.map(c=>`<span class="pill">${esc(c.card_code)}<button class="x" data-act="unlink-card" data-id="${c.id}">✕</button></span>`).join("")||`<span class="muted">None yet — checked in by room number. Add the card whenever the guest has it.</span>`}</div>
+    <button class="btn" style="margin-top:10px" data-act="scan" data-ctx="add_card" data-room="${r.id}" data-storage="${sts[0]?sts[0].id:""}">+ Add key card</button>
+    <h2 class="sec">Room history</h2>
+    <div class="hist">${DB.history.filter(h=>h.room_id===r.id).slice(0,8).map(histEvent).join("")||`<div class="muted">Nothing logged yet.</div>`}</div>`,
+  after(){
+    if(p.intent==="checkout"){ p.intent=null;
+      if(out.length) confirmRoomReturn(r.id); else if(inHall.length) confirmRoomHand(r.id); }
+  }};
+};
+/* ---- whole-room actions: the guest's items sit in several locations ---- */
+function openEditRoom(id){
+  const r=room(id); if(!r) return;
+  openSheet(`<h3>Room ${esc(r.room_number)}</h3><p class="sub">Guest details for this stay</p>
+    <label class="f"><span>Guest name</span><input class="input" id="erGuest" value="${esc(guestOf(r))}"></label>
+    <label class="f"><span>Hotel departure</span><input class="input" id="erOut" type="date" value="${r.status!=="checked_out"?esc(r.departure||""):""}"></label>
+    <label class="check"><input type="checkbox" id="erVip" ${r.vip&&r.status!=="checked_out"?"checked":""}> VIP guest</label>
+    <div class="btn-grid" style="margin-top:8px"><button class="btn" data-act="close-sheet">Cancel</button>
+      <button class="btn primary" data-act="do-edit-room" data-id="${r.id}">Save</button></div>`);
+}
+function doEditRoom(id){
+  const r=room(id); if(!r){ closeSheet(); return; }
+  r.guest_name=$("#erGuest").value.trim(); r.departure=$("#erOut").value; r.vip=!!$("#erVip").checked;
+  if(r.status==="checked_out" && (r.guest_name||storagesOfRoom(r.id).length)) r.status="staying";
+  r.updated_at=now(); log("Room updated",{room_id:r.id,notes:[r.guest_name,r.departure,r.vip?"VIP":""].filter(Boolean).join(" · ")});
+  save(); closeSheet(); toast("Room updated"); render();
+}
+/* a family may come one at a time: the valet ticks the locations that go now
+   (nothing is ticked at first, unless there is only one) */
+const ownerOf = s => String(eqOf(s.id).map(e=>e.owner).find(Boolean)||"").trim();
+const pickList = sts => {
+  const groups=new Map();
+  [...sts].sort((a,b)=>(ownerOf(a)?0:1)-(ownerOf(b)?0:1)||ownerOf(a).localeCompare(ownerOf(b))||byNumber(a,b))
+    .forEach(s=>{ const o=ownerOf(s); if(!groups.has(o)) groups.set(o,[]); groups.get(o).push(s); });
+  const named=[...groups.keys()].some(Boolean);
+  return `<div class="pick-list">${[...groups].map(([o,list])=>`
+    ${named?`<div class="row between pick-head"><b>${o?esc(o):"No name"}</b>
+      <button class="btn sm" style="width:auto" data-act="pick-owner" data-ids="${list.map(s=>s.id).join(",")}">Select ${o?esc(o)+"’s":"these"}</button></div>`:""}
+    <div class="pick-grid">${list.map(s=>pickTile(s,sts.length===1)).join("")}</div>`).join("")}</div>`;
+};
+/* one big photo per location: the guest points at their gear, the valet taps it */
+function pickTile(s,on){
+  const eq=eqOf(s.id), ph=eq.find(e=>e.photo_id), cap=eq.map(eqLabel).join(", ")||"Equipment";
+  return `<label class="ptile">
+    <input type="checkbox" data-pick="${s.id}" ${on?"checked":""}>
+    <span class="img">${ph?`<img src="${photoUrl(ph.photo_id)}" alt="" loading="lazy">`:`<span class="ic">${eq.map(e=>catInfo(e.category).ic).join("")||"🎿"}</span>`}</span>
+    <span class="tick">✓</span>
+    ${ph?`<button type="button" class="zoom" data-act="zoom-photo" data-id="${esc(ph.photo_id)}" data-c="${esc(cap+" · "+s.storage_number)}" aria-label="Open photo">🔍</button>`:""}
+    <span class="cap"><b>${esc(cap)}</b><small>${esc(s.storage_number)}${s.section?" · "+esc(s.section):""}</small></span></label>`;
+}
+/* full-size photo above the open sheet, so a selection in progress is kept */
+function openLightbox(id,caption){
+  const lb=document.createElement("div"); lb.className="lightbox";
+  lb.innerHTML=`<button class="sheet-x" aria-label="Close">✕</button><img src="${photoUrl(id)}" alt="Equipment photo">${caption?`<p>${esc(caption)}</p>`:""}`;
+  lb.addEventListener("click",()=>lb.remove()); document.body.appendChild(lb);
+}
+const pickExtras = sts =>
+  `${sts.length>1?`<div class="row" style="gap:14px;margin:4px 0 0"><span class="muted tiny" style="text-decoration:underline;cursor:pointer" data-act="pick-all" data-v="1">Select all</span><span class="muted tiny" style="text-decoration:underline;cursor:pointer" data-act="pick-all" data-v="">Select none</span></div>`:""}`;
+document.addEventListener("change",e=>{          // "Handed over · 2" follows the selection
+  if(!e.target.dataset || e.target.dataset.pick===undefined) return;
+  const b=$('[data-act="do-room-hand"]'), n=$$("[data-pick]").filter(c=>c.checked).length;
+  if(b) b.textContent = n ? `Handed over · ${n}` : "Handed over";
+});
+const picked = sts => { const on=new Set($$("[data-pick]").filter(c=>c.checked).map(c=>+c.dataset.pick)); return sts.filter(s=>on.has(s.id)); };
+function confirmRoomHand(id){
+  const r=room(id), sts=storagesOfRoom(id).filter(s=>s.status!=="guest_using"&&eqCount(s.id)).sort(byNumber);
+  if(!sts.length) return;
+  openSheet(`<h3>Hand to guest</h3><p class="sub">Room ${esc(r.room_number)} · tap what the guest takes now</p>${idCheck(r)}
+    ${pickList(sts)}${pickExtras(sts)}
+    <div class="btn-grid" style="margin-top:14px"><button class="btn" data-act="close-sheet">Cancel</button>
+      <button class="btn primary" data-act="do-room-hand" data-id="${r.id}">Handed over</button></div>`);
+}
+function doRoomHand(id){
+  const sts=picked(storagesOfRoom(id).filter(s=>s.status!=="guest_using"&&eqCount(s.id)));
+  if(!sts.length){ toast("Tap at least one item","err"); return; }
+  sts.forEach(s=>{ setStorageStatus(s,"guest_using","Handed to guest");
+    log("Equipment checked out",{storage_id:s.id,room_id:s.room_id,notes:manifest(s)}); });
+  save(); closeSheet(); toast(sts.length+" location"+(sts.length===1?"":"s")+" handed out"); render();
+}
+function confirmRoomReturn(id){
+  const r=room(id), sts=storagesOfRoom(id).filter(s=>s.status==="guest_using").sort(byNumber);
+  if(!sts.length) return;
+  openSheet(`<h3>Return equipment</h3><p class="sub">Room ${esc(r.room_number)} · tap what comes back now</p>
+    ${pickList(sts)}${pickExtras(sts)}
+    <div class="btn-grid" style="margin-top:14px">
+      <button class="btn" data-act="do-room-return" data-id="${r.id}" data-next="preparing">Returned · drying</button>
+      <button class="btn go" data-act="do-room-return" data-id="${r.id}" data-next="occupied">Returned · stored</button></div>
+    <button class="btn ghost" style="margin-top:10px" data-act="close-sheet">Cancel</button>`);
+}
+function doRoomReturn(id,next){
+  const sts=picked(storagesOfRoom(id).filter(s=>s.status==="guest_using"));
+  if(!sts.length){ toast("Tap at least one item","err"); return; }
+  sts.forEach(s=>{ setStorageStatus(s,next,"Returned by guest"); log("Equipment returned",{storage_id:s.id,room_id:s.room_id,next:stInfo(next).label}); });
+  save(); closeSheet(); toast("Equipment returned"); render();
+}
+function confirmRoomOut(id){
+  const r=room(id), sts=storagesOfRoom(id).sort(byNumber); if(!r||!sts.length) return;
+  openSheet(`<h3>Check out &amp; release</h3><p class="sub">Room ${esc(r.room_number)} · everything goes home with the guest</p>${idCheck(r)}
+    ${sts.map(s=>eqOf(s.id).map(eqLine).join("")||`<div class="muted tiny">${esc(s.storage_number)}: no equipment recorded</div>`).join("")}
+    <div class="panel" style="margin-top:12px">
+      <div class="eyebrow">This will release</div>
+      <div class="kv"><span>Locations</span><b>${sts.map(s=>esc(s.storage_number)).join(", ")} → free</b></div>
+      <div class="kv"><span>Key cards</span><b>${cardsOfRoom(r.id).length} unlinked</b></div>
+    </div>
+    <p class="hint">Everything stays in the history, equipment photos included${idPhotos(r).length?" — the guest's ID photo is deleted":""}. Scanning the card again starts a fresh check-in.</p>
+    <div class="btn-grid" style="margin-top:14px">
+      <button class="btn" data-act="do-room-out" data-id="${r.id}" data-next="preparing">Release · needs cleaning</button>
+      <button class="btn go" data-act="do-room-out" data-id="${r.id}" data-next="available">Release · free now</button></div>
+    <button class="btn ghost" style="margin-top:10px" data-act="close-sheet">Cancel</button>`);
+}
+function doRoomOut(id,next){
+  const r=room(id); if(!r){ closeSheet(); home(); return; }
+  const sts=storagesOfRoom(id), guest=r.guest_name||"", num=r.room_number;
+  let n=0;
+  sts.forEach(s=>{
+    const list=manifest(s)||"no items", prev=stInfo(s.status).label;
+    const c=releaseAll(s,next); n+=c;
+    log("Checked out & released",{storage_id:s.id,room_id:id,prev,next:stInfo(next).label,
+      notes:`${list}${c?` · ${c} card${c===1?"":"s"} released`:""} · room ${num}${guest?" · "+guest:""}`});
+  });
+  save(); closeSheet(); toast(`Room ${num} checked out · ${sts.length} location${sts.length===1?"":"s"} released`);
+  home();
+}
+function storageRow(s){
+  const r=room(s.room_id), st=stInfo(s.status);
+  return `<button class="item" data-act="nav" data-view="storage" data-id="${s.id}">
+    <span class="tag sm">${esc(s.storage_number)}</span>
+    <span class="body"><b>${r?"Room "+esc(r.room_number):"No room"}</b><small>${esc(s.section||"—")} · ${eqOf(s.id).map(eqLabel).join(", ")||"empty"}</small></span>
+    <span class="chip s-${esc(s.status)}"><i class="dot"></i>${esc(st.label)}</span><span class="arr">›</span></button>`;
+}
+/* Storage lists show a room once, however many locations it uses: the row opens
+   the room, which lists all of them. Locations without a room keep their own row. */
+function roomStorageRow(r,sts){
+  const items=sts.flatMap(s=>eqOf(s.id)).map(eqLabel), stat=[...new Set(sts.map(s=>s.status))];
+  const st=stat.length===1?stInfo(stat[0]):null;
+  return `<button class="item" data-act="nav" data-view="room" data-id="${r.id}">
+    <span class="tag sm" style="white-space:nowrap">${esc(sts[0].storage_number)}${sts.length>1?" +"+(sts.length-1):""}</span>
+    <span class="body"><b>Room ${esc(r.room_number)}</b><small>${sts.length} location${sts.length===1?"":"s"} · ${esc(sts.map(s=>s.storage_number).join(", "))} · ${esc(items.join(", ")||"empty")}</small></span>
+    ${st?`<span class="chip s-${esc(stat[0])}"><i class="dot"></i>${esc(st.label)}</span>`:""}<span class="arr">›</span></button>`;
+}
+function storageRows(list){
+  const byRoom=new Map(), out=[];          // keeps the list's order: a room sits where its first location was
+  list.forEach(s=>{ const r=room(s.room_id);
+    if(!r){ out.push({s}); return; }
+    if(!byRoom.has(r.id)){ const g={r,sts:[]}; byRoom.set(r.id,g); out.push(g); }
+    byRoom.get(r.id).sts.push(s); });
+  return out.map(x=>x.r?roomStorageRow(x.r,x.sts):storageRow(x.s)).join("");
+}
+VIEWS.rooms = (p={}) => {
+  const all=[...DB.rooms].sort(byRoom);
+  const live = r => r.status!=="checked_out" || storagesOfRoom(r.id).length || cardsOfRoom(r.id).length;
+  const active = all.filter(live), rows = p.all ? all : active, hidden = all.length-active.length;
+  return {title:"Rooms", sub:active.length+" in use"+(p.all&&hidden?` · ${hidden} checked out`:""),
+  body:`<div class="searchbar" style="margin-bottom:12px">🔎<input id="qRooms" placeholder="Room number or guest" autocomplete="off"></div>
+    <div class="list" id="roomList">${rows.map(roomRow).join("")||`<div class="empty"><span class="ic">🚪</span>No rooms are using the valet right now.</div>`}</div>
+    ${hidden?`<button class="btn ghost" style="margin-top:12px" data-act="rooms-all">${p.all?"Hide checked-out rooms":`Show ${hidden} checked-out room${hidden===1?"":"s"}`}</button>`:""}`,
+  after(){ const i=$("#qRooms"); i.addEventListener("input",()=>{
+      const q=i.value.trim().toLowerCase();
+      $("#roomList").innerHTML=rows.filter(r=>!q||String(r.room_number??"").toLowerCase().includes(q)||guestOf(r).toLowerCase().includes(q)).map(roomRow).join("")||`<div class="empty">No room matches “${esc(q)}”.</div>`;
+    }); }};
+};
+function roomRow(r){
+  const sts=storagesOfRoom(r.id);
+  return `<button class="item" data-act="nav" data-view="room" data-id="${r.id}">
+    <span class="body"><b>Room ${esc(r.room_number)}</b><small>${r.status==="checked_out"&&!cardsOfRoom(r.id).length?"Checked out":`${esc(guestOf(r)||"—")} · ${cardsOfRoom(r.id).length} cards`}</small></span>
+    ${sts[0]?`<span class="tag sm">${esc(sts[0].storage_number)}${sts.length>1?" +"+(sts.length-1):""}</span>`:`<span class="tag sm ghost">—</span>`}<span class="arr">›</span></button>`;
+}
+
+/* ==========================================================================
+   11. STORAGE LIST / MAP / ACTIVE
+   ========================================================================== */
+VIEWS.storages = () => {
+  const list=[...DB.storages].sort((a,b)=>String(a.storage_number??"").localeCompare(String(b.storage_number??""),undefined,{numeric:true}));
+  if(!list.length) return {title:"Storages", sub:"None yet",
+    body:`<div class="empty"><span class="ic">🏷️</span>No storage locations yet.<br>Create the rack layout, or just type a number while registering a card.</div>
+      <button class="btn primary" data-act="nav" data-view="setup">Set up storage locations</button>`};
+  const filters=["all",...Object.keys(STATUS)];
+  return {title:"Storages", sub:list.length+" locations",
+  body:`<div class="searchbar" style="margin-bottom:10px">🔎<input id="qSt" placeholder="Storage or room number" autocomplete="off"></div>
+    <div class="rolebar" id="fBar">${filters.map(f=>`<button data-f="${f}" class="${f==="all"?"on":""}">${f==="all"?"All":esc(STATUS[f].label)}</button>`).join("")}</div>
+    <div class="list" id="stList" style="margin-top:12px">${storageRows(list)}</div>`,
+  after(){
+    let f="all"; const draw=()=>{ const q=$("#qSt").value.trim().toLowerCase();
+      const out=list.filter(s=>(f==="all"||s.status===f) && (!q||String(s.storage_number??"").toLowerCase().includes(q)||normCode(s.storage_number).includes(normCode(q))||String(room(s.room_id)?.room_number??"").toLowerCase().includes(q)));
+      $("#stList").innerHTML=storageRows(out)||`<div class="empty">Nothing matches this filter.</div>`; };
+    $("#qSt").addEventListener("input",draw);
+    $$("#fBar button").forEach(b=>b.addEventListener("click",()=>{ $$("#fBar button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); f=b.dataset.f; draw(); }));
+  }};
+};
+VIEWS.map = () => {
+  const sections=[...new Set(DB.storages.map(s=>s.section||"Unassigned area"))];
+  if(!sections.length) return {title:"Storage map", sub:"Physical hall layout",
+    body:`<div class="empty"><span class="ic">🗺️</span>No locations to draw yet.</div>
+      <button class="btn primary" data-act="nav" data-view="setup">Set up storage locations</button>`};
+  return {title:"Storage map", sub:"Physical hall layout",
+  body:`${hallPlan()?`<div style="margin-bottom:14px">${hallPlan()}</div><div class="hint" style="margin:0 0 14px">Tap an area to jump to its locations.</div>`:""}
+    <div id="mapCells"><div class="legend">${Object.entries(STATUS).map(([k,v])=>`<span><i style="background:${v.c}"></i>${v.label}</span>`).join("")}</div>
+    ${sections.map(sec=>{ const rows=DB.storages.filter(s=>(s.section||"Unassigned area")===sec), k=rows.map(kindOf).find(Boolean);
+      return `<div class="map-area" id="area-${esc(normCode(sec))}"><h2 class="sec"><i style="width:10px;height:10px;border-radius:3px;display:inline-block;background:${KIND_COLOR[k]||"var(--line)"}"></i>${esc(sec)}${k&&!String(sec).toLowerCase().startsWith(KINDS[k].toLowerCase())?` · ${esc(KINDS[k])}`:""}</h2>
+      <div class="map-grid">${DB.storages.filter(s=>(s.section||"Unassigned area")===sec).sort((a,b)=>String(a.storage_number).localeCompare(String(b.storage_number),undefined,{numeric:true})).map(s=>`
+        <button class="cell on" style="--c:${stInfo(s.status).c}" data-act="nav" data-view="storage" data-id="${s.id}">
+          <span class="n">${esc(s.storage_number)}</span>
+          ${room(s.room_id)?`<span class="k">R${esc(room(s.room_id).room_number)} ${eqOf(s.id).map(e=>catInfo(e.category).ic).join("")}</span>`:""}
+        </button>`).join("")}</div></div>`; }).join("")}</div>`};
+};
+VIEWS.active = () => {
+  const groups=[["ready","Ready for guest"],["guest_using","With the guest"],["occupied","Stored"],["preparing","Preparing"],["attention","Needs attention"]];
+  return {title:"Active storage", sub:"Everything in use right now",
+  body: groups.map(([k,label])=>{ const rows=DB.storages.filter(s=>s.status===k); if(!rows.length) return "";
+      const rooms=new Set(rows.map(s=>s.room_id).filter(id=>room(id))).size;
+      return `<h2 class="sec">${label} · ${rows.length}${rooms&&rooms!==rows.length?` locations · ${rooms} room${rooms===1?"":"s"}`:""}</h2><div class="list">${storageRows(rows)}</div>`;
+    }).join("") || `<div class="empty"><span class="ic">🏔️</span>The hall is empty.</div>`};
+};
+
+/* ==========================================================================
+   12. CHECK-IN / CHECK-OUT ENTRY POINTS
+   ========================================================================== */
+VIEWS.checkin  = () => VIEWS.scan({ctx:"checkin"});
+VIEWS.checkout = () => VIEWS.scan({ctx:"checkout"});
+
+/* ==========================================================================
+   12a. DEPARTURES — rooms leaving the hotel, so nothing stays behind
+   ========================================================================== */
+function departingRooms(){
+  return DB.rooms.filter(r=>r.departure && r.status!=="checked_out" && storagesOfRoom(r.id).length)
+    .map(r=>({r, d:daysTo(r.departure), sts:storagesOfRoom(r.id)}))
+    .sort((a,b)=>a.d-b.d);
+}
+VIEWS.departures = () => {
+  const rows=departingRooms();
+  const band = d => d<0?["Overdue","hot"] : d===0?["Leaving today",""] : d===1?["Tomorrow",""] : ["In "+d+" days",""];
+  return {title:"Departures", sub:rows.length+" rooms with equipment",
+  body: rows.length? rows.map(({r,d,sts})=>{
+    const [lbl,hot]=band(d), items=sts.reduce((a,x)=>a+eqCount(x.id),0);
+    return `<div class="panel" style="margin-bottom:10px;border-left:4px solid ${d<0?"var(--st-attention)":d===0?"var(--st-preparing)":"var(--line)"}">
+      <div class="row between" style="flex-wrap:wrap;gap:8px">
+        <b class="num" style="font-size:26px">Room ${esc(r.room_number)}</b>
+        <span class="chip ${hot?"solid s-attention":""}">${lbl} · ${fmtDay(r.departure)}</span>
+      </div>
+      <div class="kv"><span>Guest</span><b>${esc(guestOf(r)||"—")}</b></div>
+      <div class="kv"><span>Storage</span><b>${sts.map(x=>esc(x.storage_number)).join(", ")}</b></div>
+      <div class="kv"><span>Still stored</span><b>${items} item${items===1?"":"s"}</b></div>
+      <div class="kv"><span>Key cards</span><b>${cardsOfRoom(r.id).length}</b></div>
+      <div class="btn-grid" style="margin-top:12px">
+        <button class="btn ghost" data-act="nav" data-view="room" data-id="${r.id}">Open room</button>
+        <button class="btn go" data-act="room-out" data-id="${r.id}">Check out &amp; release</button>
+      </div></div>`;
+  }).join("") : `<div class="empty"><span class="ic">📅</span>No departures with equipment in the hall.<br>Add a departure date when you register a card and rooms will show up here.</div>`};
+};
+
+/* ==========================================================================
+   12b. HALL SETUP — create the physical storage locations
+   ========================================================================== */
+VIEWS.setup = () => {
+  const sections=[...new Set(DB.storages.map(s=>s.section||"Unassigned area"))];
+  const admin = SESSION.role==="admin";
+  return {title:"Hall setup", sub:DB.storages.length+" locations",
+  body:`
+    ${admin?"":`<div class="alert hot"><span>🔒</span><span><b>Admins only</b><p>Sign in as an admin to change the hall layout.</p></span></div>`}
+    <div class="panel">
+      <div class="eyebrow">Create a rack row</div>
+      <p class="muted tiny" style="margin:6px 0 14px">Generate a whole range at once — for example S-101 to S-112 in the main hall.</p>
+      <label class="f"><span>Area name</span><input class="input" id="hArea" placeholder="Boots 1" ${admin?"":"disabled"}></label>
+      <label class="f"><span>Holds</span><select class="input" id="hKind" ${admin?"":"disabled"}>${kindOpts("")}</select></label>
+      <label class="f"><span>Prefix</span><input class="input" id="hPfx" value="S-" autocapitalize="characters" ${admin?"":"disabled"}></label>
+      <div class="btn-grid" style="gap:10px">
+        <label class="f" style="margin:0"><span>From</span><input class="input" id="hFrom" inputmode="numeric" placeholder="101" ${admin?"":"disabled"}></label>
+        <label class="f" style="margin:0"><span>To</span><input class="input" id="hTo" inputmode="numeric" placeholder="112" ${admin?"":"disabled"}></label>
+      </div>
+      <button class="btn primary" style="margin-top:14px" data-act="make-range" ${admin?"":"disabled"}>Create locations</button>
+      <div class="hint">Numbers already in use are skipped. To add a single one, put the same number in both fields.</div>
+    </div>
+
+    ${admin && SkiSync.missingLayout(DB).length?`<div class="panel" style="margin-top:12px">
+      <div class="eyebrow">Default storage map</div>
+      <p class="muted tiny" style="margin:6px 0 14px">${SkiSync.missingLayout(DB).length} standard locations are missing (${esc([...new Set(SkiSync.missingLayout(DB).map(x=>x.section))].join(", "))}). They are created empty and available.</p>
+      <button class="btn" data-act="load-layout">Restore default layout</button>
+    </div>`:""}
+
+    <h2 class="sec">Areas ${sections.length?`· ${sections.length}`:""}</h2>
+    ${sections.length? sections.map(sec=>{
+      const rows=DB.storages.filter(s=>(s.section||"Unassigned area")===sec), busy=rows.filter(s=>s.status!=="available").length;
+      const k=rows.map(kindOf).find(Boolean)||"";
+      return `<div class="item" style="flex-wrap:wrap">
+        <span class="body"><b>${esc(sec)}</b><small>${rows.length} locations · ${busy} in use · ${esc(KINDS[k]||"type not set — not used automatically")}</small></span>
+        ${admin?`<select class="input" style="width:auto;min-height:42px;font-size:15px" data-area-kind="${esc(sec)}" aria-label="Holds">${kindOpts(k)}</select>
+          <button class="btn sm danger" data-act="drop-area" data-sec="${esc(sec)}">Delete</button>`:""}</div>`;
+    }).join("") : `<div class="empty"><span class="ic">🏗️</span>No locations yet.<br>Create your first rack row above.</div>`}
+
+    <h2 class="sec">Data</h2>
+    <div class="btn-grid">
+      <button class="btn danger" data-act="wipe-all" ${admin?"":"disabled"} style="grid-column:1/-1">Erase everything</button>
+    </div>
+    <div class="hint">Erasing keeps the staff accounts and removes every room, card, storage and item.</div>`,
+  after(){ if(SESSION.role==="admin") setTimeout(()=>$("#hArea")?.focus(),80); }};
+};
+const kindOpts = sel => `<option value="">Type not set</option>`+Object.entries(KINDS).map(([k,l])=>`<option value="${k}" ${k===sel?"selected":""}>${esc(l)}</option>`).join("");
+document.addEventListener("change",e=>{
+  const sec=e.target.dataset && e.target.dataset.areaKind; if(sec==null || !SESSION || SESSION.role!=="admin") return;
+  const k=e.target.value;
+  DB.storages.filter(s=>(s.section||"Unassigned area")===sec).forEach(s=>{ if(k) s.kind=k; else delete s.kind; s.updated_at=now(); });
+  log("Area type changed",{notes:`${sec} → ${KINDS[k]||"not set"}`}); save(); toast(sec+" holds "+(KINDS[k]||"—")); render();
+});
+function makeRange(){
+  const area=$("#hArea").value.trim()||"Unassigned area", kind=$("#hKind").value;
+  const pfx=$("#hPfx").value.trim().toUpperCase();
+  const from=parseInt($("#hFrom").value,10), to=parseInt($("#hTo").value,10);
+  if(SESSION.role!=="admin"){ toast("Admins only","err"); return; }
+  if(isNaN(from)||isNaN(to)||to<from||from<0){ toast("Check the From / To numbers","err"); return; }
+  if(to-from>199){ toast("Maximum 200 locations at a time","err"); return; }
+  let made=0;
+  for(let i=from;i<=to;i++){
+    const num=pfx+i; if(storByNumber(num)) continue;
+    const s={id:uid(),storage_number:num,section:area,status:"available",room_id:null,created_at:now(),updated_at:now()};
+    if(kind) s.kind=kind;
+    DB.storages.push(s); made++;
+  }
+  if(!made){ toast("Those locations already exist","info"); return; }
+  log("Locations created",{notes:`${made} × ${pfx}${from}–${pfx}${to} in ${area}`});
+  save(); toast(made+" locations created"); render();
+}
+function dropArea(sec){
+  const rows=DB.storages.filter(s=>(s.section||"Unassigned area")===sec), busy=rows.filter(s=>s.status!=="available"||s.room_id!=null||eqCount(s.id)>0);
+  if(busy.length){ toast(`${busy.length} locations are in use — clear them first`,"err"); return; }
+  openSheet(`<h3 style="color:var(--st-attention)">Delete ${esc(sec)}</h3>
+    <p class="sub">Removes ${rows.length} empty locations. Nothing else is affected.</p>
+    <div class="btn-grid"><button class="btn" data-act="close-sheet">Cancel</button>
+      <button class="btn danger" data-act="do-drop-area" data-sec="${esc(sec)}">Delete area</button></div>`);
+}
+
+/* ==========================================================================
+   13. SEARCH
+   ========================================================================== */
+VIEWS.search = (p) => ({title:"Quick search", sub:"Card · room · storage · item",
+  body:`<div class="searchbar">🔎<input id="qAll" placeholder="Room, storage, card code, guest, item…" autocomplete="off" value="${esc(p.q||"")}"></div>
+    <div id="results" style="margin-top:14px"></div>`,
+  after(){ const i=$("#qAll"); i.focus();
+    const run=()=>{ $("#results").innerHTML=searchHTML(i.value.trim()); };
+    i.addEventListener("input",run); run(); }});
+function searchHTML(q){
+  if(!q) return `<div class="empty"><span class="ic">🔎</span>Type a room, storage, card code, guest name, item or status.</div>`;
+  const L=q.toLowerCase(), N=normCode(q), out=[];
+  const cards=N.length>2?DB.cards.filter(c=>normCode(c.card_code).includes(N)):[];
+  const rooms=DB.rooms.filter(r=>String(r.room_number??"").toLowerCase().includes(L)||guestOf(r).toLowerCase().includes(L)).sort(byRoom);
+  const sts=DB.storages.filter(s=>String(s.storage_number??"").toLowerCase().includes(L)||(N&&normCode(s.storage_number).includes(N))||stInfo(s.status).label.toLowerCase().includes(L)
+    ||eqOf(s.id).some(e=>catInfo(e.category).label.toLowerCase().includes(L)||(e.type||"").toLowerCase().includes(L)));
+  if(cards.length) out.push(`<h2 class="sec">Key cards · ${cards.length}</h2><div class="list">${cards.map(c=>`
+    <button class="item" data-act="nav" data-view="${stor(c.storage_id)?"storage":room(c.room_id)?"room":"search"}" data-id="${stor(c.storage_id)?c.storage_id:room(c.room_id)?c.room_id:""}">
+      <span class="body"><b class="mono" style="font-size:15px">${esc(c.card_code)}</b>
+      <small>Room ${esc(room(c.room_id)?.room_number||"—")} → ${esc(stor(c.storage_id)?.storage_number||"no storage")}</small></span><span class="arr">›</span></button>`).join("")}</div>`);
+  if(rooms.length) out.push(`<h2 class="sec">Rooms · ${rooms.length}</h2><div class="list">${rooms.map(roomRow).join("")}</div>`);
+  if(sts.length) out.push(`<h2 class="sec">Storages · ${sts.length}</h2><div class="list">${sts.map(storageRow).join("")}</div>`);
+  return out.join("")||`<div class="empty"><span class="ic">🤷</span>No match for “${esc(q)}”.<br>Try a room number or the card code.</div>`;
+}
+
+/* ==========================================================================
+   14. HISTORY + ACCOUNT
+   ========================================================================== */
+VIEWS.history = (p={}) => {
+  let staff = p.staff ? +p.staff : null;
+  const count = id => DB.history.filter(h=>h.user_id===id).length;
+  return {title:"Activity history", sub:DB.history.length+" records",
+  body:`<div class="searchbar" style="margin-bottom:10px">🔎<input id="qH" placeholder="Room, storage, card code or action" autocomplete="off"></div>
+    <div class="rolebar" id="sBar">
+      <button data-u="" class="${staff?"":"on"}">Everyone</button>
+      ${DB.users.filter(u=>count(u.id)||(!u.retired&&!u.archived)).map(u=>`<button data-u="${u.id}" class="${staff===u.id?"on":""}">${esc(firstName(u))} · ${count(u.id)}</button>`).join("")}
+    </div>
+    <div class="hist" id="hList" style="margin-top:14px"></div>`,
+  after(){
+    const i=$("#qH");
+    const draw=()=>{ const q=i.value.trim().toLowerCase();
+      const rows=DB.history.filter(h=>{
+        if(staff && h.user_id!==staff) return false;
+        if(!q) return true;
+        const s=[h.action,user(h.user_id)?.name,room(h.room_id)?.room_number,stor(h.storage_id)?.storage_number,card(h.key_card_id)?.card_code,h.notes,h.prev,h.next].join(" ").toLowerCase();
+        return s.includes(q); }).slice(0,150);
+      $("#hList").innerHTML=rows.map(histEvent).join("")||`<div class="empty"><span class="ic">🕒</span>No records match this filter.</div>`;
+    };
+    i.addEventListener("input",draw);
+    $$("#sBar button").forEach(b=>b.addEventListener("click",()=>{
+      $$("#sBar button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+      staff = b.dataset.u ? +b.dataset.u : null; draw(); }));
+    draw();
+  }};
+};
+
+VIEWS.users = () => {
+  if(SESSION.role!=="admin") return {title:"Access", body:`<div class="empty">Admins only.</div>`};
+  const acts = id => DB.history.filter(h=>h.user_id===id).length;
+  const st=staffAcc(), a=adminAcc();
+  return {title:"Access", sub:"Staff PIN and admin login",
+  body:`<div class="panel" style="margin-bottom:12px">
+      <div class="eyebrow">Staff PIN</div>
+      <p class="muted tiny" style="margin:6px 0 14px">For members without a personal PIN · <b>${st.pin_set?"set":"not set"}</b> (stored encrypted on the server) ·
+        <span data-act="staff-log" data-id="${st.id}" style="text-decoration:underline;cursor:pointer">${acts(st.id)} actions</span></p>
+      <label class="f"><span>New 4-digit PIN</span><input class="input" id="pin_staff" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label>
+      <button class="btn primary" data-act="set-pin">Change staff PIN</button>
+    </div>
+    <div class="panel">
+      <div class="eyebrow">Admin login</div>
+      <p class="muted tiny" style="margin:6px 0 14px">Username <b class="mono">${esc(a.username)}</b> ·
+        <span data-act="staff-log" data-id="${a.id}" style="text-decoration:underline;cursor:pointer">${acts(a.id)} actions</span></p>
+      <label class="f"><span>Current password</span><input class="input" id="acCur" type="password" autocomplete="current-password"></label>
+      <label class="f"><span>Username</span><input class="input" id="acUser" value="${esc(a.username)}" autocapitalize="none" spellcheck="false" autocomplete="username"></label>
+      <label class="f"><span>New password (min. 8)</span><input class="input" id="acPass" type="password" autocomplete="new-password"></label>
+      <label class="f"><span>Repeat new password</span><input class="input" id="acPass2" type="password" autocomplete="new-password"></label>
+      <button class="btn primary" data-act="set-admin">Save admin login</button>
+    </div>
+    <h2 class="sec">Staff members · ${members().length}</h2>
+    <div class="list">${members().map(u=>`<div class="item"><span class="body"><b>${esc(u.name)}</b><small>${acts(u.id)} actions · ${u.pin_set?"personal PIN":"shared PIN"}</small></span>
+      <button class="btn sm" data-act="member-pin" data-id="${u.id}">${u.pin_set?"Change PIN":"Set PIN"}</button>
+      <button class="btn sm ghost" data-act="staff-log" data-id="${u.id}">History</button>
+      <button class="btn sm danger" data-act="rm-member" data-id="${u.id}">Remove</button></div>`).join("")
+      ||`<div class="empty">No names yet. Everyone signs in as “Staff”.</div>`}</div>
+    <div class="panel" style="margin-top:12px">
+      <label class="f"><span>Add staff member</span><input class="input" id="mName" placeholder="Full name" autocapitalize="words"></label>
+      <button class="btn primary" data-act="add-member">Add</button>
+    </div>
+    <div class="hint">Give each member their own PIN with “Set PIN”: they sign in with it directly, so nobody can use someone else's name. Members without one use the shared staff PIN, then tap their name. Removed members keep their history.</div>`};
+};
+async function setPin(){
+  if(SESSION.role!=="admin"){ toast("Admins only","err"); return; }
+  const v=$("#pin_staff").value.trim();
+  if(!validPin(v)){ toast("The PIN must be exactly 4 digits","err"); return; }
+  try{ await API("/api/admin/pin",{pin:v}); }catch(e){ toast(e.message,"err"); return; }
+  const st=staffAcc(); if(st) st.pin_set=true; AUTH.staff_pin_set=true;
+  log("Staff PIN changed",{}); save(); toast("Staff PIN updated"); render();
+}
+function memberPin(id){
+  const u=user(id); if(!u||u.shared) return;
+  openSheet(`<h3>PIN for ${esc(u.name)}</h3><p class="sub">${u.pin_set?"A personal PIN is set. Enter a new one to replace it.":"No personal PIN yet — this member signs in with the shared staff PIN."}
+      Each member needs a different PIN.</p>
+    <label class="f"><span>New 4-digit PIN</span><input class="input" id="mpPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label>
+    <div class="btn-grid"><button class="btn primary" data-act="save-member-pin" data-id="${u.id}" style="grid-column:1/-1">Save PIN</button>
+      ${u.pin_set?`<button class="btn danger" data-act="clear-member-pin" data-id="${u.id}" style="grid-column:1/-1">Remove PIN</button>`:""}</div>`);
+  setTimeout(()=>{ const i=$("#mpPin"); if(!i) return; i.focus(); i.addEventListener("keydown",e=>{ if(e.key==="Enter") saveMemberPin(id); }); },60);
+}
+async function saveMemberPin(id,clear){
+  const u=user(id); if(!u) return;
+  const v=clear?"":($("#mpPin")?.value||"").trim();
+  if(!clear && !validPin(v)){ toast("The PIN must be exactly 4 digits","err"); return; }
+  if(SkiSync.pending()){ try{ await SkiSync.save(); }catch(_){} }     // a member just added must reach the server first
+  try{ await API("/api/admin/member-pin",{id:u.id,pin:v}); }catch(e){ toast(e.message,"err"); return; }
+  await SkiSync.refresh();
+  closeSheet(); render(); toast(clear?`PIN removed — ${u.name} uses the shared PIN again`:`PIN saved for ${u.name}`);
+}
+function addMember(){
+  if(SESSION.role!=="admin"){ toast("Admins only","err"); return; }
+  const name=$("#mName").value.trim();
+  if(!name){ toast("Enter a name","err"); return; }
+  if(nameTaken(name)){ toast("That name already exists","err"); return; }
+  DB.users.push({id:uid(),name,email:"",role:"staff",created_at:now()});
+  log("Staff member added",{notes:name}); save(); toast(name+" added"); render();
+}
+function removeMember(id){
+  const u=user(id); if(!u||u.shared||SESSION.role!=="admin") return;
+  u.archived=true; u.updated_at=now(); log("Staff member removed",{notes:u.name}); save(); toast(u.name+" removed","info"); render();
+}
+async function setAdminLogin(){
+  if(SESSION.role!=="admin"){ toast("Admins only","err"); return; }
+  const cur=$("#acCur").value, user=$("#acUser").value.trim(), p1=$("#acPass").value, p2=$("#acPass2").value;
+  const err=credError(user,p1,p2); if(err){ toast(err,"err"); return; }
+  try{ await API("/api/admin/login",{current:cur,username:user,password:p1,password2:p2}); }catch(e){ toast(e.message,"err"); return; }
+  log("Admin login changed",{notes:user}); save(); toast("Admin login updated"); render();
+}
+function openAccount(){
+  openSheet(`<h3>${esc(SESSION.name)}</h3><p class="sub">${SESSION.role==="admin"?"Admin":"Ski Valet staff"}${SESSION.email?" · "+esc(SESSION.email):""}</p>
+    <div class="list">
+      ${SESSION.role==="admin"?`<button class="item" data-act="nav-sheet" data-view="users"><span class="body"><b>Access &amp; staff</b><small>Staff PIN, names, admin login</small></span><span class="arr">›</span></button>`:""}
+      <button class="item" data-act="nav-sheet" data-view="history"><span class="body"><b>Activity history</b><small>Full audit trail</small></span><span class="arr">›</span></button>
+      ${SESSION.role==="admin"?`<a class="item" href="admin.html" style="text-decoration:none;color:inherit"><span class="body"><b>Admin console</b><small>Fix records, trace equipment, backups</small></span><span class="arr">›</span></a>`:""}
+      ${SESSION.role==="admin"?`<button class="item" data-act="nav-sheet" data-view="setup"><span class="body"><b>Hall setup</b><small>Storage locations, reset</small></span><span class="arr">›</span></button>`:""}
+      <button class="item" data-act="signout"><span class="body"><b style="color:var(--st-attention)">Sign out</b><small>Lock the app</small></span></button>
+    </div>`);
+}
+
+/* ==========================================================================
+   15. SHEETS
+   ========================================================================== */
+function openSheet(html){ const m=$("#modal"); m.innerHTML=`<div class="sheet"><button class="sheet-x" aria-label="Close">✕</button>${html}</div>`; m.classList.remove("hidden");
+  m.onclick=e=>{ if(e.target===m || e.target.closest(".sheet-x")) closeSheet(); }; }
+let staleView=false;
+function closeSheet(){ stopCamera(); const m=$("#modal"); m.classList.add("hidden"); m.innerHTML="";
+  if(staleView){ staleView=false; render(); } }
+
+/* ==========================================================================
+   16. EVENT DELEGATION
+   ========================================================================== */
+document.addEventListener("click", e=>{
+  const el=e.target.closest("[data-act]"); if(!el) return;
+  const a=el.dataset.act, id=el.dataset.id?+el.dataset.id:null;
+  switch(a){
+    /* login */
+    case "admin-login": adminLogin=true; pin=""; render(); setTimeout(()=>$("#alUser")?.focus(),50); break;
+    case "staff-login": adminLogin=false; render(); break;
+    case "admin-signin": adminSignIn(); break;
+    case "pick-name": signInAs(id); break;
+    case "pin-cancel": pinOk=false; pin=""; render(); break;
+    case "pin": if(!busy&&pin.length<4){ pin+=el.dataset.n; $("#shell").innerHTML=viewLogin(); if(pin.length===4) setTimeout(tryLogin,120);} break;
+    case "pin-del": pin=pin.slice(0,-1); $("#shell").innerHTML=viewLogin(); break;
+    case "pin-clear": pin=""; $("#shell").innerHTML=viewLogin(); break;
+    /* nav */
+    case "back": back(); break;
+    case "home": home(); break;
+    case "nav": go(el.dataset.view, id?{id}:{}); break;
+    case "nav-sheet": closeSheet(); go(el.dataset.view,{}); break;
+    case "account": openAccount(); break;
+    case "signout": signOut(); break;
+    case "make-range": makeRange(); break;
+    case "load-layout": { if(SESSION.role!=="admin") break; el.disabled=true;
+      SkiSync.loadLayout().then(n=>{ toast(n?n+" locations created":"Nothing missing", n?"":"info"); render(); })
+        .catch(e=>{ toast(e.message,"err"); el.disabled=false; }); break; }
+    case "drop-area": dropArea(el.dataset.sec); break;
+    case "do-drop-area": { const sec=el.dataset.sec;
+      DB.storages=DB.storages.filter(s=>!((s.section||"Unassigned area")===sec&&s.status==="available"&&s.room_id==null&&!eqCount(s.id)&&!cardsOfStorage(s.id).length));
+      log("Area deleted",{notes:sec}); save(); closeSheet(); toast("Area deleted"); render(); break; }
+    case "wipe-all": openSheet(`<h3 style="color:var(--st-attention)">Erase everything</h3>
+      <p class="sub">Every room, key card, storage location and item is removed. Staff accounts stay.</p>
+      <div class="btn-grid"><button class="btn" data-act="close-sheet">Cancel</button>
+        <button class="btn danger" data-act="do-wipe">Erase everything</button></div>`); break;
+    case "do-wipe": { if(SESSION.role!=="admin") break; DB=normaliseDB(emptyDB(DB.users)); save(); closeSheet(); toast("Hall is empty now","info"); home(); break; }
+    /* scan */
+    case "scan": closeSheet(); go("scan",{ctx:el.dataset.ctx||"identify",room_id:el.dataset.room?+el.dataset.room:null,storage_id:el.dataset.storage?+el.dataset.storage:null}); break;
+    case "nfc-start": startNFC(); break;
+    case "native-scan": askNativeScan(); break;
+    case "submit-code": submitCode(); break;
+    case "paste-code": pasteCode(); break;
+    case "done-adding": closeSheet(); replaceView("room",{id:+el.dataset.id}); break;
+    case "do-reassign": doReassign(+el.dataset.card,+el.dataset.room, el.dataset.storage?+el.dataset.storage:null); break;
+    /* register */
+    case "pick-storage": { const f=$("#fStorage"); if(f) f.value=el.dataset.n; break; }
+    case "reuse-room": $("#fRoom").value=el.dataset.n; if(el.dataset.g) $("#fGuest").value=el.dataset.g;
+      $("#fStorage").focus(); toast("Room "+el.dataset.n+" filled in","info"); break;
+    case "save-card": saveNewCard(el.dataset.code, el.dataset.next); break;
+    /* equipment */
+    case "add-eq": openEqSheet(id); break;
+    case "plan-area": { const t=document.getElementById("area-"+normCode(el.dataset.area));
+      if(t) t.scrollIntoView({behavior:"smooth",block:"start"}); else go("map",{}); break; }
+    case "eq-edit": { const eq=DB.equipment.find(x=>x.id===id); if(eq) openEqSheet(eq.storage_id,eq.id); break; }
+    case "photo": openPhoto(el.dataset.id,el.dataset.c); break;
+    case "zoom-photo": e.preventDefault(); openLightbox(el.dataset.id,el.dataset.c); break;
+    case "eq-save": saveEq(el.dataset.storage, el.dataset.id?+el.dataset.id:null); break;
+    case "eq-delete": { const eq=DB.equipment.find(x=>x.id===id); if(!eq){ closeSheet(); break; } DB.equipment=DB.equipment.filter(x=>x.id!==id);
+      log("Equipment removed",{storage_id:eq.storage_id,notes:catInfo(eq.category).label}); save(); closeSheet(); toast("Equipment removed"); render(); break; }
+    case "eq-plus": { const eq=DB.equipment.find(x=>x.id===id); if(!eq){ render(); break; } eq.quantity=(+eq.quantity||0)+1; eq.updated_at=now(); save(); render(); break; }
+    case "eq-minus": { const eq=DB.equipment.find(x=>x.id===id); if(!eq){ render(); break; }
+      if(+eq.quantity>1){ eq.quantity=+eq.quantity-1; eq.updated_at=now(); } else { DB.equipment=DB.equipment.filter(x=>x.id!==id);
+        log("Equipment removed",{storage_id:eq.storage_id,notes:catInfo(eq.category).label}); }
+      save(); render(); break; }
+    /* check in by room */
+    case "nav-stow": go("stow",{room_id:+el.dataset.room}); break;
+    case "ci-add": { const p=stowParams(); if(!p) break; p.d.items.push(newItem(el.dataset.k)); drawItems();
+      const last=$$(".ci-item").pop(); if(last) last.scrollIntoView({block:"nearest",behavior:"smooth"}); break; }
+    case "ci-del": { const p=stowParams(); if(!p) break; p.d.touched=true; p.d.items=p.d.items.filter(i=>i.key!==+el.dataset.key); drawItems(); break; }
+    case "ci-cam": itemCamera(+el.dataset.key); break;
+    case "eq-cam": eqCamera(); break;
+    case "ci-unphoto": { const i=ciItem(el); if(i){ i.photo=null; i.photo_id=null; drawItems(); } break; }
+    case "ci-save": stowSave(); break;
+    case "pc-open": openPrecheck(id); break;
+    case "pc-use": usePrecheck(id); break;
+    case "pc-drop": dropPrecheck(id); render(); break;
+    case "pc-dismiss": dismissPrecheck(id); break;
+    case "pc-dismiss-ok": { const pc=precheck(id); closeSheet(); if(!pc) break;
+      if(pc.status==="pending"){ Object.assign(pc,{status:"dismissed",updated_at:now()});
+        log("Pre-check-in dismissed",{notes:`Room ${pc.room_number} · ${pcGuest(pc)} · ${pcItems(pc)}`}); save(); }
+      dropPrecheck(pc.id);
+      toast("Pre-check-in dismissed","info"); render(); break; }
+    /* whole room */
+    case "edit-room": openEditRoom(id); break;
+    case "do-edit-room": doEditRoom(id); break;
+    case "room-hand": confirmRoomHand(id); break;
+    case "do-room-hand": doRoomHand(id); break;
+    case "pick-all": $$("[data-pick]").forEach(c=>c.checked=!!el.dataset.v); $("[data-pick]")?.dispatchEvent(new Event("change",{bubbles:true})); break;
+    case "pick-owner": { const ids=new Set(el.dataset.ids.split(",").map(Number)); $$("[data-pick]").forEach(c=>{ if(ids.has(+c.dataset.pick)) c.checked=true; });
+      $("[data-pick]")?.dispatchEvent(new Event("change",{bubbles:true})); break; }
+    case "room-return": confirmRoomReturn(id); break;
+    case "do-room-return": doRoomReturn(id, el.dataset.next); break;
+    case "room-out": confirmRoomOut(id); break;
+    case "do-room-out": doRoomOut(id, el.dataset.next); break;
+    /* workflows */
+    case "checkin-here": openCheckinSheet(id); break;
+    case "checkout-eq": confirmCheckout(id); break;
+    case "final-out": confirmFinalOut(id); break;
+    case "do-final-out": doFinalOut(id, el.dataset.next); break;
+    case "do-checkout": doCheckout(id); break;
+    case "return-eq": confirmReturn(id); break;
+    case "do-return": doReturn(id, el.dataset.next); break;
+    case "set-status": openStatusSheet(id); break;
+    case "pick-status": { const s=stor(id); if(!s){ closeSheet(); break; } setStorageStatus(s,el.dataset.s,"Manual change"); save(); closeSheet(); toast("Status updated"); render(); break; }
+    case "assign-room": openAssignRoom(id); break;
+    case "do-assign-room": doAssignRoom(id); break;
+    case "assign-free": { const free=DB.storages.find(s=>s.status==="available"); if(!free){ toast("No free storage","err"); break; }
+      openAssignRoomFromRoom(+el.dataset.room); break; }
+    case "move-storage": openMoveSheet(id); break;
+    case "do-move": doMove(id); break;
+    case "release-storage": releaseStorage(id); break;
+    case "do-release": doRelease(id); break;
+    case "unlink-card": { const c=card(id); if(!c){ render(); break; }
+      openSheet(`<h3>Remove key card</h3><p class="sub">Card <b class="mono">${esc(c.card_code)}</b> will stop opening this storage. It is released, so it can be registered again later.</p>
+        <div class="btn-grid"><button class="btn" data-act="close-sheet">Cancel</button>
+        <button class="btn danger" data-act="do-unlink" data-id="${c.id}">Remove card</button></div>`); break; }
+    case "do-unlink": { const c=card(id); if(!c){ closeSheet(); break; }
+      const ur=room(c.room_id);
+      log("Key card removed",{key_card_id:c.id,room_id:c.room_id,storage_id:c.storage_id,notes:ur?.guest_name||""});
+      // released rather than deleted: history keeps pointing at it and the card is reusable
+      c.last_room_id=c.room_id; c.last_storage_id=c.storage_id;
+      Object.assign(c,{room_id:null,storage_id:null,status:"released",released_at:now(),updated_at:now()});
+      freeRoom(ur);
+      save(); closeSheet(); toast("Key card removed"); render(); break; }
+    case "staff-log": go("history",{staff:id}); break;
+    case "rooms-all": replaceView("rooms",{all:!current().params.all}); break;
+    case "set-pin": setPin(); break;
+    case "set-admin": setAdminLogin(); break;
+    case "add-member": addMember(); break;
+    case "rm-member": removeMember(id); break;
+    case "member-pin": memberPin(id); break;
+    case "save-member-pin": saveMemberPin(id); break;
+    case "clear-member-pin": saveMemberPin(id,true); break;
+    case "close-sheet": closeSheet(); break;
+  }
+});
+function openAssignRoomFromRoom(roomId){
+  const r=room(roomId), free=DB.storages.filter(s=>s.status==="available"&&s.room_id==null); if(!r) return;
+  openSheet(`<h3>Assign a storage</h3><p class="sub">Room ${esc(r.room_number)}</p>
+    <div class="pill-list">${free.slice(0,30).map(s=>`<button class="pill" data-act="do-assign-free" data-room="${r.id}" data-s="${s.id}">${esc(s.storage_number)}</button>`).join("")}</div>`);
+}
+document.addEventListener("click",e=>{
+  const el=e.target.closest('[data-act="do-assign-free"]'); if(!el) return;
+  const s=stor(+el.dataset.s), r=room(+el.dataset.room);
+  if(!s||!r){ closeSheet(); render(); return; }
+  if(s.status!=="available"||s.room_id!=null){ toast(`${s.storage_number} is no longer free`,"err"); closeSheet(); render(); return; }
+  s.room_id=r.id; s.updated_at=now(); r.status="staying"; setStorageStatus(s,"preparing","Assigned to room "+r.room_number);
+  cardsOfRoom(r.id).forEach(c=>{ if(c.storage_id==null){ c.storage_id=s.id; c.updated_at=now(); } });
+  log("Storage assigned",{storage_id:s.id,room_id:r.id,next:s.storage_number});
+  save(); closeSheet(); toast(s.storage_number+" assigned"); replaceView("storage",{id:s.id});
+});
+
+/* ==========================================================================
+   17. BOOT
+   ========================================================================== */
+/* Changes from other devices / the admin console arrive through SkiSync. */
+function onRemoteChange(full){
+  if(!SESSION) return;
+  const u=user(SESSION.id);
+  if(!u || u.retired || u.archived){ SkiSync._authLost(); return; }
+  SESSION=u;
+  const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  if(!$("#modal").classList.contains("hidden") || typing){ staleView=true; return; }  // don't wipe what the user is doing
+  if(current().view==="stow"){ drawItems(); return; }   // keep the check-in form (and its scroll) as it is
+  render();
+}
+document.addEventListener("focusout",()=>{ setTimeout(()=>{
+  if(staleView && $("#modal").classList.contains("hidden") && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))){ staleView=false; render(); }
+},0); });
+SkiSync.init({
+  get: () => DB,
+  set: d => { DB = normaliseDB(d); },
+  onRemote: onRemoteChange,
+  canWriteUsers: () => !!(SESSION && SESSION.role==="admin"),
+  onConflict: msg => { toast(msg,"info"); if(SESSION){ const u=user(SESSION.id); if(u) SESSION=u; closeSheet(); render(); } },
+  onAuthLost: () => { const was=!!SESSION; SESSION=null; pinOk=false; pin=""; nav=[]; DB=normaliseDB(null); closeSheet();
+    if(was) toast("Signed out — please sign in again","info"); API("/api/me").then(a=>{ AUTH=a; render(); }).catch(()=>render()); }
+});
+(async function boot(){
+  DB = normaliseDB(null);
+  nav=[{view:"dash",params:{}}];
+  const handed = consumeUrlCard();
+  try{ AUTH = await API("/api/me"); }catch(e){ toast(e.message,"err"); }
+  if(AUTH && AUTH.user){
+    try{ await SkiSync.start(); SESSION = user(AUTH.user.id) || null; }catch(e){ toast(e.message,"err"); }
+  }
+  render();
+  if(handed) receiveCard(handed);
+})();
+</script>
+</body>
+</html>
