@@ -361,7 +361,7 @@ def init_db():
                        WHERE s.storage_number LIKE 'SK-%%' AND NOT EXISTS (SELECT 1 FROM storages o
                        WHERE o.storage_number = 'K-' || substr(s.storage_number, 4))""")      # SK-01 -> K-01
         tidy_hall(cur)                                    # clean up rooms left over by older versions
-        purge_faces(cur)
+        purge_guest_data(cur)
         # once per layout version: an empty hall gets the floor-plan areas (version 2 =
         # one area per equipment kind); a hall emptied on purpose later stays empty
         if meta_get(cur, "layout_seeded") != "2":
@@ -419,12 +419,18 @@ def tidy_hall(cur, room_ids=None):
                     WHERE status = 'checked_out' AND (COALESCE(guest_name, '') <> '' OR departure IS NOT NULL)""")
 
 
-def purge_faces(cur):
-    """Guest ID photos (photos.kind = 'face') live only as long as something needs them:
-    a pending pre-check-in, or a room that has not checked out (rooms.extra.face_photo_ids).
-    A checked-out room drops its ids, so the photo goes when the guest collects the last item."""
+def purge_guest_data(cur):
+    """Kiosk data about a guest lives only as long as the stay needs it.
+      * a confirmed pre-check-in is deleted once its room has checked out (the guest
+        collected the last item); the history keeps the "Pre-check-in confirmed" entry
+      * guest ID photos (photos.kind = 'face') are kept only while a pending pre-check-in
+        or a room that has not checked out (rooms.extra.face_photo_ids) points to them
+      * expired / dismissed pre-check-ins go after PRECHECK_KEEP_DAYS (see kiosk_precheck)"""
     cur.execute("""UPDATE prechecks SET status = 'expired', updated_at = now()
                    WHERE status = 'pending' AND created_at < now() - make_interval(hours => %s)""", (PRECHECK_HOURS,))
+    cur.execute("""DELETE FROM prechecks c WHERE c.status = 'confirmed'
+                     AND NOT EXISTS (SELECT 1 FROM rooms r WHERE r.id = c.room_id
+                                       AND r.status IS DISTINCT FROM 'checked_out')""")
     cur.execute("""UPDATE rooms SET extra = extra - 'face_photo_ids', updated_at = now()
                    WHERE status = 'checked_out' AND extra ? 'face_photo_ids'""")
     cur.execute("""DELETE FROM photos p WHERE p.kind = 'face'
@@ -918,7 +924,7 @@ def sync_post(cur, u):
         else:
             cur.execute(f"DELETE FROM {t} WHERE id = ANY(%s)", (ids,))
     tidy_hall(cur, freed)
-    purge_faces(cur)
+    purge_guest_data(cur)
     if plan["users"][0]:
         drop_stale_pins(cur)
     cur.execute("SET CONSTRAINTS ALL IMMEDIATE")           # surface FK / unique problems as 409 now
@@ -1086,7 +1092,7 @@ def kiosk_precheck(cur, k):
     if cur.fetchone()["n"] >= PRECHECK_PER_MINUTE:
         raise ApiError(429, "Too many registrations from this screen. Wait a minute.")
     # pending ones nobody confirmed expire; old finished ones are deleted (they hold guest names)
-    purge_faces(cur)
+    purge_guest_data(cur)
     cur.execute("""DELETE FROM prechecks WHERE status <> 'pending'
                    AND created_at < now() - make_interval(days => %s)""", (PRECHECK_KEEP_DAYS,))
     now = dt.datetime.now(dt.timezone.utc)
@@ -1208,7 +1214,7 @@ def replace_all(cur, data, keep_history, actor, label, notes):
             vals["user_id"] = idmap.get(vals["user_id"], vals["user_id"])
             hist.append((rid, vals, extra))
         insert_rows(cur, "history", hist, "insert")
-    purge_faces(cur)
+    purge_guest_data(cur)
     log_server(cur, actor["id"], "[Admin] " + label, notes)
     bump_epoch(cur)
 

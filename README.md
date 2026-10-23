@@ -90,7 +90,9 @@ python app.py                   # http://localhost:5000
   cookie; solo puede enviar pre-registros, no ve ningún dato. *Remove* la desconecta al momento.
 - Los pre-registros quedan en la tabla `prechecks` con estado `pending` y llegan a todos los
   dispositivos por la sincronización normal. Los que nadie confirma pasan a `expired` a las
-  `PRECHECK_HOURS` horas (por defecto 24) y los terminados se borran a los `PRECHECK_KEEP_DAYS` días (30).
+  `PRECHECK_HOURS` horas (por defecto 24). Un pre-registro confirmado se borra cuando su habitación hace
+  check-out (el cliente recoge el último equipo); en el historial queda la línea *Pre-check-in confirmed*.
+  Los caducados y descartados se borran a los `PRECHECK_KEEP_DAYS` días (30).
 - En la app del valet, el inicio muestra **Pre-check-ins** pendientes. Al tocar uno (o al escribir la
   habitación en *Check in*) el formulario se rellena: habitación, nombre, salida y una línea por equipo
   declarado, con el nombre del cliente como dueño (vacío si declaró más de uno del mismo tipo: es una
