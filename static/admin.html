@@ -285,6 +285,11 @@ const CATS = {
   boots:"Boots", skis:"Skis + poles", snowboard:"Snowboard", poles:"Poles",
   sbboots:"Snowboard boots", helmet:"Helmet", goggles:"Goggles", other:"Other"
 };
+/* what the valet stores today; older kinds only show up while a record still uses one */
+const STORED = {boots:"Boots", skis:"Skis + poles", snowboard:"Snowboard"};
+const catChoices = () => { const o={...STORED};
+  DB.equipment.forEach(e=>{ if(e.category && !o[e.category]) o[e.category]=(CATS[e.category]||e.category)+" (old)"; });
+  return o; };
 /* what each area holds (same list as the valet app) */
 const KINDS = {boots:"Boots", ski:"Ski", ski_kids:"Kids", snowboard:"Snowboard", vip:"VIP"};
 const photoUrl = id => "/api/photos/"+encodeURIComponent(id);
@@ -755,7 +760,7 @@ const SCHEMA = {
   equipment:{ title:"Equipment", one:"item", label:e=>(CATS[e.category]||e.category)+" #"+e.id,
     fields:[
       {k:"storage_id",l:"Storage",type:"select",opts:storOptsReq,num:true,req:true},
-      {k:"category",l:"Category",type:"select",opts:()=>opt(CATS),def:"skis"},
+      {k:"category",l:"Category",type:"select",opts:()=>opt(catChoices()),def:"skis"},
       {k:"quantity",l:"Quantity",type:"number",def:1,req:true},
       {k:"size",l:"Size"},
       {k:"type",l:"Type / brand"},
@@ -764,7 +769,7 @@ const SCHEMA = {
       ["Size",e=>esc(e.size||"—")],["Type",e=>esc([e.type,e.description].filter(Boolean).join(" · ")||"—")],
       ["Storage",e=>storLabel(e.storage_id)],["Room",e=>roomLabel(stor(e.storage_id)?.room_id)],["Updated",e=>ago(e.updated_at)]],
     text:e=>[e.id,CATS[e.category],e.category,e.size,e.type,e.description,stor(e.storage_id)?.storage_number,room(stor(e.storage_id)?.room_id)?.room_number].join(" "),
-    filter:{k:"category",opts:CATS},
+    filter:{k:"category",get opts(){ return catChoices(); }},
     sort:(a,b)=>String(stor(a.storage_id)?.storage_number||"~").localeCompare(String(stor(b.storage_id)?.storage_number||"~"),undefined,{numeric:true}),
     check(v){ if(!(v.quantity>=1)) return "Quantity must be at least 1"; },
     del(e){ return {run(){ DB.equipment=DB.equipment.filter(x=>x!==e); }}; }
