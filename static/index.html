@@ -919,6 +919,8 @@ VIEWS.dash = () => {
     <div class="stats">
       <button class="stat" style="--c:var(--st-occupied)" data-act="nav" data-view="active"><b class="num">${occ}</b><span>Occupied storages</span></button>
       <button class="stat" style="--c:var(--st-available)" data-act="nav" data-view="storages"><b class="num">${avail}</b><span>Available of ${total}</span></button>
+      <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="active"><b class="num">${DB.storages.filter(s=>s.status==="guest_using").reduce((a,s)=>a+eqCount(s.id),0)}</b><span>Guest using</span></button>
+      <button class="stat" style="--c:var(--st-occupied)" data-act="nav" data-view="history"><b class="num">${checkinsToday()}</b><span>Checked in today</span></button>
       <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="departures"><b class="num">${checkoutsToday().length}</b><span>Checked out today</span></button>
       <button class="stat" style="--c:var(--glacier)" data-act="nav" data-view="storages"><b class="num">${stored}</b><span>Items in the hall</span></button>
       <button class="stat" style="--c:var(--signal)" data-act="nav" data-view="rooms"><b class="num">${guests}</b><span>Rooms using valet</span></button>
@@ -2136,6 +2138,12 @@ function checkoutsToday(){
   const t=todayISO(), seen=new Map();
   DB.history.forEach(h=>{ if(h.action==="Checked out & released" && h.room_id!=null && h.timestamp && isoOf(h.timestamp)===t && !seen.has(h.room_id)) seen.set(h.room_id,h); });
   return [...seen].filter(([rid])=>!storagesOfRoom(rid).length).map(([rid,h])=>({room_id:rid, departure:h.departure||null}));
+}
+/* rooms that checked equipment in today (one per room, however many items) */
+function checkinsToday(){
+  const t=todayISO(), rooms=new Set();
+  DB.history.forEach(h=>{ if(h.action==="Equipment checked in" && h.room_id!=null && h.timestamp && isoOf(h.timestamp)===t) rooms.add(h.room_id); });
+  return rooms.size;
 }
 /* rooms leaving today: those still in the hall plus those already checked out today.
    At the end of the day both counters match, unless a guest extended the stay. */
