@@ -170,7 +170,18 @@ h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
 .panel.pc-on{border-color:var(--glacier);margin-top:10px}
 .panel.pc-on .eyebrow,.panel.pc-wait .eyebrow{color:var(--glacier)}
 .panel.pc-wait{margin-top:10px}
+.pc-row{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:10px 4px;border-bottom:1px solid var(--line)}
+.pc-row b,.pc-line b{display:block}
+.pc-row small,.pc-line small{color:var(--mist);font-size:13px}
+.pc-group{margin-bottom:10px;border-left:4px solid var(--glacier)}
+.pc-group.stale{border-left-color:var(--st-attention)}
+.pc-line{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.grow{flex:1;min-width:0}
 .panel.id-check{margin:0 0 12px;border-color:var(--glacier)}
+.dep-bar{display:flex;gap:8px;align-items:center;padding:10px}
+.dep-bar .input{flex:1;min-width:0;text-align:center;color-scheme:dark}
+.dep-bar .btn{width:auto;min-width:48px;font-size:22px}
+.co-face{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--glacier);flex:none;background:var(--night)}
 .panel.id-check .eyebrow{color:var(--glacier)}
 .panel.id-check .row{gap:10px;margin-top:8px;flex-wrap:wrap}
 .panel.id-check img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--glacier);background:var(--night)}
@@ -190,6 +201,8 @@ h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
 
 /* ---------- map ---------- */
 .map-area{margin-bottom:20px}
+.map-area.hit h2.sec{animation:areaHit 1.6s ease}
+@keyframes areaHit{0%,40%{color:var(--glacier)}100%{color:inherit}}
 .map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
 .cell{aspect-ratio:1;border-radius:12px;background:var(--slab);border:1px solid var(--line);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:4px;
@@ -572,12 +585,25 @@ const cardsOfStorage = id => DB.cards.filter(c=>c.storage_id===id);
 /* --- kiosk pre-check-ins: a guest declares room, name and how many items on a
    kiosk screen; the valet checks them at the counter and confirms the check-in --- */
 const PRECHECK_MAX_AGE = 24*36e5;      // the server expires pending ones after PRECHECK_HOURS (24 by default)
+const PRECHECK_STALE = 60*6e4;         // waiting this long: the guest probably never came to the counter
+/* pre-check-ins last until midnight: each day starts with an empty list (the server expires them too) */
+const sameDay = ts => { const d=new Date(ts), t=new Date();
+  return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate(); };
 const PC_ITEMS = [["boots","boots"],["skis","skis"],["snowboards","snowboard"]];   // precheck field -> category
 const precheck = id => DB.prechecks.find(p=>p.id===id);
-const pendingPrechecks = () => DB.prechecks.filter(p=>p.status==="pending"&&now()-(p.created_at||0)<PRECHECK_MAX_AGE)
+const pendingPrechecks = () => DB.prechecks.filter(p=>p.status==="pending"&&now()-(p.created_at||0)<PRECHECK_MAX_AGE&&sameDay(p.created_at||0))
   .sort((a,b)=>(b.created_at||0)-(a.created_at||0));
 const prechecksOfRoom = n => { const k=String(n??"").trim().toLowerCase();
   return k ? pendingPrechecks().filter(p=>String(p.room_number??"").toLowerCase()===k) : []; };
+/* pending pre-check-ins grouped by room (a family may send one each), newest room first */
+function pcGroups(){
+  const m=new Map();
+  pendingPrechecks().forEach(p=>{ const k=String(p.room_number??"").toLowerCase();
+    if(!m.has(k)) m.set(k,{room:p.room_number,pcs:[]}); m.get(k).pcs.push(p); });
+  return [...m.values()];
+}
+const pcGroupItems = g => { const t={boots:0,skis:0,snowboards:0};
+  g.pcs.forEach(x=>PC_ITEMS.forEach(([f])=>{ t[f]+=+x[f]||0; })); return pcItems(t); };
 const pcGuest = p => [p.first_name,p.last_name].map(x=>String(x||"").trim()).filter(Boolean).join(" ");
 /* the guest's ID photos taken at the kiosk; the server deletes them at check-out */
 const idPhotos = r => r && r.status!=="checked_out" ? (r.face_photo_ids||[]) : [];
@@ -906,7 +932,8 @@ VIEWS.dash = () => {
       ${A("rooms","🚪","Search room","By room number")}
       ${A("storages","🏷️","Search storage","All locations")}
       ${A("stow","⬇️","Check in","By room number")}
-      ${A("checkout","⬆️","Check out","Release to guest")}
+      ${A("checkout","⬆️","Check out","By room number")}
+      ${A("prechecks","📝","Pre-check-ins","From the kiosk, today")}
       ${A("map","🗺️","Storage map","Hall layout")}
       ${A("active","🎿","Active storage","In use now")}
       ${A("search","🔎","Quick search","Card · room · item")}
@@ -925,11 +952,15 @@ VIEWS.dash = () => {
   `};
 };
 function pcPanel(){
-  const list=pendingPrechecks(); if(!list.length) return "";
-  return `<h2 class="sec">Pre-check-ins · ${list.length}</h2>
-    ${list.slice(0,6).map(p=>`<button class="alert pc" data-act="pc-open" data-id="${p.id}"><span style="font-size:20px">📝</span>
-      <span><b>Room ${esc(p.room_number)} · ${esc(pcGuest(p))}</b><p>${esc(pcItems(p))} · ${ago(p.created_at)}</p></span></button>`).join("")}
-    ${list.length>6?`<div class="hint">${list.length-6} more — type the room number in Check in to see its pre-check-ins.</div>`:""}`;
+  const groups=pcGroups(); if(!groups.length) return "";
+  return `<h2 class="sec">Pre-check-ins · ${groups.length} room${groups.length===1?"":"s"} waiting</h2>
+    <div class="panel pc-sum">
+      ${groups.slice(0,3).map(g=>{ const names=[...new Set(g.pcs.map(pcGuest))];
+        return `<button class="pc-row" data-act="pc-room" data-room="${esc(g.room)}"><span style="font-size:20px">📝</span>
+          <span class="grow"><b>Room ${esc(g.room)} · ${esc(names[0])}${names.length>1?` +${names.length-1}`:""}</b>
+          <small>${esc(pcGroupItems(g))} · ${ago(g.pcs[0].created_at)}</small></span><span class="arr">›</span></button>`; }).join("")}
+      <button class="btn ${groups.length>3?"primary":"ghost"}" style="margin-top:8px" data-act="nav" data-view="prechecks">${groups.length>3?`See all ${groups.length} · search by room`:"Open pre-check-ins"}</button>
+    </div>`;
 }
 function kindsBar(){
   const f=freeByKind();
@@ -1320,6 +1351,43 @@ function drawPc(){
       <div class="row between" style="gap:10px;margin-top:4px"><span><b>${esc(pcGuest(x))}</b><br><span class="muted tiny">${esc(pcItems(x))}</span></span>
       <button class="btn sm primary" style="width:auto" data-act="pc-use" data-id="${x.id}">${used.length?"Add too":"Use it"}</button></div></div>`).join("");
 }
+/* ---- Pre-check-ins: everything waiting today, searchable, one card per room ---- */
+VIEWS.prechecks = (p={}) => {
+  const n=pcGroups().length;
+  return {title:"Pre-check-ins", sub:`${n} room${n===1?"":"s"} waiting · today`,
+  body:`<div class="searchbar" style="margin-bottom:12px">🔎<input id="qPc" placeholder="Room number or guest name" autocomplete="off" value="${esc(p.q||"")}"></div>
+    <div id="pcList"></div>
+    <div class="hint" style="margin-top:12px">Pre-check-ins nobody confirms are cleared at midnight.</div>`,
+  after(){
+    const i=$("#qPc");
+    const draw=()=>{ const q=i.value.trim().toLowerCase(); p.q=i.value;
+      const gs=pcGroups().filter(g=>!q||String(g.room??"").toLowerCase().startsWith(q)||g.pcs.some(x=>pcGuest(x).toLowerCase().includes(q)));
+      $("#pcList").innerHTML=gs.map(pcGroupCard).join("")
+        ||`<div class="empty"><span class="ic">📝</span>${q?`Nothing waiting for “${esc(i.value.trim())}”.`:"No pre-check-ins waiting."}</div>`; };
+    i.addEventListener("input",draw); draw();
+  }};
+};
+function pcGroupCard(g){
+  const oldest=Math.min(...g.pcs.map(x=>x.created_at||now())), stale=now()-oldest>PRECHECK_STALE;
+  return `<div class="panel pc-group${stale?" stale":""}">
+    <div class="row between" style="gap:8px;flex-wrap:wrap"><b class="num" style="font-size:26px">Room ${esc(g.room)}</b>
+      <span class="chip ${stale?"solid s-attention":""}">${stale?"Waiting since "+new Date(oldest).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):ago(g.pcs[0].created_at)}</span></div>
+    ${g.pcs.length>1?`<div class="muted tiny" style="margin:2px 0 8px">${esc(pcGroupItems(g))} · ${g.pcs.length} registrations</div>`:`<div style="height:8px"></div>`}
+    ${g.pcs.map(x=>`<div class="pc-line">${x.face_photo_id?thumb(x.face_photo_id,"ID photo · "+pcGuest(x)):""}
+      <span class="grow"><b>${esc(pcGuest(x))}</b><small>${esc(pcItems(x))} · ${ago(x.created_at)}</small></span>
+      <button class="btn sm ghost" data-act="pc-dismiss" data-id="${x.id}" aria-label="Dismiss" title="Dismiss">✕</button></div>`).join("")}
+    <button class="btn primary" style="margin-top:10px" data-act="pc-room" data-room="${esc(g.room)}">Check in room ${esc(g.room)}</button>
+  </div>`;
+}
+/* opens Check in with every pre-check-in waiting for the room already added */
+function openRoomPrechecks(num){
+  const pcs=prechecksOfRoom(num);
+  if(!pcs.length){ toast("No pre-check-ins waiting for this room","err"); render(); return; }
+  const r=roomByNumber(num);
+  go("stow", r&&r.status!=="checked_out"&&storagesOfRoom(r.id).length ? {room_id:r.id} : {});
+  [...pcs].reverse().forEach(p=>usePrecheck(p.id));        // oldest first: its guest names the room
+}
+
 /* adds a pre-check-in to the check-in form: one line per declared item */
 function usePrecheck(id){
   const p=stowParams(), pc=precheck(id); if(!p||!pc) return;
@@ -2034,7 +2102,38 @@ VIEWS.active = () => {
    12. CHECK-IN / CHECK-OUT ENTRY POINTS
    ========================================================================== */
 VIEWS.checkin  = () => VIEWS.scan({ctx:"checkin"});
-VIEWS.checkout = () => VIEWS.scan({ctx:"checkout"});
+/* Check out starts from the room number; the key card is an optional extra check */
+VIEWS.checkout = (p={}) => {
+  const rooms=DB.rooms.filter(r=>storagesOfRoom(r.id).some(s=>eqCount(s.id))).sort(byRoom);
+  return {title:"Check out", sub:"By room number",
+  body:`<div class="panel">
+      <label class="f"><span>Room number</span><input class="input big" id="coRoom" placeholder="Room" inputmode="numeric" autocomplete="off"></label>
+      <div class="hint" style="margin:-6px 0 0">Ask the guest for the room number, then check their ID photo or name.</div>
+    </div>
+    <h2 class="sec">Rooms with equipment · ${rooms.length}</h2>
+    <div class="list" id="coList"></div>
+    <button class="btn ghost" style="margin-top:14px" data-act="scan" data-ctx="checkout">Scan key card instead</button>`,
+  after(){
+    const i=$("#coRoom");
+    const match=()=>{ const q=i.value.trim().toLowerCase();
+      return q?rooms.filter(r=>String(r.room_number??"").toLowerCase().startsWith(q)||guestOf(r).toLowerCase().includes(q)):rooms; };
+    const draw=()=>{ const q=i.value.trim();
+      $("#coList").innerHTML=match().map(coRow).join("")||`<div class="empty">No room ${esc(q)} has equipment in the valet.</div>`; };
+    i.addEventListener("input",draw);
+    i.addEventListener("keydown",e=>{ if(e.key!=="Enter") return; const m=match();
+      const exact=m.find(r=>String(r.room_number).toLowerCase()===i.value.trim().toLowerCase());
+      if(exact||m.length===1) go("room",{id:(exact||m[0]).id,intent:"checkout"}); });
+    draw(); setTimeout(()=>i.focus(),80);
+  }};
+};
+function coRow(r){
+  const sts=storagesOfRoom(r.id), n=sts.reduce((a,s)=>a+eqCount(s.id),0), out=sts.filter(s=>s.status==="guest_using").length;
+  const face=idPhotos(r)[0];
+  return `<button class="item" data-act="co-room" data-id="${r.id}">
+    ${face?`<img class="co-face" src="${photoUrl(face)}" alt="">`:""}
+    <span class="body"><b>Room ${esc(r.room_number)}</b><small>${esc(guestOf(r)||"No guest name")} · ${n} item${n===1?"":"s"}${out?` · ${out} with the guest`:""}</small></span>
+    <span class="arr">›</span></button>`;
+}
 
 /* ==========================================================================
    12a. DEPARTURES — rooms leaving the hotel, so nothing stays behind
@@ -2044,27 +2143,51 @@ function departingRooms(){
     .map(r=>({r, d:daysTo(r.departure), sts:storagesOfRoom(r.id)}))
     .sort((a,b)=>a.d-b.d);
 }
-VIEWS.departures = () => {
-  const rows=departingRooms();
-  const band = d => d<0?["Overdue","hot"] : d===0?["Leaving today",""] : d===1?["Tomorrow",""] : ["In "+d+" days",""];
-  return {title:"Departures", sub:rows.length+" rooms with equipment",
-  body: rows.length? rows.map(({r,d,sts})=>{
-    const [lbl,hot]=band(d), items=sts.reduce((a,x)=>a+eqCount(x.id),0);
-    return `<div class="panel" style="margin-bottom:10px;border-left:4px solid ${d<0?"var(--st-attention)":d===0?"var(--st-preparing)":"var(--line)"}">
-      <div class="row between" style="flex-wrap:wrap;gap:8px">
-        <b class="num" style="font-size:26px">Room ${esc(r.room_number)}</b>
-        <span class="chip ${hot?"solid s-attention":""}">${lbl} · ${fmtDay(r.departure)}</span>
-      </div>
-      <div class="kv"><span>Guest</span><b>${esc(guestOf(r)||"—")}</b></div>
-      <div class="kv"><span>Storage</span><b>${sts.map(x=>esc(x.storage_number)).join(", ")}</b></div>
-      <div class="kv"><span>Still stored</span><b>${items} item${items===1?"":"s"}</b></div>
-      <div class="kv"><span>Key cards</span><b>${cardsOfRoom(r.id).length}</b></div>
-      <div class="btn-grid" style="margin-top:12px">
-        <button class="btn ghost" data-act="nav" data-view="room" data-id="${r.id}">Open room</button>
-        <button class="btn go" data-act="room-out" data-id="${r.id}">Check out &amp; release</button>
-      </div></div>`;
-  }).join("") : `<div class="empty"><span class="ic">📅</span>No departures with equipment in the hall.<br>Add a departure date when you register a card and rooms will show up here.</div>`};
+/* one day at a time (today by default); chips and the date picker show other days */
+const isoShift = (iso,n) => { const d=new Date(iso+"T12:00"); d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+VIEWS.departures = (p={}) => {
+  const all=departingRooms(), today=todayISO(), mode=p.mode||"day", day=p.day||today;
+  const rows = mode==="overdue" ? all.filter(x=>x.d<0) : mode==="all" ? all : all.filter(x=>x.r.departure===day);
+  const nDay = iso => all.filter(x=>x.r.departure===iso).length, late=all.filter(x=>x.d<0).length;
+  const dayLabel = iso => iso===today?"Today":iso===isoShift(today,1)?"Tomorrow":iso===isoShift(today,-1)?"Yesterday"
+    : new Date(iso+"T12:00").toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+  const chip = (lbl,m,d,on,n,hot) => `<button class="${on?"on":""}" data-act="dep-go" data-mode="${m}" data-day="${d||""}">${lbl}${n!=null?` · ${n}`:""}${hot&&n?" ⚠️":""}</button>`;
+  const title = mode==="overdue"?"Overdue":mode==="all"?"All departures":dayLabel(day)+(day===today||day===isoShift(today,1)||day===isoShift(today,-1)?" · "+fmtDay(day):"");
+  return {title:"Departures", sub:`${title} · ${rows.length} room${rows.length===1?"":"s"} with equipment`,
+  body:`<div class="panel dep-bar">
+      <button class="btn sm ghost" data-act="dep-go" data-mode="day" data-day="${isoShift(mode==="day"?day:today,-1)}" aria-label="Previous day">‹</button>
+      <input class="input" type="date" id="depDay" value="${mode==="day"?esc(day):""}" aria-label="Departure day">
+      <button class="btn sm ghost" data-act="dep-go" data-mode="day" data-day="${isoShift(mode==="day"?day:today,1)}" aria-label="Next day">›</button>
+    </div>
+    <div class="rolebar" style="margin:10px 0 14px">
+      ${chip("Today","day",today,mode==="day"&&day===today,nDay(today))}
+      ${chip("Tomorrow","day",isoShift(today,1),mode==="day"&&day===isoShift(today,1),nDay(isoShift(today,1)))}
+      ${chip("Overdue","overdue","",mode==="overdue",late,true)}
+      ${chip("All","all","",mode==="all",all.length)}
+    </div>
+    ${mode==="day"&&day===today&&late?`<button class="alert hot" data-act="dep-go" data-mode="overdue" data-day="" style="margin-bottom:12px">
+      <span style="font-size:20px">⛔</span><span><b>${late} overdue room${late===1?"":"s"}</b><p>Their departure date has passed and equipment is still in the hall.</p></span></button>`:""}
+    ${rows.map(depCard).join("") || `<div class="empty"><span class="ic">📅</span>${mode==="overdue"?"No overdue rooms.":mode==="all"?"No departures with equipment in the hall.<br>Add a departure date at check-in and rooms show up here."
+      :`No rooms with equipment leave ${day===today?"today":"on "+esc(dayLabel(day))}.`}</div>`}`,
+  after(){ const i=$("#depDay"); if(i) i.addEventListener("change",()=>{ if(i.value) replaceView("departures",{mode:"day",day:i.value}); }); }};
 };
+function depCard({r,d,sts}){
+  const lbl = d<0?"Overdue":d===0?"Leaving today":d===1?"Tomorrow":"In "+d+" days", items=sts.reduce((a,x)=>a+eqCount(x.id),0);
+  return `<div class="panel" style="margin-bottom:10px;border-left:4px solid ${d<0?"var(--st-attention)":d===0?"var(--st-preparing)":"var(--line)"}">
+    <div class="row between" style="flex-wrap:wrap;gap:8px">
+      <b class="num" style="font-size:26px">Room ${esc(r.room_number)}</b>
+      <span class="chip ${d<0?"solid s-attention":""}">${lbl} · ${fmtDay(r.departure)}</span>
+    </div>
+    <div class="kv"><span>Guest</span><b>${esc(guestOf(r)||"—")}</b></div>
+    <div class="kv"><span>Storage</span><b>${sts.map(x=>esc(x.storage_number)).join(", ")}</b></div>
+    <div class="kv"><span>Still stored</span><b>${items} item${items===1?"":"s"}</b></div>
+    <div class="kv"><span>Key cards</span><b>${cardsOfRoom(r.id).length}</b></div>
+    <div class="btn-grid" style="margin-top:12px">
+      <button class="btn ghost" data-act="nav" data-view="room" data-id="${r.id}">Open room</button>
+      <button class="btn go" data-act="room-out" data-id="${r.id}">Check out &amp; release</button>
+    </div></div>`;
+}
 
 /* ==========================================================================
    12b. HALL SETUP — create the physical storage locations
@@ -2353,7 +2476,11 @@ document.addEventListener("click", e=>{
     /* equipment */
     case "add-eq": openEqSheet(id); break;
     case "plan-area": { const t=document.getElementById("area-"+normCode(el.dataset.area));
-      if(t) t.scrollIntoView({behavior:"smooth",block:"start"}); else go("map",{}); break; }
+      if(!t){ go("map",{}); break; }
+      // land the area's title just under the sticky top bar, not behind it
+      const bar=$(".topbar"), off=(bar?bar.getBoundingClientRect().bottom:0)+14;
+      window.scrollTo({top:Math.max(0,t.getBoundingClientRect().top+window.scrollY-off),behavior:"smooth"});
+      t.classList.remove("hit"); void t.offsetWidth; t.classList.add("hit"); break; }
     case "eq-edit": { const eq=DB.equipment.find(x=>x.id===id); if(eq) openEqSheet(eq.storage_id,eq.id); break; }
     case "photo": openPhoto(el.dataset.id,el.dataset.c); break;
     case "zoom-photo": e.preventDefault(); openLightbox(el.dataset.id,el.dataset.c); break;
@@ -2375,6 +2502,9 @@ document.addEventListener("click", e=>{
     case "ci-unphoto": { const i=ciItem(el); if(i){ i.photo=null; i.photo_id=null; drawItems(); } break; }
     case "ci-save": stowSave(); break;
     case "pc-open": openPrecheck(id); break;
+    case "pc-room": openRoomPrechecks(el.dataset.room); break;
+    case "co-room": go("room",{id,intent:"checkout"}); break;
+    case "dep-go": replaceView("departures",{mode:el.dataset.mode,day:el.dataset.day||undefined}); window.scrollTo(0,0); break;
     case "pc-use": usePrecheck(id); break;
     case "pc-drop": dropPrecheck(id); render(); break;
     case "pc-dismiss": dismissPrecheck(id); break;
