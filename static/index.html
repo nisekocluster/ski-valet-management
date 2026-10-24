@@ -1696,7 +1696,7 @@ function doCheckout(id){
 function confirmReturn(storageId){
   const s=stor(+storageId);
   openSheet(`<h3>Return equipment</h3>
-    <p class="sub">Room ${esc(room(s.room_id)?.room_number||"—")} · Storage ${esc(s.storage_number)}</p>
+    <p class="sub">Room ${esc(room(s.room_id)?.room_number||"—")} · Storage ${esc(s.storage_number)}</p>${idCheck(room(s.room_id))}
     <p class="hint">Confirm the equipment is back in the rack, then choose the next state.</p>
     <div class="btn-grid one" style="margin-top:8px">
       <button class="btn go" data-act="do-return" data-id="${s.id}" data-next="occupied">Returned · stored</button>
@@ -1962,7 +1962,7 @@ function doRoomHand(id){
 function confirmRoomReturn(id){
   const r=room(id), sts=storagesOfRoom(id).filter(s=>s.status==="guest_using").sort(byNumber);
   if(!sts.length) return;
-  openSheet(`<h3>Return equipment</h3><p class="sub">Room ${esc(r.room_number)} · tap what comes back now</p>
+  openSheet(`<h3>Return equipment</h3><p class="sub">Room ${esc(r.room_number)} · tap what comes back now</p>${idCheck(r)}
     ${pickList(sts)}${pickExtras(sts)}
     <div class="btn-grid one" style="margin-top:14px">
       <button class="btn go" data-act="do-room-return" data-id="${r.id}" data-next="occupied">Returned · stored</button></div>
