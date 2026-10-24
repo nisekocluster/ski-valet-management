@@ -919,10 +919,10 @@ VIEWS.dash = () => {
     <div class="stats">
       <button class="stat" style="--c:var(--st-occupied)" data-act="nav" data-view="active"><b class="num">${occ}</b><span>Occupied storages</span></button>
       <button class="stat" style="--c:var(--st-available)" data-act="nav" data-view="storages"><b class="num">${avail}</b><span>Available of ${total}</span></button>
-      <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="active"><b class="num">${DB.storages.filter(s=>s.status==="guest_using").reduce((a,s)=>a+eqCount(s.id),0)}</b><span>Guest using</span></button>
       <button class="stat" style="--c:var(--st-occupied)" data-act="nav" data-view="history"><b class="num">${checkinsToday()}</b><span>Checked in today</span></button>
       <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="departures"><b class="num">${checkoutsToday().length}</b><span>Checked out today</span></button>
       <button class="stat" style="--c:var(--glacier)" data-act="nav" data-view="storages"><b class="num">${stored}</b><span>Items in the hall</span></button>
+      <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="active"><b class="num">${DB.storages.filter(s=>s.status==="guest_using").reduce((a,s)=>a+eqCount(s.id),0)}</b><span>Guest using</span></button>
       <button class="stat" style="--c:var(--signal)" data-act="nav" data-view="rooms"><b class="num">${guests}</b><span>Rooms using valet</span></button>
       <button class="stat" style="--c:var(--st-attention)" data-act="nav" data-view="departures"><b class="num">${departingTodayCount()}</b><span>Departing today</span></button>
     </div>
