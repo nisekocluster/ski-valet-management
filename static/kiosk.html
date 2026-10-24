@@ -531,6 +531,18 @@ setInterval(() => {
   if(Date.now() - idleAt > IDLE_AFTER * 1000) showIdle();
 }, 1000);
 
+/* full screen hides the browser bar. A page may only ask for it on a tap, and it is lost
+   when the page reloads, so every tap re-enters it if needed: the pairing taps the first
+   time, then the next guest's first tap after a restart. (Locking the device to this page
+   is done on the device: Guided Access, screen pinning or a kiosk browser.) */
+function goFullscreen(){
+  const el = document.documentElement;
+  if(document.fullscreenElement || document.webkitFullscreenElement) return;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(!req) return;
+  try{ const r = req.call(el, {navigationUI:"hide"}); if(r && r.catch) r.catch(() => {}); }catch(_){}
+}
+document.addEventListener("click", goFullscreen, true);
 document.addEventListener("pointerdown", poke);
 document.addEventListener("keydown", poke);
 document.addEventListener("contextmenu", e => e.preventDefault());
