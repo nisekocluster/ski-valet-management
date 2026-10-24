@@ -279,7 +279,7 @@ function commit(label, fn, logEntry){
    2. DOMAIN (mirrors index.html)
    ========================================================================== */
 const STATUS = {
-  available:"Available", preparing:"Preparing", occupied:"Stored", ready:"Ready",
+  available:"Available", occupied:"Stored",
   guest_using:"Guest using", attention:"Needs attention", closed:"Closed"
 };
 const CARD_STATUS = {active:"Active", released:"Released"};
@@ -426,8 +426,8 @@ function checkIntegrity(){
     if(s.room_id!=null && !room(s.room_id)) add(true,"Storage points to a deleted room",`${s.storage_number} → room #${s.room_id}, which does not exist.`,()=>{ s.room_id=null; });
     const items=eqCount(s.id);
     if(s.status==="available" && items>0) add(false,"Available storage holds equipment",`${s.storage_number} is marked Available but holds ${items} items.`,()=>{ s.status="occupied"; });
-    if(s.status==="available" && s.room_id!=null && room(s.room_id)) add(false,"Available storage has a room",`${s.storage_number} is Available but still linked to room ${room(s.room_id).room_number}.`,()=>{ s.status="preparing"; });
-    if(["occupied","ready","guest_using"].includes(s.status) && s.room_id==null && !items && !cardsOfStorage(s.id).length)
+    if(s.status==="available" && s.room_id!=null && room(s.room_id)) add(false,"Available storage has a room",`${s.storage_number} is Available but still linked to room ${room(s.room_id).room_number}.`,()=>{ s.status="occupied"; });
+    if(["occupied","guest_using"].includes(s.status) && s.room_id==null && !items && !cardsOfStorage(s.id).length)
       add(false,"Empty storage marked in use",`${s.storage_number} is "${STATUS[s.status]}" with no room, cards or equipment.`,()=>{ s.status="available"; });
     if(!s.room_id && items) add(false,"Equipment without a room",`${s.storage_number} holds ${items} items but no room is assigned — guests can't find it by room.`,null,{view:"trace",q:s.storage_number});
     if(!s.section) add(false,"Storage without area",`${s.storage_number} has no area; it won't appear on the map.`,()=>{ s.section="Unassigned area"; });
@@ -1175,7 +1175,7 @@ function saveForm(col,id){
       target.room_id=null; target.storage_id=null;
       if(!rec||rec.status!=="released"||!target.released_at) target.released_at=now(); }
     if(col==="cards"&&target.status==="active") target.released_at=null;
-    if(col==="storages"&&target.room_id!=null&&target.status==="available") target.status="preparing";
+    if(col==="storages"&&target.room_id!=null&&target.status==="available") target.status="occupied";
     if(col==="equipment"){ const s=stor(target.storage_id); if(s&&s.status==="available"){ s.status="occupied"; s.updated_at=now(); } }
     if(col==="rooms"&&target.status==="staying"&&!rec) target.updated_at=now();
     if(col==="rooms"&&target.status==="checked_out"){

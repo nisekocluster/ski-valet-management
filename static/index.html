@@ -465,9 +465,7 @@ function credError(user,pw,pw2){
    ========================================================================== */
 const STATUS = {
   available:{label:"Available", c:"var(--st-available)"},
-  preparing:{label:"Preparing", c:"var(--st-preparing)"},
   occupied :{label:"Stored",    c:"var(--st-occupied)"},
-  ready    :{label:"Ready",     c:"var(--st-ready)"},
   guest_using:{label:"Guest using", c:"var(--st-guest)"},
   attention:{label:"Needs attention", c:"var(--st-attention)"},
   closed   :{label:"Closed",    c:"var(--st-closed)"}
@@ -701,7 +699,7 @@ function log(action, o={}){
   DB.history.unshift({id:uid(),user_id:SESSION?SESSION.id:null,action,
     room_id:o.room_id??null,storage_id:o.storage_id??null,key_card_id:o.key_card_id??null,
     equipment_id:o.equipment_id??null,timestamp:now(),notes:o.notes||"",prev:o.prev||null,next:o.next||null,
-    ...(o.photo_id?{photo_id:o.photo_id}:{})});
+    ...(o.photo_id?{photo_id:o.photo_id}:{}),...(o.departure?{departure:o.departure}:{})});
   if(DB.history.length>5000) DB.history.length=5000;     // display cap only; the server keeps everything
 }
 function setStorageStatus(s,next,note){
@@ -735,14 +733,18 @@ const firstName = u => String(u&&u.name||"").trim().split(/\s+/)[0] || "—";
 /* ==========================================================================
    4. ROUTER
    ========================================================================== */
-function go(view,params={}){ nav.push({view,params}); render(); }
-function replaceView(view,params={}){ nav[nav.length-1]={view,params}; render(); }
-function back(){ if(nav.length>1){ nav.pop(); render(); } }
-function home(){ nav=[{view:"dash",params:{}}]; render(); }
+/* each screen remembers how far down it was, so Back returns to the same spot */
+function go(view,params={}){ if(nav.length) current().y=window.scrollY; nav.push({view,params}); render(0); }
+function replaceView(view,params={}){ nav[nav.length-1]={view,params}; render(0); }
+function back(){ if(nav.length>1){ nav.pop(); render(current().y||0); } }
+function home(){ nav=[{view:"dash",params:{}}]; render(0); }
 const current = ()=>nav[nav.length-1]||{view:"dash",params:{}};
 
 const VIEWS = {};
-function render(){
+/* y: where to scroll to; left out, the screen stays where it is (a change from
+   another device or an action on this screen must not jump to the top) */
+function render(y){
+  const keep = y===undefined ? window.scrollY : y;
   staleView=false;
   const {view,params} = current();
   if(!SESSION){ $("#shell").innerHTML = adminLogin ? viewAdminLogin() : pinOk ? viewPickName() : viewLogin(); return; }
@@ -756,8 +758,8 @@ function render(){
         `<button class="who" data-act="account"><i>${esc(firstName(SESSION)[0])}</i>${esc(firstName(SESSION))}</button>`}
     </header>
     <main>${out.body}</main>`;
-  window.scrollTo(0,0);
   if(out.after) out.after();
+  window.scrollTo(0,keep);
 }
 
 /* ==========================================================================
@@ -880,9 +882,7 @@ VIEWS.dash = () => {
   const total=DB.storages.length;
   const avail=DB.storages.filter(s=>s.status==="available").length;
   const occ=DB.storages.filter(s=>!["available","closed"].includes(s.status)).length;
-  const stored=DB.storages.filter(s=>["occupied","preparing","ready","attention"].includes(s.status)).reduce((a,s)=>a+eqCount(s.id),0);
-  const ready=DB.storages.filter(s=>s.status==="ready").reduce((a,s)=>a+eqCount(s.id),0);
-  const out=DB.storages.filter(s=>s.status==="guest_using").reduce((a,s)=>a+eqCount(s.id),0);
+  const stored=DB.storages.filter(s=>["occupied","attention"].includes(s.status)).reduce((a,s)=>a+eqCount(s.id),0);
   const guests=DB.rooms.filter(r=>storagesOfRoom(r.id).some(s=>s.status!=="available")).length;
   const al=alerts(), recent=DB.history.slice(0,5);
   const A=(act,ic,label,small)=>`<button class="action" data-act="nav" data-view="${act}"><span class="ico">${ic}</span><b>${label}</b><small>${small}</small></button>`;
@@ -919,25 +919,21 @@ VIEWS.dash = () => {
     <div class="stats">
       <button class="stat" style="--c:var(--st-occupied)" data-act="nav" data-view="active"><b class="num">${occ}</b><span>Occupied storages</span></button>
       <button class="stat" style="--c:var(--st-available)" data-act="nav" data-view="storages"><b class="num">${avail}</b><span>Available of ${total}</span></button>
-      <button class="stat" style="--c:var(--st-ready)" data-act="nav" data-view="active"><b class="num">${ready}</b><span>Ready for pickup</span></button>
-      <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="active"><b class="num">${out}</b><span>Checked out</span></button>
+      <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="departures"><b class="num">${checkoutsToday().length}</b><span>Checked out today</span></button>
       <button class="stat" style="--c:var(--glacier)" data-act="nav" data-view="storages"><b class="num">${stored}</b><span>Items in the hall</span></button>
       <button class="stat" style="--c:var(--signal)" data-act="nav" data-view="rooms"><b class="num">${guests}</b><span>Rooms using valet</span></button>
-      <button class="stat" style="--c:var(--st-preparing)" data-act="nav" data-view="storages"><b class="num">${DB.storages.filter(s=>s.status==="preparing").length}</b><span>Preparing</span></button>
-      <button class="stat" style="--c:var(--st-attention)" data-act="nav" data-view="departures"><b class="num">${departingRooms().filter(x=>x.d<=0).length}</b><span>Departing today</span></button>
+      <button class="stat" style="--c:var(--st-attention)" data-act="nav" data-view="departures"><b class="num">${departingTodayCount()}</b><span>Departing today</span></button>
     </div>
 
     <h2 class="sec">Actions</h2>
     <div class="actions">
-      ${A("rooms","🚪","Search room","By room number")}
-      ${A("storages","🏷️","Search storage","All locations")}
+      ${A("search","🔎","Quick search","Card · room · item")}
+      ${A("prechecks","📝","Pre-check-ins","From the kiosk, today")}
       ${A("stow","⬇️","Check in","By room number")}
       ${A("checkout","⬆️","Check out","By room number")}
-      ${A("prechecks","📝","Pre-check-ins","From the kiosk, today")}
+      ${A("rooms","🚪","Search room","By room number")}
+      ${A("storages","🏷️","Search storage","All locations")}
       ${A("map","🗺️","Storage map","Hall layout")}
-      ${A("active","🎿","Active storage","In use now")}
-      ${A("search","🔎","Quick search","Card · room · item")}
-      ${A("departures","📅","Departures","Leaving the hotel")}
       ${A("history","🕒","History","Full audit trail")}
     </div>
 
@@ -1357,7 +1353,7 @@ VIEWS.prechecks = (p={}) => {
   return {title:"Pre-check-ins", sub:`${n} room${n===1?"":"s"} waiting · today`,
   body:`<div class="searchbar" style="margin-bottom:12px">🔎<input id="qPc" placeholder="Room number or guest name" autocomplete="off" value="${esc(p.q||"")}"></div>
     <div id="pcList"></div>
-    <div class="hint" style="margin-top:12px">Pre-check-ins nobody confirms are cleared at midnight.</div>`,
+    <div class="hint" style="margin-top:12px;text-align:center">Pre-check-ins nobody confirms are cleared at midnight.</div>`,
   after(){
     const i=$("#qPc");
     const draw=()=>{ const q=i.value.trim().toLowerCase(); p.q=i.value;
@@ -1666,7 +1662,7 @@ async function saveEq(storageId,editId){
     if(photo_id) e.photo_id=photo_id;
     DB.equipment.push(e);
     log("Equipment added",{storage_id:e.storage_id,room_id:stor(e.storage_id).room_id,equipment_id:e.id,photo_id,notes:`${eqLabel(e)} ×1`});
-    const s=stor(+storageId); if(s.status==="available") setStorageStatus(s,"preparing");
+    const s=stor(+storageId); if(s.status==="available") setStorageStatus(s,"occupied");
   }
   save(); closeSheet(); toast("Equipment saved"); render();
 }
@@ -1700,8 +1696,7 @@ function confirmReturn(storageId){
   openSheet(`<h3>Return equipment</h3>
     <p class="sub">Room ${esc(room(s.room_id)?.room_number||"—")} · Storage ${esc(s.storage_number)}</p>
     <p class="hint">Confirm the equipment is back in the rack, then choose the next state.</p>
-    <div class="btn-grid" style="margin-top:8px">
-      <button class="btn" data-act="do-return" data-id="${s.id}" data-next="preparing">Returned · drying</button>
+    <div class="btn-grid one" style="margin-top:8px">
       <button class="btn go" data-act="do-return" data-id="${s.id}" data-next="occupied">Returned · stored</button>
     </div>
     <button class="btn ghost" style="margin-top:10px" data-act="close-sheet">Cancel</button>`);
@@ -1726,8 +1721,7 @@ function confirmFinalOut(storageId){
       <div class="kv"><span>Equipment</span><b>${eqCount(s.id)} items handed over</b></div>
     </div>
     <p class="hint">Everything stays in the history. Scanning the card again starts a fresh check-in.</p>
-    <div class="btn-grid" style="margin-top:14px">
-      <button class="btn" data-act="do-final-out" data-id="${s.id}" data-next="preparing">Release · needs cleaning</button>
+    <div class="btn-grid one" style="margin-top:14px">
       <button class="btn go" data-act="do-final-out" data-id="${s.id}" data-next="available">Release · free now</button>
     </div>
     <button class="btn ghost" style="margin-top:10px" data-act="close-sheet">Cancel</button>`);
@@ -1762,11 +1756,11 @@ function releaseAll(s,next){
 }
 function doFinalOut(id,next){
   const s=stor(+id); if(!s){ closeSheet(); home(); return; }
-  const r=room(s.room_id), eq=eqOf(s.id), guest=r?.guest_name||"";
+  const r=room(s.room_id), eq=eqOf(s.id), guest=r?.guest_name||"", dep=r?.departure;
   const list=manifest(s)||"no items";
   const prev=stInfo(s.status).label, roomId=s.room_id;
   const n=releaseAll(s,next);
-  log("Checked out & released",{storage_id:s.id,room_id:roomId,prev,next:stInfo(next).label,
+  log("Checked out & released",{storage_id:s.id,room_id:roomId,prev,next:stInfo(next).label,departure:dep,
     notes:`${list} · ${n} card${n===1?"":"s"} released${r?" · room "+r.room_number:""}${guest?" · "+guest:""}`});
   save(); closeSheet(); toast("Checked out · "+s.storage_number+" released");
   home();
@@ -1820,7 +1814,7 @@ function doAssignRoom(id){
     r.status="staying"; r.updated_at=now(); }
   const prev=room(s.room_id)?.room_number||"—";
   s.room_id=r.id; s.updated_at=now();
-  if(s.status==="available") setStorageStatus(s,"preparing");
+  if(s.status==="available") setStorageStatus(s,"occupied");
   cardsOfStorage(s.id).forEach(c=>{ c.room_id=r.id; c.updated_at=now(); });
   cardsOfRoom(r.id).forEach(c=>{ if(c.storage_id==null){ c.storage_id=s.id; c.updated_at=now(); } });
   log("Room assigned",{storage_id:s.id,room_id:r.id,prev:"Room "+prev,next:"Room "+r.room_number});
@@ -1968,8 +1962,7 @@ function confirmRoomReturn(id){
   if(!sts.length) return;
   openSheet(`<h3>Return equipment</h3><p class="sub">Room ${esc(r.room_number)} · tap what comes back now</p>
     ${pickList(sts)}${pickExtras(sts)}
-    <div class="btn-grid" style="margin-top:14px">
-      <button class="btn" data-act="do-room-return" data-id="${r.id}" data-next="preparing">Returned · drying</button>
+    <div class="btn-grid one" style="margin-top:14px">
       <button class="btn go" data-act="do-room-return" data-id="${r.id}" data-next="occupied">Returned · stored</button></div>
     <button class="btn ghost" style="margin-top:10px" data-act="close-sheet">Cancel</button>`);
 }
@@ -1989,19 +1982,18 @@ function confirmRoomOut(id){
       <div class="kv"><span>Key cards</span><b>${cardsOfRoom(r.id).length} unlinked</b></div>
     </div>
     <p class="hint">Everything stays in the history, equipment photos included${idPhotos(r).length?" — the guest's ID photo is deleted":""}. Scanning the card again starts a fresh check-in.</p>
-    <div class="btn-grid" style="margin-top:14px">
-      <button class="btn" data-act="do-room-out" data-id="${r.id}" data-next="preparing">Release · needs cleaning</button>
+    <div class="btn-grid one" style="margin-top:14px">
       <button class="btn go" data-act="do-room-out" data-id="${r.id}" data-next="available">Release · free now</button></div>
     <button class="btn ghost" style="margin-top:10px" data-act="close-sheet">Cancel</button>`);
 }
 function doRoomOut(id,next){
   const r=room(id); if(!r){ closeSheet(); home(); return; }
-  const sts=storagesOfRoom(id), guest=r.guest_name||"", num=r.room_number;
+  const sts=storagesOfRoom(id), guest=r.guest_name||"", num=r.room_number, dep=r.departure;
   let n=0;
   sts.forEach(s=>{
     const list=manifest(s)||"no items", prev=stInfo(s.status).label;
     const c=releaseAll(s,next); n+=c;
-    log("Checked out & released",{storage_id:s.id,room_id:id,prev,next:stInfo(next).label,
+    log("Checked out & released",{storage_id:s.id,room_id:id,prev,next:stInfo(next).label,departure:dep,
       notes:`${list}${c?` · ${c} card${c===1?"":"s"} released`:""} · room ${num}${guest?" · "+guest:""}`});
   });
   save(); closeSheet(); toast(`Room ${num} checked out · ${sts.length} location${sts.length===1?"":"s"} released`);
@@ -2090,7 +2082,7 @@ VIEWS.map = () => {
         </button>`).join("")}</div></div>`; }).join("")}</div>`};
 };
 VIEWS.active = () => {
-  const groups=[["ready","Ready for guest"],["guest_using","With the guest"],["occupied","Stored"],["preparing","Preparing"],["attention","Needs attention"]];
+  const groups=[["guest_using","With the guest"],["occupied","Stored"],["attention","Needs attention"]];
   return {title:"Active storage", sub:"Everything in use right now",
   body: groups.map(([k,label])=>{ const rows=DB.storages.filter(s=>s.status===k); if(!rows.length) return "";
       const rooms=new Set(rows.map(s=>s.room_id).filter(id=>room(id))).size;
@@ -2138,6 +2130,19 @@ function coRow(r){
 /* ==========================================================================
    12a. DEPARTURES — rooms leaving the hotel, so nothing stays behind
    ========================================================================== */
+/* rooms that finished check-out today: their last location was released today */
+const isoOf = ts => { const d=new Date(ts); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+function checkoutsToday(){
+  const t=todayISO(), seen=new Map();
+  DB.history.forEach(h=>{ if(h.action==="Checked out & released" && h.room_id!=null && h.timestamp && isoOf(h.timestamp)===t && !seen.has(h.room_id)) seen.set(h.room_id,h); });
+  return [...seen].filter(([rid])=>!storagesOfRoom(rid).length).map(([rid,h])=>({room_id:rid, departure:h.departure||null}));
+}
+/* rooms leaving today: those still in the hall plus those already checked out today.
+   At the end of the day both counters match, unless a guest extended the stay. */
+function departingTodayCount(){
+  const t=todayISO();
+  return departingRooms().filter(x=>x.r.departure===t).length + checkoutsToday().filter(x=>x.departure===t).length;
+}
 function departingRooms(){
   return DB.rooms.filter(r=>r.departure && r.status!=="checked_out" && storagesOfRoom(r.id).length)
     .map(r=>({r, d:daysTo(r.departure), sts:storagesOfRoom(r.id)}))
@@ -2577,7 +2582,7 @@ document.addEventListener("click",e=>{
   const s=stor(+el.dataset.s), r=room(+el.dataset.room);
   if(!s||!r){ closeSheet(); render(); return; }
   if(s.status!=="available"||s.room_id!=null){ toast(`${s.storage_number} is no longer free`,"err"); closeSheet(); render(); return; }
-  s.room_id=r.id; s.updated_at=now(); r.status="staying"; setStorageStatus(s,"preparing","Assigned to room "+r.room_number);
+  s.room_id=r.id; s.updated_at=now(); r.status="staying"; setStorageStatus(s,"occupied","Assigned to room "+r.room_number);
   cardsOfRoom(r.id).forEach(c=>{ if(c.storage_id==null){ c.storage_id=s.id; c.updated_at=now(); } });
   log("Storage assigned",{storage_id:s.id,room_id:r.id,next:s.storage_number});
   save(); closeSheet(); toast(s.storage_number+" assigned"); replaceView("storage",{id:s.id});
