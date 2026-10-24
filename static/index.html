@@ -2122,7 +2122,7 @@ VIEWS.checkout = (p={}) => {
     i.addEventListener("input",draw);
     i.addEventListener("keydown",e=>{ if(e.key!=="Enter") return; const m=match();
       const exact=m.find(r=>String(r.room_number).toLowerCase()===i.value.trim().toLowerCase());
-      if(exact||m.length===1) go("room",{id:(exact||m[0]).id,intent:"checkout"}); });
+      if(exact||m.length===1) go("room",{id:(exact||m[0]).id}); });
     draw(); setTimeout(()=>i.focus(),80);
   }};
 };
@@ -2503,7 +2503,7 @@ document.addEventListener("click", e=>{
     case "ci-save": stowSave(); break;
     case "pc-open": openPrecheck(id); break;
     case "pc-room": openRoomPrechecks(el.dataset.room); break;
-    case "co-room": go("room",{id,intent:"checkout"}); break;
+    case "co-room": go("room",{id}); break;
     case "dep-go": replaceView("departures",{mode:el.dataset.mode,day:el.dataset.day||undefined}); window.scrollTo(0,0); break;
     case "pc-use": usePrecheck(id); break;
     case "pc-drop": dropPrecheck(id); render(); break;
