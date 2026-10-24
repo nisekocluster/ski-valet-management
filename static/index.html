@@ -418,7 +418,15 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;ba
 .tag{box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),0 5px 12px rgba(0,0,0,.18)}
 .input,.searchbar{border-color:rgba(112,151,178,.34)}.input{background:rgba(5,15,24,.55);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}.input:focus{background:#0b1926;box-shadow:0 0 0 4px rgba(94,200,242,.12)}
 .chip{box-shadow:inset 0 1px rgba(255,255,255,.04)}
-.modal{background:rgba(3,10,16,.78)}.sheet{box-shadow:0 -8px 36px rgba(0,0,0,.4);border-color:rgba(112,151,178,.42)}
+.modal{background:rgba(3,10,16,.86)}.sheet{box-shadow:0 -8px 36px rgba(0,0,0,.4);border-color:rgba(112,151,178,.42)}
+/* Overlay sheets: no blur behind them (re-blurring the page on every scroll frame made the
+   sheet flash see-through for a moment), the sheet scrolls on its own layer, its scroll never
+   passes to the page, and the page behind is locked while a sheet is open. */
+.modal{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+.sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;will-change:transform;transform:translateZ(0)}
+html.sheet-open,html.sheet-open body{overflow:hidden}
+html{scrollbar-gutter:stable}
+
 @media(min-width:760px){#shell{max-width:1180px}.topbar{margin:10px 12px 0;border:1px solid rgba(112,151,178,.3);border-radius:16px}.hero{border-radius:22px}.panel{padding:18px}.stats{gap:12px}.actions{gap:12px}}
 </style>
 </head>
@@ -2432,9 +2440,11 @@ function openAccount(){
    15. SHEETS
    ========================================================================== */
 function openSheet(html){ const m=$("#modal"); m.innerHTML=`<div class="sheet"><button class="sheet-x" aria-label="Close">✕</button>${html}</div>`; m.classList.remove("hidden");
+  document.documentElement.classList.add("sheet-open");
   m.onclick=e=>{ if(e.target===m || e.target.closest(".sheet-x")) closeSheet(); }; }
 let staleView=false;
 function closeSheet(){ stopCamera(); const m=$("#modal"); m.classList.add("hidden"); m.innerHTML="";
+  document.documentElement.classList.remove("sheet-open");
   if(staleView){ staleView=false; render(); } }
 
 /* ==========================================================================

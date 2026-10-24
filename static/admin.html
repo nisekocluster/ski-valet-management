@@ -218,7 +218,15 @@ nav.side button.on{background:linear-gradient(90deg,rgba(255,106,43,.16),rgba(26
 .input{background:rgba(5,15,24,.58);border-color:rgba(112,151,178,.35);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}.input:focus{background:#0b1926;box-shadow:0 0 0 4px rgba(94,200,242,.12)}
 .searchbar{background:rgba(19,35,51,.9);box-shadow:0 7px 16px rgba(2,10,17,.1)}
 .tbl-wrap{box-shadow:0 10px 24px rgba(2,10,17,.13)}th{background:#1a3042}tr.clk:hover td,tr:hover td{background:rgba(94,200,242,.055)}
-.sheet{box-shadow:0 18px 48px rgba(0,0,0,.42);border-color:rgba(112,151,178,.42)}.modal{background:rgba(3,10,16,.78);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.sheet{box-shadow:0 18px 48px rgba(0,0,0,.42);border-color:rgba(112,151,178,.42)}.modal{background:rgba(3,10,16,.86)}
+/* Overlay sheets: no blur behind them (re-blurring the page on every scroll frame made the
+   sheet flash see-through for a moment), the sheet scrolls on its own layer, its scroll never
+   passes to the page, and the page behind is locked while a sheet is open. */
+.modal{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+.sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;will-change:transform;transform:translateZ(0)}
+html.sheet-open,html.sheet-open body{overflow:hidden}
+html{scrollbar-gutter:stable}
+
 @media(min-width:1100px){.layout{padding:12px}.topbar{margin:10px 12px 0;border:1px solid rgba(112,151,178,.3);border-radius:16px}.layout{max-width:1424px}main{padding:26px 28px 72px}nav.side{top:77px;height:calc(100vh - 89px);border-radius:16px;background:rgba(19,35,51,.5)}}
 /* ---------- analytics ---------- */
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-s);overflow:hidden;background:rgba(5,15,24,.4)}
@@ -1678,8 +1686,9 @@ function importJSON(text,name){
 
 /* ---------- modal ---------- */
 function openSheet(html,wide){ const m=$("#modal"); m.innerHTML=`<div class="sheet${wide?" wide":""}"><button class="sheet-x" aria-label="Close">✕</button>${html}</div>`; m.classList.remove("hidden");
+  document.documentElement.classList.add("sheet-open");
   m.onclick=e=>{ if(e.target===m || e.target.closest(".sheet-x")) closeSheet(); }; }
-function closeSheet(){ const m=$("#modal"); m.classList.add("hidden"); m.innerHTML=""; }
+function closeSheet(){ const m=$("#modal"); m.classList.add("hidden"); m.innerHTML=""; document.documentElement.classList.remove("sheet-open"); }
 function confirmSheet(title,sub,btn,fn){
   openSheet(`<h3 style="color:var(--st-attention)">${title}</h3><p class="sub">${sub}</p>
     <div class="foot"><button class="btn" data-act="close">Cancel</button><button class="btn danger" id="cfOk">${btn}</button></div>`);
