@@ -89,8 +89,12 @@ python app.py                   # http://localhost:5000
   (válido 10 minutos) que se escribe en `/kiosk`. La pantalla queda emparejada un año con su propia
   cookie; solo puede enviar pre-registros, no ve ningún dato. *Remove* la desconecta al momento.
 - Los pre-registros quedan en la tabla `prechecks` con estado `pending` y llegan a todos los
-  dispositivos por la sincronización normal. Los que nadie confirma pasan a `expired` a las
-  `PRECHECK_HOURS` horas (por defecto 24). Un pre-registro confirmado se borra cuando su habitación hace
+  dispositivos por la sincronización normal. Los que nadie confirma pasan a `expired` a medianoche
+  (hora del hotel, `HOTEL_TZ`, por defecto `Asia/Tokyo`) o a las `PRECHECK_HOURS` horas (24), lo que
+  llegue antes: cada día empieza con la lista vacía. En la app del valet, el inicio muestra un resumen
+  (3 habitaciones) y **Pre-check-ins** la lista completa: buscador por habitación o nombre, una tarjeta
+  por habitación (los registros de una familia juntos), ✕ para descartar y aviso en rojo si llevan más
+  de 1 hora esperando. Un pre-registro confirmado se borra cuando su habitación hace
   check-out (el cliente recoge el último equipo); en el historial queda la línea *Pre-check-in confirmed*.
   Los caducados y descartados se borran a los `PRECHECK_KEEP_DAYS` días (30).
 - En la app del valet, el inicio muestra **Pre-check-ins** pendientes. Al tocar uno (o al escribir la

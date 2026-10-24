@@ -61,6 +61,7 @@ PHOTO_KEEP_DAYS = int(os.environ.get("PHOTO_KEEP_DAYS", "90"))   # photos no sto
 PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp"}
 PRECHECK_HOURS = int(os.environ.get("PRECHECK_HOURS", "24"))        # a kiosk pre-check-in nobody confirmed expires
 PRECHECK_KEEP_DAYS = int(os.environ.get("PRECHECK_KEEP_DAYS", "30"))  # confirmed / expired ones are then deleted
+HOTEL_TZ = os.environ.get("HOTEL_TZ", "Asia/Tokyo")                # pending pre-check-ins expire at midnight here
 PRECHECK_PER_MINUTE = 6                                           # per kiosk screen
 KIOSK_COOKIE = "skivalet_kiosk"
 KIOSK_DAYS = 365                                                  # a paired screen stays signed in this long
@@ -329,8 +330,12 @@ def ddl():
 
 
 def init_db():
+    global HOTEL_TZ
     with tx() as cur:
         write_lock(cur)
+        cur.execute("SELECT 1 FROM pg_timezone_names WHERE name = %s", (HOTEL_TZ,))
+        if not cur.fetchone():                            # a typo in HOTEL_TZ must not break every sync
+            HOTEL_TZ = "Asia/Tokyo"
         for stmt in ddl():
             cur.execute(stmt)
         for t in TABLES:                                  # triggers (created once)
@@ -425,9 +430,12 @@ def purge_guest_data(cur):
         collected the last item); the history keeps the "Pre-check-in confirmed" entry
       * guest ID photos (photos.kind = 'face') are kept only while a pending pre-check-in
         or a room that has not checked out (rooms.extra.face_photo_ids) points to them
+      * a pending pre-check-in expires at midnight (HOTEL_TZ) or after PRECHECK_HOURS
       * expired / dismissed pre-check-ins go after PRECHECK_KEEP_DAYS (see kiosk_precheck)"""
     cur.execute("""UPDATE prechecks SET status = 'expired', updated_at = now()
-                   WHERE status = 'pending' AND created_at < now() - make_interval(hours => %s)""", (PRECHECK_HOURS,))
+                   WHERE status = 'pending' AND (created_at < now() - make_interval(hours => %s)
+                         OR (created_at AT TIME ZONE %s)::date < (now() AT TIME ZONE %s)::date)""",
+                (PRECHECK_HOURS, HOTEL_TZ, HOTEL_TZ))                # sent before today's midnight
     cur.execute("""DELETE FROM prechecks c WHERE c.status = 'confirmed'
                      AND NOT EXISTS (SELECT 1 FROM rooms r WHERE r.id = c.room_id
                                        AND r.status IS DISTINCT FROM 'checked_out')""")
