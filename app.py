@@ -362,6 +362,9 @@ def init_db():
                            VALUES (%s, 'Staff', '', 'staff', 'staff', %s, %s, %s)""",
                         (new_id() + 1, now, now, generate_password_hash(pin) if re.fullmatch(r"\d{4}", pin) else None))
         cur.execute("UPDATE storages SET section = 'Kids' WHERE section = 'Ski Kids'")   # area renamed
+        # Preparing / Ready are no longer used: a location holds a room's items (Stored) or is free
+        cur.execute("""UPDATE storages SET status = CASE WHEN room_id IS NOT NULL THEN 'occupied' ELSE 'available' END,
+                       updated_at = now() WHERE status IN ('preparing', 'ready')""")
         cur.execute("""UPDATE storages s SET storage_number = 'K-' || substr(s.storage_number, 4)
                        WHERE s.storage_number LIKE 'SK-%%' AND NOT EXISTS (SELECT 1 FROM storages o
                        WHERE o.storage_number = 'K-' || substr(s.storage_number, 4))""")      # SK-01 -> K-01
