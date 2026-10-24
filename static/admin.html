@@ -136,6 +136,10 @@ tr.picked td{background:rgba(255,77,77,.08)}
 .trace-photos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block;background:#060d15}
 .trace-photos span{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
 @media(max-width:760px){.trace.with-photos{grid-template-columns:1fr}.trace-photos{flex-direction:row;flex-wrap:wrap}.trace-photos a{width:160px}}
+.id-ph{display:flex;flex-direction:column;align-items:center;gap:4px;text-decoration:none}
+.id-ph img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--glacier);background:var(--night)}
+.id-ph span{font-size:11px;color:var(--glacier);letter-spacing:.5px;text-transform:uppercase}
+.id-mini{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--glacier);flex:none}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}
 .gallery .ph{background:var(--night);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
 .gallery .ph a,.gallery .ph .none{display:block;aspect-ratio:4/3;background:#060d15}
@@ -293,6 +297,10 @@ const catChoices = () => { const o={...STORED};
 /* what each area holds (same list as the valet app) */
 const KINDS = {boots:"Boots", ski:"Ski", ski_kids:"Kids", snowboard:"Snowboard", vip:"VIP"};
 const photoUrl = id => "/api/photos/"+encodeURIComponent(id);
+/* the guest's ID photos from the kiosk; the server deletes them when the room checks out */
+const idPhotos = r => r && r.status!=="checked_out" ? (r.face_photo_ids||[]) : [];
+const idLinks = r => idPhotos(r).map(id=>`<a class="id-ph" href="${photoUrl(id)}" target="_blank" rel="noopener" title="Guest ID photo · open full size">
+  <img src="${photoUrl(id)}" alt="Guest ID photo"><span>Guest ID</span></a>`).join("");
 const photoImg = id => id?`<a href="${photoUrl(id)}" target="_blank" rel="noopener"><img src="${photoUrl(id)}" alt="Equipment photo" loading="lazy" style="width:100%;max-width:360px;border-radius:10px;display:block;margin:6px 0 12px"></a>`:"";
 const EQ_STATUS = {stored:"Stored"};
 const COLLECTIONS = ["rooms","storages","cards","equipment","users","history"];
@@ -605,6 +613,8 @@ function openDetail(col,id){
     body=`<div class="panel tiny" style="margin-bottom:12px">
         ${kv("Departure",esc(rec.departure||"—"))}${kv("Key cards",cs.map(c=>`<span class="mono">${esc(c.card_code)}</span>`).join(", ")||"—")}
         ${kv("Storages",sts.map(s=>esc(s.storage_number)).join(", ")||"—")}${kv("Items",sts.reduce((a,s)=>a+eqCount(s.id),0))}</div>
+      ${idPhotos(rec).length?`<div class="panel id-panel" style="margin-bottom:12px"><span class="eyebrow dim tiny">Guest ID photo · deleted at check-out</span>
+        <div class="row" style="gap:10px;margin-top:8px;flex-wrap:wrap">${idLinks(rec)}</div></div>`:""}
       ${roomGallery(rec)}
       ${sts.map(s=>traceStorage(s,"Storage "+s.storage_number)).join("")
         ||`<div class="panel" style="margin-bottom:12px"><p class="muted tiny" style="margin:0 0 10px">No storage is linked to this room.</p>${H(DB.history.filter(h=>h.room_id===rec.id))}</div>`}`;
@@ -708,7 +718,7 @@ const SCHEMA = {
       {k:"guest_name",l:"Guest name"},
       {k:"departure",l:"Departure",type:"date"},
       {k:"status",l:"Status",type:"select",opts:()=>opt(ROOM_STATUS),def:"staying"}],
-    cols:[["Room",r=>`<b>${esc(r.room_number)}</b>`],["Guest",r=>esc(guestOf(r)||"—")],["Departure",r=>esc(r.status!=="checked_out"&&r.departure||"—")],
+    cols:[["Room",r=>`<b>${esc(r.room_number)}</b>`],["Guest",r=>`<span class="row" style="gap:8px">${idPhotos(r).slice(0,1).map(id=>`<img class="id-mini" src="${photoUrl(id)}" alt="" loading="lazy">`).join("")}${esc(guestOf(r)||"—")}</span>`],["Departure",r=>esc(r.status!=="checked_out"&&r.departure||"—")],
       ["Status",r=>chip(r.status||"staying",ROOM_STATUS[r.status]||r.status)],
       ["Storages",r=>storagesOfRoom(r.id).map(s=>storLabel(s.id)).join(", ")||`<span class="dim">—</span>`],
       ["Cards",r=>cardsOfRoom(r.id).length],
