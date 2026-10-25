@@ -140,7 +140,7 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
   color:var(--glacier); font:600 20px var(--body); cursor:pointer}
 
 /* done */
-.done{justify-content:center; align-items:center; text-align:center}
+.done{justify-content:center; align-items:center; text-align:center; cursor:pointer}
 .tick{width:150px; height:150px; border-radius:50%; background:var(--ok); display:grid; place-items:center; margin-bottom:28px}
 .tick svg{width:84px; color:#fff}
 .bigroom{font:700 120px var(--display); color:var(--signal); line-height:1; margin:20px 0}
@@ -290,7 +290,7 @@ const T = {
     equipment:"Equipment", edit:"Edit", send:"Send", sending:"Sending…",
     err_net:"No connection. Please try again, or go to the valet counter.", err:"Something went wrong. Please go to the valet counter.", busy:"This screen is busy. Please wait a moment and tap Send again.",
     done_t:"You're pre-registered!", done_h:"Take your equipment to the valet counter and tell the staff your room number.",
-    reset:"This screen resets in {n} s", idle_t:"Are you still there?", idle_s:"For your privacy, this screen resets in {n} s.",
+    reset:"Tap anywhere to start the next check-in · resets in {n} s", idle_t:"Are you still there?", idle_s:"For your privacy, this screen resets in {n} s.",
     idle_b:"Continue", back:"Back", next:"Next", startover:"Start over"},
   ja:{welcome:"ようこそ", welcome_sub:"スキー・スノーボード預かり — セルフチェックイン。言語を選んで始めてください。",
     room_t:"お部屋番号を入力してください", room_h:"ルームキーに記載されています。", clear:"消去",
@@ -307,7 +307,7 @@ const T = {
     equipment:"用具", edit:"修正", send:"送信する", sending:"送信中…",
     err_net:"接続できません。もう一度お試しいただくか、バレーカウンターへお越しください。", err:"エラーが発生しました。バレーカウンターへお越しください。", busy:"ただいま混み合っています。少しお待ちいただき、もう一度「送信する」をタップしてください。",
     done_t:"事前登録が完了しました", done_h:"用具をお持ちのうえ、バレーカウンターでスタッフにお部屋番号をお伝えください。",
-    reset:"{n}秒後に最初の画面に戻ります", idle_t:"操作を続けますか？", idle_s:"プライバシー保護のため、{n}秒後にリセットされます。",
+    reset:"画面をタップすると次の受付を始められます · {n}秒後に戻ります", idle_t:"操作を続けますか？", idle_s:"プライバシー保護のため、{n}秒後にリセットされます。",
     idle_b:"続ける", back:"戻る", next:"次へ", startover:"最初から"},
   zh:{welcome:"欢迎", welcome_sub:"滑雪板与单板寄存 — 自助登记。请选择语言开始。",
     room_t:"请输入您的房间号", room_h:"房卡上印有房间号。", clear:"清除",
@@ -324,7 +324,7 @@ const T = {
     equipment:"装备", edit:"修改", send:"提交", sending:"提交中…",
     err_net:"无法连接。请重试，或前往寄存柜台。", err:"出现错误。请前往寄存柜台。", busy:"当前使用人数较多，请稍等片刻后再次点击“提交”。",
     done_t:"预登记完成！", done_h:"请携带装备前往寄存柜台，并告知工作人员您的房间号。",
-    reset:"{n} 秒后返回首页", idle_t:"您还在吗？", idle_s:"为保护您的隐私，{n} 秒后将重置。",
+    reset:"轻触屏幕即可开始下一位登记 · {n} 秒后返回首页", idle_t:"您还在吗？", idle_s:"为保护您的隐私，{n} 秒后将重置。",
     idle_b:"继续", back:"返回", next:"下一步", startover:"重新开始"},
   ko:{welcome:"환영합니다", welcome_sub:"스키·스노보드 보관 — 셀프 체크인. 언어를 선택해 시작하세요.",
     room_t:"객실 번호를 입력하세요", room_h:"객실 키에 적혀 있습니다.", clear:"지우기",
@@ -341,7 +341,7 @@ const T = {
     equipment:"장비", edit:"수정", send:"보내기", sending:"보내는 중…",
     err_net:"연결할 수 없습니다. 다시 시도하시거나 발레 카운터로 가 주세요.", err:"오류가 발생했습니다. 발레 카운터로 가 주세요.", busy:"사용자가 많습니다. 잠시 후 '보내기'를 다시 눌러 주세요.",
     done_t:"사전 등록 완료!", done_h:"장비를 가지고 발레 카운터로 가셔서 직원에게 객실 번호를 말씀해 주세요.",
-    reset:"{n}초 후 처음 화면으로 돌아갑니다", idle_t:"계속하시겠어요?", idle_s:"개인정보 보호를 위해 {n}초 후 초기화됩니다.",
+    reset:"화면을 누르면 다음 접수를 시작합니다 · {n}초 후 처음 화면으로", idle_t:"계속하시겠어요?", idle_s:"개인정보 보호를 위해 {n}초 후 초기화됩니다.",
     idle_b:"계속", back:"이전", next:"다음", startover:"처음부터"}
 };
 const ICON = {
@@ -351,7 +351,7 @@ const ICON = {
 };
 const ITEMS = ["boots", "skis", "snowboards"];
 const FAMILY_FIRST = ["ja", "zh", "ko"];
-const LAST = 6, PHOTO = 4, IDLE_AFTER = 60, IDLE_GRACE = 15, DONE_RESET = 10;
+const LAST = 6, PHOTO = 4, IDLE_AFTER = 60, IDLE_GRACE = 15, DONE_RESET = 5;
 const blank = () => ({lang:"en", step:0, room:"", first:"", last:"", dep:"", eq:{boots:0, skis:0, snowboards:0},
   consent:false, face:null, camErr:false, sending:false, err:""});
 let S = blank(), paired = false, code = "", pairing = false;
@@ -547,6 +547,7 @@ document.addEventListener("pointerdown", poke);
 document.addEventListener("keydown", poke);
 document.addEventListener("contextmenu", e => e.preventDefault());
 document.addEventListener("click", e => {
+  if(paired && S.step === LAST){ resetAll(); return; }     // the next guest need not wait
   const b = e.target.closest("button"); if(!b) return;
   const d = b.dataset;
   if(d.lang){ S.lang = d.lang; go(1); }
