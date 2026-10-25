@@ -648,6 +648,7 @@ function openDetail(col,id){
     <div class="foot">
       ${canEdit?`<button class="btn danger" data-act="del" data-col="${col}" data-id="${id}">Delete</button>`:""}
       <span class="grow"></span><button class="btn" data-act="close">Close</button>
+      ${col==="rooms"&&storagesOfRoom(rec.id).length?`<button class="btn" data-act="change-room" data-id="${id}">Change room</button>`:""}
       ${canEdit?`<button class="btn primary" data-act="edit" data-col="${col}" data-id="${id}">Edit</button>`:""}
       ${col==="users"&&!rec.shared?`<button class="btn primary" data-act="edit-member" data-id="${id}">Edit</button>`:""}</div>`,true);
 }
@@ -733,7 +734,7 @@ const SCHEMA = {
       ["Photos",r=>{ const n=storagesOfRoom(r.id).flatMap(s=>eqOf(s.id)).filter(e=>e.photo_id).length; return n?`📷 ${n}`:`<span class="dim">—</span>`; }],["Updated",r=>ago(r.updated_at)]],
     text:r=>[r.id,r.room_number,r.guest_name,r.departure,r.status].join(" "),
     sort:byRoom,
-    unique:(v,rec)=>DB.rooms.some(r=>r!==rec&&String(r.room_number??"").trim().toLowerCase()===String(v.room_number).trim().toLowerCase())&&`Room ${v.room_number} already exists`,
+    unique:(v,rec)=>roomTaken(v.room_number,rec),
     del(r){ return {warn:`${storagesOfRoom(r.id).length} storage(s) and ${cardsOfRoom(r.id).length} card(s) will be unlinked from this room.`,
       run(){ storagesOfRoom(r.id).forEach(s=>{ s.room_id=null; s.updated_at=now(); }); cardsOfRoom(r.id).forEach(c=>{ c.room_id=null; c.updated_at=now(); });
         DB.rooms=DB.rooms.filter(x=>x!==r); }}; }
@@ -1141,11 +1142,72 @@ function openForm(col,id){
     <p class="sub">${rec?`${esc(S.label(rec))} · id ${rec.id}${rec.created_at?" · created "+fmtDT(rec.created_at):""}`:"Creates the record directly in the valet data."}</p>
     <form id="frm" onsubmit="return false">${S.fields.map(f=>`<label class="f"><span>${f.l}${f.req?" *":""}</span>${fieldHTML(f,rec?rec[f.k]:undefined)}</label>`).join("")}</form>
     <div class="foot">
-      ${rec?`<button class="btn ghost" data-act="raw" data-col="${col}" data-id="${rec.id}">Raw JSON</button>`:""}
       <span class="grow"></span>
       <button class="btn" data-act="close">Cancel</button>
       <button class="btn primary" data-act="save" data-col="${col}" data-id="${rec?rec.id:""}">Save</button></div>`);
   setTimeout(()=>$("#frm .input")?.focus(),50);
+  if(col==="rooms"){                       // warn while typing, not only on Save
+    const i=$('#frm [name="room_number"]');
+    i.insertAdjacentHTML("afterend",`<span class="warn tiny" id="rnWarn" style="display:block;margin-top:6px;text-transform:none;letter-spacing:0;font-family:inherit;font-size:13px;color:var(--st-attention)"></span>`);
+    const chk=()=>{ $("#rnWarn").textContent=roomTaken(i.value,rec); };
+    i.addEventListener("input",chk);
+  }
+}
+/* ---- Change room: same as in the valet app. Everything follows the guest to the new
+   room, the equipment stays in its locations, the old room is left free. ---- */
+const roomByNum = n => { const k=String(n??"").trim().toLowerCase(); return k?DB.rooms.find(r=>String(r.room_number??"").trim().toLowerCase()===k):null; };
+function roomBusy(target, from){
+  if(!target || target===from) return "";
+  if(storagesOfRoom(target.id).length) return `Room ${target.room_number} still has equipment in the valet — check it out first.`;
+  if(cardsOfRoom(target.id).some(c=>c.status!=="released")) return `Room ${target.room_number} still has key cards linked — release them first.`;
+  return "";
+}
+function openChangeRoom(id){
+  const r=room(id); if(!r) return;
+  openSheet(`<h3>Change room</h3>
+    <p class="sub">Room ${esc(r.room_number)}${guestOf(r)?" · "+esc(guestOf(r)):""}. The equipment stays in its locations; it now belongs to the new room.</p>
+    <label class="f"><span>New room number</span><input class="input" id="crNum" autocomplete="off"></label>
+    <span id="crHint" style="display:block;margin:-4px 0 10px;font-size:13px"></span>
+    <p class="muted tiny">Room ${esc(r.room_number)} is left free and its key cards are released. A snapshot is taken first, so this can be undone from Backup &amp; data.</p>
+    <div class="foot"><span class="grow"></span><button class="btn" data-act="close">Cancel</button>
+      <button class="btn primary" data-act="do-change-room" data-id="${r.id}" id="crGo" disabled>Change room</button></div>`);
+  const i=$("#crNum"), hint=$("#crHint"), goBtn=$("#crGo");
+  i.addEventListener("input",()=>{
+    const n=i.value.trim(), t=roomByNum(n), busy=roomBusy(t,r);
+    const same=n && n.toLowerCase()===String(r.room_number).toLowerCase();
+    hint.textContent = same?"That is the current room." : busy || (n?`Move to room ${n}${t?" (free, reused)":""}`:"");
+    hint.style.color = same||busy ? "var(--st-attention)" : "var(--mist)";
+    goBtn.disabled = !n || same || !!busy;
+  });
+  setTimeout(()=>i.focus(),60);
+}
+function doChangeRoom(id){
+  const r=room(id), n=($("#crNum")?.value||"").trim(); if(!r||!n) return;
+  let t=roomByNum(n);
+  if(t===r || roomBusy(t,r)){ toast(roomBusy(t,r)||"That is the current room","err"); return; }
+  const from=r.room_number;
+  closeSheet();
+  commit(`Change room ${from} → ${n}`,()=>{
+    if(!t){ t={id:nextId(),room_number:n,status:"staying",created_at:now(),updated_at:now()}; DB.rooms.push(t); }
+    const faces=r.face_photo_ids||[];
+    Object.assign(t,{status:"staying",guest_name:r.guest_name||"",departure:r.departure||"",vip:!!r.vip,updated_at:now()});
+    if(faces.length) t.face_photo_ids=[...faces]; else delete t.face_photo_ids;
+    storagesOfRoom(r.id).forEach(s=>{ s.room_id=t.id; s.updated_at=now(); });
+    cardsOfRoom(r.id).forEach(c=>{ c.last_room_id=r.id; c.last_storage_id=c.storage_id;
+      c.room_id=null; c.storage_id=null; c.status="released"; c.released_at=now(); c.updated_at=now(); });
+    (DB.prechecks||[]).filter(p=>p.room_id===r.id&&p.status==="confirmed").forEach(p=>{ p.room_id=t.id; p.updated_at=now(); });
+    delete r.face_photo_ids;
+    Object.assign(r,{status:"checked_out",guest_name:"",departure:"",vip:false,updated_at:now()});
+    log("Room changed",{room_id:t.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)});
+  },()=>({action:"Room changed",room_id:r.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)}));
+  toast(`Moved to room ${n} · room ${from} is free`);
+}
+
+/* a room number another record already uses: two records with one number would get mixed up */
+function roomTaken(num,rec){
+  const n=String(num??"").trim().toLowerCase();
+  const other=n&&DB.rooms.find(r=>r!==rec&&String(r.room_number??"").trim().toLowerCase()===n);
+  return other ? `Room ${String(num).trim()} already exists${rec?" — to move a guest to another room, use Change room on the room page of the valet app":""}.` : "";
 }
 function readForm(S){
   const v={};
@@ -1727,6 +1789,8 @@ document.addEventListener("click",e=>{
     case "rm-member": removeMember(id); break;
     case "restore-member": restoreMember(id); break;
     case "signout": signOut(); break;
+    case "change-room": openChangeRoom(id); break;
+    case "do-change-room": doChangeRoom(id); break;
     case "kiosk-add": kioskAdd(); break;
     case "kiosk-code": kioskCode(id); break;
     case "kiosk-rm": kioskRemove(id); break;
