@@ -62,6 +62,11 @@ python app.py                   # http://localhost:5000
 
 ## Check-in y storage
 
+- **Cambio de habitación** (página de la habitación → *Change room*): todo pasa a la habitación nueva
+  (ubicaciones, equipos, nombre, salida, VIP y foto de identificación); los equipos no se mueven de
+  sitio. La habitación anterior queda libre, como tras un check-out, y sus tarjetas se liberan. Si la
+  nueva ya existe y está libre se reutiliza; si todavía tiene equipos o tarjetas, no deja hacerlo.
+
 - Solo se guardan **boots**, **skis (con sus poles)** y **snowboards**.
 - Cada equipo va a **su propia ubicación**, en la zona de su tipo: un cliente con una snowboard y
   un par de boots usa dos ubicaciones. La app propone la primera libre de cada zona y el valet
