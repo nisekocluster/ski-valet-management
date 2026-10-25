@@ -170,6 +170,7 @@ h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
 .panel.pc-on{border-color:var(--glacier);margin-top:10px}
 .panel.pc-on .eyebrow,.panel.pc-wait .eyebrow{color:var(--glacier)}
 .panel.pc-wait{margin-top:10px}
+.thumb.id-big{width:96px;height:96px;border-radius:50%;border:2px solid var(--glacier)}
 .decl{margin-top:12px;padding:12px;border-radius:var(--r-s);background:var(--night);border:1px solid var(--line)}
 .decl .eyebrow{color:var(--glacier)}
 .decl-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
@@ -1359,7 +1360,7 @@ function drawPc(){
   const others=prechecksOfRoom(r?r.room_number:d.room).filter(x=>!(d.pcs||[]).includes(x.id));
   box.innerHTML = used.map(u=>`<div class="panel pc-on">
       <div class="eyebrow">Kiosk pre-check-in · sent ${esc(ago(u.created_at))}</div>
-      <div class="row" style="gap:12px;margin-top:4px">${u.face_photo_id?thumb(u.face_photo_id,"ID photo · "+pcGuest(u)):""}
+      <div class="row" style="gap:14px;margin-top:8px">${u.face_photo_id?thumb(u.face_photo_id,"ID photo · "+pcGuest(u)).replace('class="thumb"','class="thumb id-big"'):""}
         <div><b class="num" style="font-size:22px;display:block;margin-bottom:2px">${esc(pcGuest(u))}</b>
         ${u.departure?`<div class="muted tiny">Leaves ${fmtDay(u.departure)}</div>`:""}</div></div>
       <div class="decl"><span class="eyebrow">Declared by the guest</span>
