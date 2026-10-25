@@ -170,6 +170,17 @@ h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
 .panel.pc-on{border-color:var(--glacier);margin-top:10px}
 .panel.pc-on .eyebrow,.panel.pc-wait .eyebrow{color:var(--glacier)}
 .panel.pc-wait{margin-top:10px}
+.decl{margin-top:12px;padding:12px;border-radius:var(--r-s);background:var(--night);border:1px solid var(--line)}
+.decl .eyebrow{color:var(--glacier)}
+.decl-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.decl-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;background:var(--slab2);border:1px solid var(--line);font-weight:600}
+.decl-chip i{font-style:normal;font-size:22px}
+.decl-chip b{font-family:var(--display);font-size:28px;line-height:1}
+.decl-chip small{color:var(--st-attention);font-weight:700;margin-left:2px}
+.decl-chip.off{border-color:var(--st-attention)}
+.ci-sum{margin-bottom:10px}
+.ci-sum.ok{border-color:var(--st-ready)}
+.ci-sum.bad{border-color:var(--st-attention)}
 .pc-row{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:10px 4px;border-bottom:1px solid var(--line)}
 .pc-row b,.pc-line b{display:block}
 .pc-row small,.pc-line small{color:var(--mist);font-size:13px}
@@ -1327,7 +1338,8 @@ VIEWS.stow = (p) => {
     const bind=(id,k,fn)=>{ const el=$(id); if(el) el.addEventListener(el.type==="checkbox"?"change":"input",()=>{ d[k]=el.type==="checkbox"?el.checked:el.value; if(fn) fn(); }); };
     bind("#ciRoom","room",roomHint); bind("#ciGuest","guest"); bind("#ciDep","dep"); bind("#ciVip","vip",drawItems);
     roomHint(); drawItems();
-    if(!r && !d.room) setTimeout(()=>$("#ciRoom")?.focus(),80);
+    // a blank check-in starts in the room box; one filled from a pre-check-in does not
+    setTimeout(()=>{ const q=stowParams(); if(q && !q.room_id && !q.d.room && !(q.d.pcs||[]).length) $("#ciRoom")?.focus(); },80);
   }};
 };
 const newItem = k => ({key:uid(), category:k, kids:false, owner:"", size:"", note:"", storage_id:null, photo:null, photo_id:null});
@@ -1349,7 +1361,9 @@ function drawPc(){
       <div class="eyebrow">Kiosk pre-check-in · sent ${esc(ago(u.created_at))}</div>
       <div class="row" style="gap:12px;margin-top:4px">${u.face_photo_id?thumb(u.face_photo_id,"ID photo · "+pcGuest(u)):""}
         <div><b class="num" style="font-size:22px;display:block;margin-bottom:2px">${esc(pcGuest(u))}</b>
-        <div class="muted tiny">Declared: ${esc(pcItems(u))}${u.departure?" · leaves "+fmtDay(u.departure):""}</div></div></div>
+        ${u.departure?`<div class="muted tiny">Leaves ${fmtDay(u.departure)}</div>`:""}</div></div>
+      <div class="decl"><span class="eyebrow">Declared by the guest</span>
+        <div class="decl-row">${declChips(pcCounts([u]))}</div></div>
       <div class="row" style="gap:8px;margin-top:10px"><button class="btn sm ghost" data-act="pc-drop" data-id="${u.id}">Don't use it</button>
         <button class="btn sm ghost" data-act="pc-dismiss" data-id="${u.id}">Dismiss</button></div></div>`).join("")
     + (used.length?`<div class="hint">Count the items with the guest, take the photos and mark VIP / Kids before checking in.</div>`:"")
@@ -1394,6 +1408,25 @@ function openRoomPrechecks(num){
   [...pcs].reverse().forEach(p=>usePrecheck(p.id));        // oldest first: its guest names the room
 }
 
+/* item counts by category: declared in pre-check-ins, or lines in the check-in form */
+const pcCounts = pcs => { const t={boots:0,skis:0,snowboard:0};
+  pcs.forEach(x=>PC_ITEMS.forEach(([f,k])=>{ t[k]+=+x[f]||0; })); return t; };
+const itemCounts = items => { const t={boots:0,skis:0,snowboard:0}; items.forEach(i=>{ if(i.category in t) t[i.category]++; }); return t; };
+const declChips = t => STORED.filter(k=>t[k]).map(k=>`<span class="decl-chip"><i>${catInfo(k).ic}</i><b>${t[k]}</b>${esc(catInfo(k).short||catInfo(k).label)}</span>`).join("")
+  || `<span class="muted tiny">Nothing declared</span>`;
+/* top of the equipment list: what is being checked in, against what the guest declared */
+function itemsSummary(d){
+  const have=itemCounts(d.items), used=(d.pcs||[]).map(precheck).filter(Boolean);
+  const decl=used.length?pcCounts(used):null, n=d.items.length;
+  if(!n && !decl) return "";
+  const diff=decl && STORED.some(k=>have[k]!==decl[k]);
+  return `<div class="panel ci-sum ${decl?(diff?"bad":"ok"):""}">
+    <div class="row between" style="gap:8px;flex-wrap:wrap"><b>${n} item${n===1?"":"s"} to check in</b>
+      ${decl?`<span class="chip ${diff?"solid s-attention":"s-available"}">${diff?"Differs from what was declared":"✓ Matches what was declared"}</span>`:""}</div>
+    <div class="decl-row">${STORED.filter(k=>have[k]||(decl&&decl[k])).map(k=>`<span class="decl-chip ${decl&&have[k]!==decl[k]?"off":""}"><i>${catInfo(k).ic}</i><b>${have[k]}</b>${esc(catInfo(k).short||catInfo(k).label)}${decl&&have[k]!==decl[k]?`<small>declared ${decl[k]}</small>`:""}</span>`).join("")}</div>
+  </div>`;
+}
+
 /* adds a pre-check-in to the check-in form: one line per declared item */
 function usePrecheck(id){
   const p=stowParams(), pc=precheck(id); if(!p||!pc) return;
@@ -1430,7 +1463,7 @@ function drawItems(){
   const freeAll=DB.storages.filter(isFree).sort(byNumber);
   const r=room(p.room_id)||(d.room.trim()?roomByNumber(d.room):null);
   const names=r?ownersOfRoom(r.id,d.items.map(i=>i.owner)):[...new Set(d.items.map(i=>String(i.owner||"").trim()).filter(Boolean))];
-  box.innerHTML = ownerList("ciOwners",names) + d.items.map((i,n)=>{
+  box.innerHTML = itemsSummary(d) + ownerList("ciOwners",names) + d.items.map((i,n)=>{
     const c=catInfo(i.category), dest=stor(i.storage_id||i.auto);
     const free=freeAll.filter(s=>fitsItem(i,s,d.vip)), areas=[...new Set(free.map(s=>s.section||"Unassigned area"))];
     const want=kindsFor(i,false).map(k=>KINDS[k]).join(" / ");
