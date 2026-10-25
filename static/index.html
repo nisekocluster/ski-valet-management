@@ -1904,7 +1904,9 @@ VIEWS.room = (p) => {
         <div class="kv"><span>Equipment</span><b>${items} item${items===1?"":"s"}${out.length?` · ${out.length} with the guest`:""}</b></div>
         <div class="kv"><span>Key cards</span><b>${cards.length}</b></div>
       </div>
-      <button class="btn ghost sm" style="width:100%;margin-top:10px" data-act="edit-room" data-id="${r.id}">Edit guest · departure · VIP</button>
+      <div class="btn-grid" style="margin-top:10px">
+        <button class="btn ghost sm" style="width:100%" data-act="edit-room" data-id="${r.id}">Edit guest · departure · VIP</button>
+        ${sts.length?`<button class="btn ghost sm" style="width:100%" data-act="change-room" data-id="${r.id}">Change room</button>`:""}</div>
     </div>
 
     <div class="btn-grid" style="margin-top:12px">
@@ -1933,6 +1935,53 @@ VIEWS.room = (p) => {
   }};
 };
 /* ---- whole-room actions: the guest's items sit in several locations ---- */
+/* ---- the guest moved to another room: everything follows, the equipment stays where it is ---- */
+function roomBusy(target, from){      // why the new room cannot take this guest, or ""
+  if(!target || target===from) return "";
+  if(storagesOfRoom(target.id).length) return `Room ${target.room_number} still has equipment in the valet — check it out first.`;
+  if(cardsOfRoom(target.id).some(c=>c.status!=="released")) return `Room ${target.room_number} still has key cards linked — release them first.`;
+  return "";
+}
+function openChangeRoom(id){
+  const r=room(id); if(!r) return;
+  openSheet(`<h3>Change room</h3>
+    <p class="sub">Room ${esc(r.room_number)}${guestOf(r)?" · "+esc(guestOf(r)):""}. The equipment stays in its locations; it now belongs to the new room.</p>
+    <label class="f"><span>New room number</span><input class="input big" id="crNum" inputmode="numeric" autocomplete="off"></label>
+    <div class="hint" id="crHint" style="margin:-6px 0 10px"></div>
+    <p class="hint">Room ${esc(r.room_number)} is left free. Its key cards are released — add the new room's card afterwards if the guest has it.</p>
+    <div class="btn-grid"><button class="btn" data-act="close-sheet">Cancel</button>
+      <button class="btn primary" data-act="do-change-room" data-id="${r.id}" id="crGo" disabled>Change room</button></div>`);
+  const i=$("#crNum"), hint=$("#crHint"), goBtn=$("#crGo");
+  i.addEventListener("input",()=>{
+    const n=i.value.trim(), t=n?roomByNumber(n):null, busy=roomBusy(t,r);
+    const same=n && n.toLowerCase()===String(r.room_number).toLowerCase();
+    hint.textContent = same?"That is the current room." : busy || (n?`Move to room ${n}`:"");
+    hint.style.color = same||busy ? "var(--st-attention)" : "";
+    goBtn.disabled = !n || same || !!busy;
+  });
+  setTimeout(()=>i.focus(),60);
+}
+function doChangeRoom(id){
+  const r=room(id), n=($("#crNum")?.value||"").trim(); if(!r||!n) return;
+  let t=roomByNumber(n);
+  if(t===r || roomBusy(t,r)){ toast(roomBusy(t,r)||"That is the current room","err"); return; }
+  if(!t){ t={id:uid(),room_number:n,status:"staying",created_at:now(),updated_at:now()}; DB.rooms.push(t); }
+  const from=r.room_number, faces=r.face_photo_ids||[];
+  Object.assign(t,{status:"staying",guest_name:r.guest_name||"",departure:r.departure||"",vip:!!r.vip,updated_at:now()});
+  if(faces.length) t.face_photo_ids=[...faces]; else delete t.face_photo_ids;
+  storagesOfRoom(r.id).forEach(s=>{ s.room_id=t.id; s.updated_at=now(); });
+  // the old room's key cards no longer open anything
+  cardsOfRoom(r.id).forEach(c=>{ c.last_room_id=r.id; c.last_storage_id=c.storage_id;
+    c.room_id=null; c.storage_id=null; c.status="released"; c.released_at=now(); c.updated_at=now(); });
+  // a confirmed pre-check-in follows the guest (it is deleted when the new room checks out)
+  DB.prechecks.filter(p=>p.room_id===r.id&&p.status==="confirmed").forEach(p=>{ p.room_id=t.id; p.updated_at=now(); });
+  delete r.face_photo_ids; r.vip=false;
+  freeRoom(r);
+  log("Room changed",{room_id:r.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)});
+  log("Room changed",{room_id:t.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)});
+  save(); closeSheet(); replaceView("room",{id:t.id});
+  toast(`Moved to room ${n} · room ${from} is free`);
+}
 function openEditRoom(id){
   const r=room(id); if(!r) return;
   openSheet(`<h3>Room ${esc(r.room_number)}</h3><p class="sub">Guest details for this stay</p>
@@ -2572,6 +2621,8 @@ document.addEventListener("click", e=>{
       toast("Pre-check-in dismissed","info"); render(); break; }
     /* whole room */
     case "edit-room": openEditRoom(id); break;
+    case "change-room": openChangeRoom(id); break;
+    case "do-change-room": doChangeRoom(id); break;
     case "do-edit-room": doEditRoom(id); break;
     case "room-hand": confirmRoomHand(id); break;
     case "do-room-hand": doRoomHand(id); break;
