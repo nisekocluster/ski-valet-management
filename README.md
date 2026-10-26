@@ -62,6 +62,15 @@ python app.py                   # http://localhost:5000
 
 ## Check-in y storage
 
+- **Fecha de salida obligatoria** en el kiosko (el cliente no puede seguir sin ella) y al confirmar el check-in del staff:
+  así *Departing today* y *Overdue* cubren a todos los clientes.
+- **Pre-check-in en una habitación que ya tiene equipos:** si el apellido coincide, los equipos se añaden;
+  si no coincide, la app no deja guardar hasta que el staff elija *Same guest* o abra la habitación para
+  hacer primero el check-out del cliente anterior.
+- **Equipos no devueltos:** si unos equipos entregados el día X siguen con el cliente a las 11:00 del día
+  X+1 (hora de check-out del hotel), sale un aviso en *Attention*; al tocarlo se abre *Check out & release*.
+  No hay check-out automático: el staff confirma con recepción que el cliente se fue.
+
 - **Cambio de habitación** (página de la habitación → *Change room*): todo pasa a la habitación nueva
   (ubicaciones, equipos, nombre, salida, VIP y foto de identificación); los equipos no se mueven de
   sitio. La habitación anterior queda libre, como tras un check-out, y sus tarjetas se liberan. Si la

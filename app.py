@@ -1089,9 +1089,9 @@ def kiosk_precheck(cur, k):
         raise ApiError(400, "Enter the first and last name")
     if any(n < 0 or n > 9 for n in counts.values()) or not sum(counts.values()):
         raise ApiError(400, "Add at least one item (up to 9 of each)")
-    dep = to_date(b.get("departure"))
-    if dep and not dt.date.today() - dt.timedelta(days=1) <= dep <= dt.date.today() + dt.timedelta(days=180):
-        dep = None
+    dep = to_date(b.get("departure"))                     # required: Departing today / Overdue rely on it
+    if not dep or not dt.date.today() - dt.timedelta(days=1) <= dep <= dt.date.today() + dt.timedelta(days=180):
+        raise ApiError(400, "Enter the hotel check-out date")
     lang = b.get("lang") if b.get("lang") in KIOSK_LANGS else "en"
     face = decode_photo(b.get("face_photo")) if b.get("face_photo") else None
     if face and b.get("consent") is not True:
