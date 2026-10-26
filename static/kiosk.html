@@ -209,7 +209,7 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
           <label class="field"><span data-t="firstname"></span><input id="first" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="60"></label>
           <label class="field last"><span data-t="lastname"></span><input id="last" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="60"></label>
         </div>
-        <label class="field"><span data-t="checkout"></span><input id="dep" type="date"><small data-t="optional"></small></label>
+        <label class="field"><span data-t="checkout"></span><input id="dep" type="date"><small data-t="dep_h"></small></label>
       </div>
       <div class="kb-note" data-t="kb_note"></div>
     </div>
@@ -278,7 +278,7 @@ const T = {
   en:{welcome:"Welcome", welcome_sub:"Ski & snowboard storage — self check-in. Choose your language to begin.",
     room_t:"What is your room number?", room_h:"You'll find it on your room key.", clear:"Clear",
     name_t:"Your name", name_h:"As on your hotel reservation, in English letters.", firstname:"First name", lastname:"Last name",
-    checkout:"Hotel check-out date", optional:"Optional", kb_note:"The screen keyboard opens when you tap a name box.",
+    checkout:"Hotel check-out date", dep_h:"The day you leave the hotel", kb_note:"The screen keyboard opens when you tap a name box.",
     eq_t:"What are you leaving with us?", eq_h:"Tap + for each item. We store boots, skis (with poles) and snowboards.",
     boots:"Boots", boots_u:"pairs", skis:"Skis + poles", skis_u:"sets", snowboards:"Snowboard", snowboards_u:"boards", need:"Add at least one item.",
     ph_t:"A photo for your security", ph_h:"Staff will check it when you pick up your equipment. This step is optional.",
@@ -295,7 +295,7 @@ const T = {
   ja:{welcome:"ようこそ", welcome_sub:"スキー・スノーボード預かり — セルフチェックイン。言語を選んで始めてください。",
     room_t:"お部屋番号を入力してください", room_h:"ルームキーに記載されています。", clear:"消去",
     name_t:"お名前", name_h:"ホテルのご予約名をローマ字でご入力ください。", firstname:"名（ローマ字）", lastname:"姓（ローマ字）",
-    checkout:"ホテルのチェックアウト日", optional:"任意", kb_note:"入力欄をタップすると画面キーボードが表示されます。",
+    checkout:"ホテルのチェックアウト日", dep_h:"ホテルを出発する日", kb_note:"入力欄をタップすると画面キーボードが表示されます。",
     eq_t:"お預けになる用具は？", eq_h:"＋で数を選んでください。ブーツ、スキー（ストック含む）、スノーボードをお預かりします。",
     boots:"ブーツ", boots_u:"足", skis:"スキー＋ストック", skis_u:"セット", snowboards:"スノーボード", snowboards_u:"本", need:"1点以上選んでください。",
     ph_t:"本人確認用の写真", ph_h:"用具のお受け取り時にスタッフが確認します。この手順は任意です。",
@@ -312,7 +312,7 @@ const T = {
   zh:{welcome:"欢迎", welcome_sub:"滑雪板与单板寄存 — 自助登记。请选择语言开始。",
     room_t:"请输入您的房间号", room_h:"房卡上印有房间号。", clear:"清除",
     name_t:"您的姓名", name_h:"请用拼音填写，与酒店预订信息一致。", firstname:"名（拼音）", lastname:"姓（拼音）",
-    checkout:"酒店退房日期", optional:"选填", kb_note:"点击姓名栏即可打开屏幕键盘。",
+    checkout:"酒店退房日期", dep_h:"您离开酒店的日期", kb_note:"点击姓名栏即可打开屏幕键盘。",
     eq_t:"您要寄存哪些装备？", eq_h:"点击 ＋ 选择数量。可寄存雪鞋、双板（含雪杖）和单板。",
     boots:"雪鞋", boots_u:"双", skis:"双板＋雪杖", skis_u:"套", snowboards:"单板", snowboards_u:"块", need:"请至少选择一件。",
     ph_t:"安全验证照片", ph_h:"取回装备时工作人员会核对。此步骤为选填。",
@@ -329,7 +329,7 @@ const T = {
   ko:{welcome:"환영합니다", welcome_sub:"스키·스노보드 보관 — 셀프 체크인. 언어를 선택해 시작하세요.",
     room_t:"객실 번호를 입력하세요", room_h:"객실 키에 적혀 있습니다.", clear:"지우기",
     name_t:"성함", name_h:"호텔 예약과 같이 영문으로 입력하세요.", firstname:"이름 (영문)", lastname:"성 (영문)",
-    checkout:"호텔 체크아웃 날짜", optional:"선택", kb_note:"이름 칸을 누르면 화면 키보드가 열립니다.",
+    checkout:"호텔 체크아웃 날짜", dep_h:"호텔을 떠나는 날", kb_note:"이름 칸을 누르면 화면 키보드가 열립니다.",
     eq_t:"맡기실 장비를 선택하세요", eq_h:"+ 를 눌러 수량을 선택하세요. 부츠, 스키(폴 포함), 스노보드를 보관합니다.",
     boots:"부츠", boots_u:"켤레", skis:"스키 + 폴", skis_u:"세트", snowboards:"스노보드", snowboards_u:"개", need:"한 개 이상 선택하세요.",
     ph_t:"보안용 사진", ph_h:"장비를 찾으실 때 직원이 확인합니다. 이 단계는 선택 사항입니다.",
@@ -360,6 +360,10 @@ const $ = q => document.querySelector(q);
 const t = (k, n) => (T[S.lang][k] ?? T.en[k]).replace("{n}", n);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const nameOk = () => !!(S.first.trim() && S.last.trim());
+const isoDay = (n=0) => { const d=new Date(); d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const depOk = () => !!S.dep && S.dep >= isoDay(0) && S.dep <= isoDay(180);   // the hotel check-out date is required
+const nameStepOk = () => nameOk() && depOk();
 const fullName = () => (FAMILY_FIRST.includes(S.lang) ? [S.last, S.first] : [S.first, S.last]).map(x => x.trim()).join(" ");
 const total = () => ITEMS.reduce((n, k) => n + S.eq[k], 0);
 
@@ -406,7 +410,8 @@ function render(){
   $("#roomNext").disabled = !S.room;
   // name
   $("#names").classList.toggle("family-first", FAMILY_FIRST.includes(S.lang));
-  $("#nameNext").disabled = !nameOk();
+  $("#dep").min = isoDay(0); $("#dep").max = isoDay(180);
+  $("#nameNext").disabled = !nameStepOk();
   // equipment
   $("#eq").innerHTML = ITEMS.map(k => `<div class="card ${S.eq[k] ? "has" : ""}">
       ${ICON[k]}<b>${t(k)}</b><div class="unit">${t(k + "_u")}</div>
@@ -563,10 +568,10 @@ document.addEventListener("click", e => {
   else if(b.id === "restart") resetAll();
   else if(b.id === "stay") hideIdle();
 });
-["first", "last"].forEach(k => $("#" + k).addEventListener("input", e => { S[k] = e.target.value; $("#nameNext").disabled = !nameOk(); }));
-$("#dep").addEventListener("input", e => { S.dep = e.target.value; });
+["first", "last"].forEach(k => $("#" + k).addEventListener("input", e => { S[k] = e.target.value; $("#nameNext").disabled = !nameStepOk(); }));
+["input", "change"].forEach(ev => $("#dep").addEventListener(ev, e => { S.dep = e.target.value; $("#nameNext").disabled = !nameStepOk(); }));
 $("#first").addEventListener("keydown", e => { if(e.key === "Enter") $(FAMILY_FIRST.includes(S.lang) ? "#first" : "#last").focus(); });
-$("#last").addEventListener("keydown", e => { if(e.key === "Enter" && nameOk()) go(3); });
+$("#last").addEventListener("keydown", e => { if(e.key === "Enter" && nameStepOk()) go(3); });
 
 (async () => {
   fit(); render();

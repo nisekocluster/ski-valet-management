@@ -170,6 +170,9 @@ h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
 .panel.pc-on{border-color:var(--glacier);margin-top:10px}
 .panel.pc-on .eyebrow,.panel.pc-wait .eyebrow{color:var(--glacier)}
 .panel.pc-wait{margin-top:10px}
+.panel.occ-info{margin-top:10px;border-color:var(--glacier);font-size:14px}
+.panel.occ-warn{margin-top:10px;border-color:var(--st-attention);background:rgba(255,77,77,.06)}
+.panel.occ-warn .eyebrow{color:var(--st-attention)}
 .thumb.id-big{width:96px;height:96px;border-radius:50%;border:2px solid var(--glacier)}
 .decl{margin-top:12px;padding:12px;border-radius:var(--r-s);background:var(--night);border:1px solid var(--line)}
 .decl .eyebrow{color:var(--glacier)}
@@ -874,6 +877,7 @@ async function signOut(){
 /* ==========================================================================
    6. DASHBOARD
    ========================================================================== */
+const NOT_RETURNED_HOUR = 11;           // hotel check-out time
 function alerts(){
   const out=[];
   DB.storages.forEach(s=>{
@@ -891,11 +895,19 @@ function alerts(){
     if(d<0) out.push({hot:true,t:"Departure not closed",p:`Room ${r.room_number} left on ${fmtDay(r.departure)} — ${sts.map(x=>x.storage_number).join(", ")} still assigned${items?` with ${items} items`:""}.`,act:{view:"room",id:r.id}});
     else if(d===0) out.push({hot:false,t:"Leaving today",p:`Room ${r.room_number} checks out today — ${items} items in ${sts.map(x=>x.storage_number).join(", ")}.`,act:{view:"room",id:r.id}});
   });
-  DB.storages.filter(s=>s.status==="guest_using").forEach(s=>{
+  /* items handed out on day X and still with the guest at 11:00 on day X+1 (hotel check-out
+     time): the guest may have left without coming back. One alert per room, with check-out. */
+  const notBack=new Map();
+  DB.storages.filter(s=>s.status==="guest_using"&&s.room_id!=null).forEach(s=>{
     const h=DB.history.find(x=>x.storage_id===s.id&&x.action==="Equipment checked out");
-    const hrs=h?(now()-h.timestamp)/36e5:0;
-    if(hrs>=3) out.push({hot:true,t:"Equipment not returned",p:`Room ${room(s.room_id)?.room_number||"—"} checked out from ${s.storage_number} ${ago(h.timestamp)}.`,act:{view:"storage",id:s.id}});
+    const t=h?h.timestamp:(s.updated_at||now()), due=new Date(t);
+    due.setDate(due.getDate()+1); due.setHours(NOT_RETURNED_HOUR,0,0,0);
+    if(now()<due.getTime()) return;
+    const g=notBack.get(s.room_id)||{items:0,first:t}; g.items+=eqCount(s.id); g.first=Math.min(g.first,t); notBack.set(s.room_id,g);
   });
+  notBack.forEach((g,rid)=>out.push({hot:true,t:"Equipment not returned",
+    p:`Room ${room(rid)?.room_number||"—"} took ${g.items} item${g.items===1?"":"s"} on ${fmtDay(isoOf(g.first))} and has not returned them. If the guest has left the hotel, tap to check the room out.`,
+    act:{view:"room",id:rid}, do:"room-out"}));
   return out;
 }
 VIEWS.dash = () => {
@@ -960,7 +972,7 @@ VIEWS.dash = () => {
     </div>
 
     <h2 class="sec">Attention ${al.length?`· ${al.length}`:""}</h2>
-    ${al.length? al.slice(0,6).map(a=>`<button class="alert ${a.hot?"hot":""}" data-act="nav" data-view="${a.act.view}" data-id="${a.act.id}">
+    ${al.length? al.slice(0,6).map(a=>`<button class="alert ${a.hot?"hot":""}" data-act="${a.do||"nav"}" data-view="${a.act.view}" data-id="${a.act.id}">
         <span style="font-size:20px">${a.hot?"⛔":"⚠️"}</span><span><b>${esc(a.t)}</b><p>${esc(a.p)}</p></span></button>`).join("")
       : `<div class="panel muted" style="text-align:center">Nothing needs attention. The hall is clean.</div>`}
 
@@ -1255,7 +1267,7 @@ VIEWS.register = (p) => {
         <input class="input" id="fRoom" placeholder="Room" autocomplete="off" inputmode="numeric"></label>
       <label class="f"><span>Guest name (optional)</span>
         <input class="input" id="fGuest" placeholder="Surname" autocomplete="off"></label>
-      <label class="f"><span>Hotel departure (optional)</span>
+      <label class="f"><span>Hotel departure</span>
         <input class="input" id="fOut" type="date" value=""></label>
       <label class="check"><input type="checkbox" id="fVip"> VIP guest — use the VIP area</label>
       <div class="hint">Storage locations are given item by item at check-in: boots, skis and snowboards each go to their own area.</div>
@@ -1279,6 +1291,8 @@ function saveNewCard(code,next){
   const rNum=$("#fRoom").value.trim(), guest=$("#fGuest").value.trim();
   const dep=$("#fOut")?$("#fOut").value:"", vip=!!$("#fVip")?.checked;
   if(!rNum){ toast("Enter the room number","err"); return; }
+  const known=roomByNumber(rNum);
+  if(!dep && !(known && known.status!=="checked_out" && known.departure)){ toast("Enter the guest's hotel departure date","err"); $("#fOut")?.focus(); return; }
   const r=upsertRoom(rNum,guest,dep,vip);
   const s=storagesOfRoom(r.id)[0]||null;
   let c = cardByCode(code), reused = false;
@@ -1312,12 +1326,13 @@ VIEWS.stow = (p) => {
     ${r?`<div class="panel"><div class="row between"><b class="num" style="font-size:30px">Room ${esc(r.room_number)}</b>
         ${storagesOfRoom(r.id).length?`<span class="chip">${storagesOfRoom(r.id).length} stored</span>`:""}</div>
         <div class="muted tiny" style="margin-top:4px">${esc(guestOf(r)||"No guest name")}${r.departure?" · leaves "+fmtDay(r.departure):""}</div>
+        ${r.departure?"":`<label class="f" style="margin-top:10px"><span>Hotel departure</span><input class="input" id="ciDep" type="date" value="${esc(d.dep)}"></label>`}
         <label class="check" style="margin-top:6px"><input type="checkbox" id="ciVip" ${d.vip?"checked":""}> VIP guest — use the VIP area</label></div>`
     :`<div class="panel">
         <label class="f"><span>Room number</span><input class="input big" id="ciRoom" value="${esc(d.room)}" placeholder="Room" inputmode="numeric" autocomplete="off"></label>
         <div class="hint" id="ciRoomHint" style="margin:-6px 0 10px"></div>
         <label class="f"><span>Guest name (optional)</span><input class="input" id="ciGuest" value="${esc(d.guest)}" placeholder="Surname" autocomplete="off"></label>
-        <label class="f"><span>Hotel departure (optional)</span><input class="input" id="ciDep" type="date" value="${esc(d.dep)}"></label>
+        <label class="f"><span>Hotel departure</span><input class="input" id="ciDep" type="date" value="${esc(d.dep)}"></label>
         <label class="check"><input type="checkbox" id="ciVip" ${d.vip?"checked":""}> VIP guest — use the VIP area</label>
       </div>`}
     <div id="ciPc"></div>
@@ -1367,6 +1382,7 @@ function drawPc(){
         <div class="decl-row">${declChips(pcCounts([u]))}</div></div>
       <div class="row" style="gap:8px;margin-top:10px"><button class="btn sm ghost" data-act="pc-drop" data-id="${u.id}">Don't use it</button>
         <button class="btn sm ghost" data-act="pc-dismiss" data-id="${u.id}">Dismiss</button></div></div>`).join("")
+    + conflictBox(p)
     + (used.length?`<div class="hint">Count the items with the guest, take the photos and mark VIP / Kids before checking in.</div>`:"")
     + others.map(x=>`<div class="panel pc-wait"><div class="eyebrow">Pre-check-in waiting · ${esc(ago(x.created_at))}</div>
       <div class="row between" style="gap:10px;margin-top:4px"><span><b>${esc(pcGuest(x))}</b><br><span class="muted tiny">${esc(pcItems(x))}</span></span>
@@ -1426,6 +1442,31 @@ function itemsSummary(d){
       ${decl?`<span class="chip ${diff?"solid s-attention":"s-available"}">${diff?"Differs from what was declared":"✓ Matches what was declared"}</span>`:""}</div>
     <div class="decl-row">${STORED.filter(k=>have[k]||(decl&&decl[k])).map(k=>`<span class="decl-chip ${decl&&have[k]!==decl[k]?"off":""}"><i>${catInfo(k).ic}</i><b>${have[k]}</b>${esc(catInfo(k).short||catInfo(k).label)}${decl&&have[k]!==decl[k]?`<small>declared ${decl[k]}</small>`:""}</span>`).join("")}</div>
   </div>`;
+}
+
+/* A pre-check-in for a room that already has equipment in the valet: the same guest adding
+   items, or a new guest in a room the previous one never checked out of the valet. */
+const normName = v => String(v||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g," ").trim();
+const sameGuest = (roomGuest, pc) => { const g=normName(roomGuest), l=normName(pc.last_name);
+  return !g || !l || g.split(" ").includes(l) || g.includes(l); };
+function stowConflict(p){
+  const d=p.d, used=(d.pcs||[]).map(precheck).filter(Boolean);
+  const tr=room(p.room_id)||(d.room.trim()?roomByNumber(d.room):null);
+  if(!used.length || !tr || tr.status==="checked_out" || !storagesOfRoom(tr.id).length) return null;
+  return {r:tr, mismatch:used.some(u=>!sameGuest(guestOf(tr),u)), used};
+}
+function conflictBox(p){
+  const c=stowConflict(p); if(!c) return "";
+  const r=c.r, sts=storagesOfRoom(r.id), n=sts.reduce((a,s)=>a+eqCount(s.id),0);
+  const since=Math.min(...sts.flatMap(s=>eqOf(s.id)).map(e=>e.created_at||now()));
+  const who=guestOf(r)?`<b>${esc(guestOf(r))}</b>`:"a guest with no name";
+  const info=`Room ${esc(r.room_number)} already has ${n} item${n===1?"":"s"} from ${who} (checked in ${fmtDay(isoOf(since))}${r.departure?`, leaves ${fmtDay(r.departure)}`:""}).`;
+  if(!c.mismatch || p.d.sameOk) return `<div class="panel occ-info">${info}<div class="muted tiny" style="margin-top:4px">The new items are added to this room.</div></div>`;
+  return `<div class="panel occ-warn"><div class="eyebrow">Check before continuing</div>
+    <p style="margin:6px 0 10px">${info} The pre-check-in is from <b>${esc(c.used.map(pcGuest).join(", "))}</b>. Is it the same guest?</p>
+    <div class="btn-grid"><button class="btn" data-act="pc-same">Same guest — add the items</button>
+      <button class="btn danger" data-act="nav" data-view="room" data-id="${r.id}">Different guest — open room ${esc(r.room_number)}</button></div>
+    <div class="hint" style="margin-top:8px">A different guest: check the previous guest out of the valet first (ask the front desk), then come back to this pre-check-in.</div></div>`;
 }
 
 /* adds a pre-check-in to the check-in form: one line per declared item */
@@ -1508,6 +1549,11 @@ async function stowSave(){
   if(p.room_id && !r){ toast("That room no longer exists","err"); home(); return; }
   if(!r && !d.room.trim()){ toast("Enter the room number","err"); $("#ciRoom")?.focus(); return; }
   if(!d.items.length){ toast("Add at least one item","err"); return; }
+  const clash=stowConflict(p);
+  if(clash && clash.mismatch && !d.sameOk){ toast(`Room ${clash.r.room_number} has another guest's equipment — confirm it is the same guest first`,"err"); drawPc(); return; }
+  // C: every stay needs its departure date, so Departing today and Overdue catch every guest
+  const known=r||(d.room.trim()?roomByNumber(d.room):null);
+  if(!d.dep && !(known && known.status!=="checked_out" && known.departure)){ toast("Enter the guest's hotel departure date","err"); $("#ciDep")?.focus(); return; }
   autoAssign(d.items,d.vip);
   const lost=d.items.find(i=>!fitsItem(i,stor(i.storage_id||i.auto),d.vip));
   if(lost){ toast(`No free location for ${catInfo(lost.category).label.toLowerCase()} — free one or pick another area`,"err"); drawItems(); return; }
@@ -1522,6 +1568,7 @@ async function stowSave(){
   if(gone){ gone.storage_id=null; toast("A location was just taken on another device — check the new suggestion","err"); render(); return; }
   if(!r) r=upsertRoom(d.room.trim(),d.guest.trim(),d.dep,d.vip);
   else if(d.vip!==!!r.vip){ r.vip=d.vip; r.updated_at=now(); }
+  if(d.dep && !r.departure){ r.departure=d.dep; r.updated_at=now(); }
   (d.pcs||[]).map(precheck).filter(pc=>pc&&pc.status==="pending").forEach(pc=>{
     Object.assign(pc,{status:"confirmed",confirmed_at:now(),room_id:r.id,updated_at:now()});
     if(!guestOf(r)){ r.guest_name=pcGuest(pc); r.updated_at=now(); }
@@ -2609,6 +2656,7 @@ document.addEventListener("click", e=>{
     case "ci-save": stowSave(); break;
     case "pc-open": openPrecheck(id); break;
     case "pc-room": openRoomPrechecks(el.dataset.room); break;
+    case "pc-same": { const p=stowParams(); if(p){ p.d.sameOk=true; drawPc(); } break; }
     case "co-room": go("room",{id}); break;
     case "dep-go": replaceView("departures",{mode:el.dataset.mode,day:el.dataset.day||undefined}); window.scrollTo(0,0); break;
     case "pc-use": usePrecheck(id); break;
