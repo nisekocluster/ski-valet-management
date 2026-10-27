@@ -41,6 +41,8 @@ input{user-select:text; -webkit-user-select:text}
 .top{position:absolute; top:0; left:0; right:0; height:96px; display:flex; align-items:center; padding:0 40px; gap:24px}
 .brand{font-family:var(--display); font-weight:700; font-size:34px; letter-spacing:.5px; display:flex; align-items:center; gap:12px}
 .brand i{width:14px; height:14px; border-radius:4px; background:var(--signal); display:inline-block}
+.pill.fs{width:56px; padding:0; display:grid; place-items:center; color:var(--glacier)}
+.pill.fs svg{width:28px; height:28px}
 .steps{flex:1; display:flex; justify-content:center; gap:10px}
 .steps span{width:56px; height:6px; border-radius:3px; background:var(--line)}
 .steps span.on{background:var(--signal)}
@@ -199,6 +201,7 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
   <div class="top">
     <div class="brand"><i></i>Ski Valet</div>
     <div class="steps" id="steps"></div>
+    <button class="pill fs" id="fsBtn" hidden aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="pill" id="restart" data-t="startover" style="visibility:hidden"></button>
   </div>
 
@@ -603,14 +606,31 @@ setInterval(() => {
    when the page reloads, so every tap re-enters it if needed: the pairing taps the first
    time, then the next guest's first tap after a restart. (Locking the device to this page
    is done on the device: Guided Access, screen pinning or a kiosk browser.) */
+const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+const canFull = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+let fsAsking = false;
 function goFullscreen(){
   const el = document.documentElement;
-  if(document.fullscreenElement || document.webkitFullscreenElement) return;
+  if(isFull() || fsAsking || !canFull()) return;
   const req = el.requestFullscreen || el.webkitRequestFullscreen;
   if(!req) return;
-  try{ const r = req.call(el, {navigationUI:"hide"}); if(r && r.catch) r.catch(() => {}); }catch(_){}
+  fsAsking = true;                               // one request per tap: a second one in the same tap is refused
+  const done = () => { fsAsking = false; fsShown(); };
+  setTimeout(() => { fsAsking = false; }, 1500);   // never stay stuck if the browser does not answer
+  try{
+    const r = req.call(el, {navigationUI:"hide"});
+    if(r && r.then) r.then(done, err => { console.warn("Full screen refused:", err && err.message); done(); });
+    else setTimeout(done, 500);
+  }catch(err){ console.warn("Full screen refused:", err && err.message); done(); }
 }
-document.addEventListener("click", goFullscreen, true);
+/* the corner button shows while the screen is not full screen, in case a tap was not enough */
+const fsShown = () => { $("#fsBtn").hidden = isFull() || !canFull(); };
+/* touch screens: pointerup / touchend count as a tap even when the finger moved a little and no click follows */
+addEventListener("pointerup", e => { if(e.pointerType !== "mouse") goFullscreen(); }, true);
+addEventListener("touchend", goFullscreen, true);
+addEventListener("click", goFullscreen, true);
+addEventListener("keydown", goFullscreen, true);
+["fullscreenchange", "webkitfullscreenchange"].forEach(ev => document.addEventListener(ev, fsShown));
 document.addEventListener("pointerdown", poke);
 document.addEventListener("keydown", poke);
 document.addEventListener("contextmenu", e => e.preventDefault());
@@ -629,6 +649,7 @@ document.addEventListener("click", e => {
   else if(b.id === "shoot"){ if(S.face){ S.face = null; render(); startCam(); } else shoot(); }
   else if(b.id === "pairBtn") pair();
   else if(b.id === "installBtn") installApp();
+  else if(b.id === "fsBtn") goFullscreen();
   else if(b.id === "restart") resetAll();
   else if(b.id === "stay") hideIdle();
 });
@@ -639,7 +660,7 @@ $("#first").addEventListener("keydown", e => { if(e.key === "Enter") $(FAMILY_FI
 $("#last").addEventListener("keydown", e => { if(e.key === "Enter" && nameStepOk()) go(3); });
 
 (async () => {
-  fit(); render();
+  fit(); render(); fsShown();
   try{ paired = !!(await api("/api/kiosk/me")).kiosk; }
   catch(e){ paired = !!e.offline; }      // offline at start: keep working, sending tells if it is still paired
   resetAll();
