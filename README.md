@@ -107,8 +107,8 @@ python app.py                   # http://localhost:5000
   icono de calendario y todo el recuadro abre el calendario (algunas tablets no muestran el icono del sistema).
 - **Web app:** el kiosko se puede instalar como aplicación. En Chrome o Edge (Windows, Mac, Android) abre
   `/kiosk` y pulsa el icono de instalar de la barra de direcciones (o *Install as app* en la pantalla de
-  emparejar): queda un acceso directo en el escritorio que abre el kiosko a pantalla completa, sin barra
-  de direcciones. Comparte las cookies con el navegador, así que el emparejamiento se mantiene. En iPad:
+  emparejar): queda un acceso directo en el escritorio que abre el kiosko en su propia ventana, sin barra
+  de direcciones, y el primer toque lo pone a pantalla completa. Comparte las cookies con el navegador, así que el emparejamiento se mantiene. En iPad:
   Safari → Compartir → *Añadir a pantalla de inicio*; ahí la app tiene sus propias cookies y hay que
   emparejarla una vez dentro de la app.
 - Cada pantalla se empareja una vez: Admin → **Kiosks** → *Add screen* da un código de 6 dígitos
