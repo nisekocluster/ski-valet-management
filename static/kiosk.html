@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#09131f">
 <title>Ski Valet · Self check-in</title>
+<link rel="manifest" href="/kiosk.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/kiosk-icon-192.png">
+<link rel="apple-touch-icon" href="/kiosk-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ski Valet Kiosk">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -12,7 +19,7 @@
 /* ==========================================================================
    Ski Valet — guest kiosk (self pre-check-in on a touch screen, landscape).
    The guest enters room, name and how many items; the valet confirms it at
-   the counter. The page is drawn at 1280×800 and scaled to fit the screen.
+   the counter. The page is drawn at 1280×800 (landscape) or 900×1300 (portrait) and scaled to fill the screen.
    ========================================================================== */
 :root{
   --night:#09131f; --slab:#132333; --slab2:#1a3042; --line:#2b4357;
@@ -27,6 +34,7 @@ html,body{margin:0; height:100%}
 body{background:var(--night); color:var(--frost); font-family:var(--body); overflow:hidden;
   user-select:none; -webkit-user-select:none; touch-action:manipulation; overscroll-behavior:none}
 input{user-select:text; -webkit-user-select:text}
+[hidden]{display:none !important}
 .kiosk{width:1280px; height:800px; position:absolute; left:50%; top:50%; transform-origin:center; overflow:hidden;
   background:radial-gradient(1200px 700px at 85% -10%, #173a55 0%, transparent 60%), var(--night)}
 
@@ -87,6 +95,17 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
   color:var(--frost); font:600 40px var(--body); padding:0 28px; outline:none; color-scheme:dark}
 .field input:focus{border-color:var(--glacier)}
 .field small{display:block; font-size:18px; color:var(--dim); margin-top:8px}
+/* hotel check-out date: our own calendar icon, and the whole box opens the picker (some tablets show no icon) */
+.field .datebox{position:relative; display:block; margin:0; font-size:inherit; color:inherit}
+.datebox input{padding-right:100px; cursor:pointer}
+.datebox input::-webkit-calendar-picker-indicator{position:absolute; inset:0; width:auto; height:auto; opacity:0; cursor:pointer}
+.datebox input::-webkit-inner-spin-button, .datebox input::-webkit-clear-button{display:none}
+.datebox svg{position:absolute; right:26px; top:50%; width:48px; height:48px; transform:translateY(-50%); color:var(--glacier); pointer-events:none}
+.datebox em{position:absolute; left:30px; top:50%; transform:translateY(-50%); font:500 32px var(--body); font-style:normal;
+  color:var(--dim); pointer-events:none; display:none; background:var(--slab); padding-right:12px}
+.datebox.empty em{display:block}
+.datebox.empty input{color:transparent}
+.datebox.empty input::-webkit-datetime-edit{opacity:0}
 .kb-note{width:300px; color:var(--dim); font-size:20px; line-height:1.5; border:2px dashed var(--line); border-radius:var(--r);
   padding:28px; align-self:center}
 
@@ -153,6 +172,25 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
 .idle .dlg{width:620px; background:var(--slab); border:2px solid var(--line); border-radius:28px; padding:48px; text-align:center}
 .idle h2{font:700 52px var(--display); margin:0 0 12px}
 .idle .sub{margin-bottom:36px}
+
+/* portrait screens (stand-up kiosks): stack what sits side by side in landscape */
+.portrait .screen{padding:24px 56px 48px}
+.portrait .body{flex-direction:column; justify-content:center; gap:40px}
+.portrait .fields{width:100%}
+.portrait [data-s="2"] .body{justify-content:flex-start; padding-top:48px}   /* stay above the screen keyboard */
+.portrait .kb-note{display:none}
+.portrait .langs{grid-template-columns:repeat(2, 330px); gap:24px}
+.portrait .lang{height:180px}
+.portrait .eq{grid-template-columns:1fr; gap:24px}
+.portrait .card{display:grid; grid-template-columns:96px 1fr auto; column-gap:30px; row-gap:2px; align-items:center;
+  justify-items:start; padding:26px 34px}
+.portrait .card svg{grid-row:1 / 3}
+.portrait .card b{align-self:end}
+.portrait .card .unit{grid-column:2; margin:0; align-self:start}
+.portrait .card .count{grid-column:3; grid-row:1 / 3}
+.portrait .photo-side{max-width:none; width:100%}
+.portrait .sum{grid-template-columns:1fr}
+.portrait .done .sub{max-width:760px}
 </style>
 </head>
 <body>
@@ -172,7 +210,7 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
       <div class="display empty" id="codeDisp"></div>
       <div class="pad" data-pad="code"></div>
     </div>
-    <div class="foot"><span class="warn" id="codeWarn"></span><button class="btn go" id="pairBtn">Pair screen</button></div>
+    <div class="foot"><button class="btn ghost" id="installBtn" hidden>Install as app</button><span class="warn" id="codeWarn"></span><button class="btn go" id="pairBtn">Pair screen</button></div>
   </section>
 
   <!-- 0 · welcome / language -->
@@ -209,7 +247,7 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
           <label class="field"><span data-t="firstname"></span><input id="first" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="60"></label>
           <label class="field last"><span data-t="lastname"></span><input id="last" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="60"></label>
         </div>
-        <label class="field"><span data-t="checkout"></span><input id="dep" type="date"><small data-t="dep_h"></small></label>
+        <label class="field"><span data-t="checkout"></span><span class="datebox empty" id="depBox"><input id="dep" type="date"><em data-t="dep_pick"></em><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><rect x="7" y="13" width="3" height="3" rx=".5" fill="currentColor" stroke="none"/></svg></span><small data-t="dep_h"></small></label>
       </div>
       <div class="kb-note" data-t="kb_note"></div>
     </div>
@@ -278,7 +316,7 @@ const T = {
   en:{welcome:"Welcome", welcome_sub:"Ski & snowboard storage — self check-in. Choose your language to begin.",
     room_t:"What is your room number?", room_h:"You'll find it on your room key.", clear:"Clear",
     name_t:"Your name", name_h:"As on your hotel reservation, in English letters.", firstname:"First name", lastname:"Last name",
-    checkout:"Hotel check-out date", dep_h:"The day you leave the hotel", kb_note:"The screen keyboard opens when you tap a name box.",
+    checkout:"Hotel check-out date", dep_h:"The day you leave the hotel", dep_pick:"Tap to choose", kb_note:"The screen keyboard opens when you tap a name box.",
     eq_t:"What are you leaving with us?", eq_h:"Tap + for each item. We store boots, skis (with poles) and snowboards.",
     boots:"Boots", boots_u:"pairs", skis:"Skis + poles", skis_u:"sets", snowboards:"Snowboard", snowboards_u:"boards", need:"Add at least one item.",
     ph_t:"A photo for your security", ph_h:"Staff will check it when you pick up your equipment. This step is optional.",
@@ -295,7 +333,7 @@ const T = {
   ja:{welcome:"ようこそ", welcome_sub:"スキー・スノーボード預かり — セルフチェックイン。言語を選んで始めてください。",
     room_t:"お部屋番号を入力してください", room_h:"ルームキーに記載されています。", clear:"消去",
     name_t:"お名前", name_h:"ホテルのご予約名をローマ字でご入力ください。", firstname:"名（ローマ字）", lastname:"姓（ローマ字）",
-    checkout:"ホテルのチェックアウト日", dep_h:"ホテルを出発する日", kb_note:"入力欄をタップすると画面キーボードが表示されます。",
+    checkout:"ホテルのチェックアウト日", dep_h:"ホテルを出発する日", dep_pick:"タップして選択", kb_note:"入力欄をタップすると画面キーボードが表示されます。",
     eq_t:"お預けになる用具は？", eq_h:"＋で数を選んでください。ブーツ、スキー（ストック含む）、スノーボードをお預かりします。",
     boots:"ブーツ", boots_u:"足", skis:"スキー＋ストック", skis_u:"セット", snowboards:"スノーボード", snowboards_u:"本", need:"1点以上選んでください。",
     ph_t:"本人確認用の写真", ph_h:"用具のお受け取り時にスタッフが確認します。この手順は任意です。",
@@ -312,7 +350,7 @@ const T = {
   zh:{welcome:"欢迎", welcome_sub:"滑雪板与单板寄存 — 自助登记。请选择语言开始。",
     room_t:"请输入您的房间号", room_h:"房卡上印有房间号。", clear:"清除",
     name_t:"您的姓名", name_h:"请用拼音填写，与酒店预订信息一致。", firstname:"名（拼音）", lastname:"姓（拼音）",
-    checkout:"酒店退房日期", dep_h:"您离开酒店的日期", kb_note:"点击姓名栏即可打开屏幕键盘。",
+    checkout:"酒店退房日期", dep_h:"您离开酒店的日期", dep_pick:"点击选择", kb_note:"点击姓名栏即可打开屏幕键盘。",
     eq_t:"您要寄存哪些装备？", eq_h:"点击 ＋ 选择数量。可寄存雪鞋、双板（含雪杖）和单板。",
     boots:"雪鞋", boots_u:"双", skis:"双板＋雪杖", skis_u:"套", snowboards:"单板", snowboards_u:"块", need:"请至少选择一件。",
     ph_t:"安全验证照片", ph_h:"取回装备时工作人员会核对。此步骤为选填。",
@@ -329,7 +367,7 @@ const T = {
   ko:{welcome:"환영합니다", welcome_sub:"스키·스노보드 보관 — 셀프 체크인. 언어를 선택해 시작하세요.",
     room_t:"객실 번호를 입력하세요", room_h:"객실 키에 적혀 있습니다.", clear:"지우기",
     name_t:"성함", name_h:"호텔 예약과 같이 영문으로 입력하세요.", firstname:"이름 (영문)", lastname:"성 (영문)",
-    checkout:"호텔 체크아웃 날짜", dep_h:"호텔을 떠나는 날", kb_note:"이름 칸을 누르면 화면 키보드가 열립니다.",
+    checkout:"호텔 체크아웃 날짜", dep_h:"호텔을 떠나는 날", dep_pick:"눌러서 선택", kb_note:"이름 칸을 누르면 화면 키보드가 열립니다.",
     eq_t:"맡기실 장비를 선택하세요", eq_h:"+ 를 눌러 수량을 선택하세요. 부츠, 스키(폴 포함), 스노보드를 보관합니다.",
     boots:"부츠", boots_u:"켤레", skis:"스키 + 폴", skis_u:"세트", snowboards:"스노보드", snowboards_u:"개", need:"한 개 이상 선택하세요.",
     ph_t:"보안용 사진", ph_h:"장비를 찾으실 때 직원이 확인합니다. 이 단계는 선택 사항입니다.",
@@ -378,12 +416,31 @@ async function api(path, body){
   return data;
 }
 
-/* fit the 1280×800 layout to whatever screen this is */
+/* web app: Chrome / Edge offer to install the kiosk (desktop shortcut, opens full screen without the address bar) */
+let installPrompt = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; $("#installBtn").hidden = false; });
+addEventListener("appinstalled", () => { installPrompt = null; $("#installBtn").hidden = true; });
+async function installApp(){
+  if(!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice.catch(() => null);
+  installPrompt = null; $("#installBtn").hidden = true;
+}
+
+const depShown = () => $("#depBox").classList.toggle("empty", !$("#dep").value);
+
+/* fit the layout to whatever screen this is: 1280×800 in landscape, 900×1300 in portrait, scaled up or down,
+   and the drawing area grows to the screen's shape so a big 16:9 or 9:16 screen is filled edge to edge */
 function fit(){
-  const s = Math.min(innerWidth / 1280, innerHeight / 800);
-  $("#kiosk").style.transform = `translate(-50%, -50%) scale(${s})`;
+  const W = innerWidth, H = innerHeight, portrait = H > W * 1.1;
+  const bw = portrait ? 900 : 1280, bh = portrait ? 1300 : 800;
+  const s = Math.min(W / bw, H / bh), k = $("#kiosk");
+  k.classList.toggle("portrait", portrait);
+  k.style.width = W / s + "px"; k.style.height = H / s + "px";
+  k.style.transform = `translate(-50%, -50%) scale(${s})`;
 }
 addEventListener("resize", fit);
+document.addEventListener("fullscreenchange", fit);
 
 function pad(kind, label){
   return [1,2,3,4,5,6,7,8,9].map(n => `<button data-${kind}="${n}">${n}</button>`).join("")
@@ -457,7 +514,7 @@ function resetAll(){
   if(document.activeElement) document.activeElement.blur();
   stopCam();
   S = blank();
-  $("#first").value = ""; $("#last").value = ""; $("#dep").value = "";
+  $("#first").value = ""; $("#last").value = ""; $("#dep").value = ""; depShown();
   hideIdle(); go(0);
 }
 
@@ -565,11 +622,13 @@ document.addEventListener("click", e => {
   else if(b.id === "consent"){ S.consent = !S.consent; if(!S.consent){ S.face = null; stopCam(); render(); } else { render(); startCam(); } }
   else if(b.id === "shoot"){ if(S.face){ S.face = null; render(); startCam(); } else shoot(); }
   else if(b.id === "pairBtn") pair();
+  else if(b.id === "installBtn") installApp();
   else if(b.id === "restart") resetAll();
   else if(b.id === "stay") hideIdle();
 });
 ["first", "last"].forEach(k => $("#" + k).addEventListener("input", e => { S[k] = e.target.value; $("#nameNext").disabled = !nameStepOk(); }));
-["input", "change"].forEach(ev => $("#dep").addEventListener(ev, e => { S.dep = e.target.value; $("#nameNext").disabled = !nameStepOk(); }));
+["input", "change"].forEach(ev => $("#dep").addEventListener(ev, e => { S.dep = e.target.value; depShown(); $("#nameNext").disabled = !nameStepOk(); }));
+$("#dep").addEventListener("click", e => { try{ e.target.showPicker(); }catch(_){} });   // the whole box opens the calendar
 $("#first").addEventListener("keydown", e => { if(e.key === "Enter") $(FAMILY_FIRST.includes(S.lang) ? "#first" : "#last").focus(); });
 $("#last").addEventListener("keydown", e => { if(e.key === "Enter" && nameStepOk()) go(3); });
 
