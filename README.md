@@ -137,6 +137,8 @@ python app.py                   # http://localhost:5000
   (`face_photo_ids`) y se muestra en la página de la habitación y en *Hand to guest* / *Check out*.
   El servidor la borra cuando la habitación hace check-out (última recogida), o si el pre-registro
   caduca o se descarta sin confirmar.
+- **Pantalla completa:** el primer toque (dedo, lápiz, ratón o tecla) la activa. Mientras no está a pantalla
+  completa se ve un botón ⛶ arriba a la derecha para activarla a mano.
 - Tras cada registro la pantalla vuelve al inicio a los 5 s (o al tocarla); si nadie la toca durante 60 s avisa y
   se reinicia 15 s después, para que el siguiente cliente no vea datos del anterior.
 
