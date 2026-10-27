@@ -10,6 +10,8 @@ app.py             Backend Flask: API, sesiones, esquema de base de datos
 static/index.html  App del valet
 static/admin.html  Consola de administración
 static/sync.js     Sincronización con el servidor (compartida por las dos páginas)
+static/kiosk.html  Kiosko del cliente (pre-check-in)
+static/kiosk.webmanifest, static/kiosk-icon-180/192/512.png   Web app del kiosko (instalable)
 requirements.txt   Procfile   railway.json
 ```
 
@@ -98,8 +100,17 @@ python app.py                   # http://localhost:5000
 ## Kiosko: pre-check-in del cliente
 
 - `static/kiosk.html` (ruta `/kiosk`) es la pantalla táctil donde el cliente se pre-registra solo:
-  idioma (English, 日本語, 中文, 한국어), habitación, nombre y apellido, fecha de salida (opcional) y
-  cuántos boots, skis y snowboards trae. No toma fotos ni elige ubicaciones.
+  idioma (English, 日本語, 中文, 한국어), habitación, nombre y apellido, fecha de salida del hotel (obligatoria)
+  y cuántos boots, skis y snowboards trae. No toma fotos ni elige ubicaciones.
+- Se adapta a cualquier pantalla, también a las grandes: en horizontal se dibuja a 1280×800 y en vertical
+  (tótem) a 900×1300, ampliado hasta llenar la pantalla de borde a borde. La fecha de salida lleva su propio
+  icono de calendario y todo el recuadro abre el calendario (algunas tablets no muestran el icono del sistema).
+- **Web app:** el kiosko se puede instalar como aplicación. En Chrome o Edge (Windows, Mac, Android) abre
+  `/kiosk` y pulsa el icono de instalar de la barra de direcciones (o *Install as app* en la pantalla de
+  emparejar): queda un acceso directo en el escritorio que abre el kiosko a pantalla completa, sin barra
+  de direcciones. Comparte las cookies con el navegador, así que el emparejamiento se mantiene. En iPad:
+  Safari → Compartir → *Añadir a pantalla de inicio*; ahí la app tiene sus propias cookies y hay que
+  emparejarla una vez dentro de la app.
 - Cada pantalla se empareja una vez: Admin → **Kiosks** → *Add screen* da un código de 6 dígitos
   (válido 10 minutos) que se escribe en `/kiosk`. La pantalla queda emparejada un año con su propia
   cookie; solo puede enviar pre-registros, no ve ningún dato. *Remove* la desconecta al momento.
@@ -126,7 +137,7 @@ python app.py                   # http://localhost:5000
   (`face_photo_ids`) y se muestra en la página de la habitación y en *Hand to guest* / *Check out*.
   El servidor la borra cuando la habitación hace check-out (última recogida), o si el pre-registro
   caduca o se descarta sin confirmar.
-- Tras cada registro la pantalla vuelve al inicio a los 10 s; si nadie la toca durante 60 s avisa y
+- Tras cada registro la pantalla vuelve al inicio a los 5 s (o al tocarla); si nadie la toca durante 60 s avisa y
   se reinicia 15 s después, para que el siguiente cliente no vea datos del anterior.
 
 ## Cómo funciona la sincronización

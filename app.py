@@ -1042,6 +1042,21 @@ def kiosk_page():
     return page("kiosk.html")
 
 
+# install the kiosk as a web app (Chrome / Edge "Install app", Safari "Add to Dock / Home Screen")
+@app.get("/kiosk.webmanifest")
+def kiosk_manifest():
+    resp = page("kiosk.webmanifest")
+    resp.headers["Content-Type"] = "application/manifest+json"
+    return resp
+
+
+@app.get("/kiosk-icon-<int:size>.png")
+def kiosk_icon(size):
+    if size not in (180, 192, 512):
+        raise ApiError(404, "Not found")
+    return send_from_directory(STATIC, f"kiosk-icon-{size}.png", max_age=86400)
+
+
 @app.get("/api/kiosk/me")
 def kiosk_me():
     with tx() as cur:
