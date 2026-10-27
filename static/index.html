@@ -171,6 +171,8 @@ h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
 .panel.pc-on .eyebrow,.panel.pc-wait .eyebrow{color:var(--glacier)}
 .panel.pc-wait{margin-top:10px}
 .panel.occ-info{margin-top:10px;border-color:var(--glacier);font-size:14px}
+.panel.occ-confirm{margin-top:10px;border-color:var(--st-preparing);background:rgba(240,169,59,.06)}
+.panel.occ-confirm .eyebrow{color:var(--st-preparing)}
 .panel.occ-warn{margin-top:10px;border-color:var(--st-attention);background:rgba(255,77,77,.06)}
 .panel.occ-warn .eyebrow{color:var(--st-attention)}
 .thumb.id-big{width:96px;height:96px;border-radius:50%;border:2px solid var(--glacier)}
@@ -1452,7 +1454,8 @@ const sameGuest = (roomGuest, pc) => { const g=normName(roomGuest), l=normName(p
 function stowConflict(p){
   const d=p.d, used=(d.pcs||[]).map(precheck).filter(Boolean);
   const tr=room(p.room_id)||(d.room.trim()?roomByNumber(d.room):null);
-  if(!used.length || !tr || tr.status==="checked_out" || !storagesOfRoom(tr.id).length) return null;
+  // "+ Add more equipment" from the room page: the valet already picked this guest's room
+  if((!used.length && p.room_id) || !tr || tr.status==="checked_out" || !storagesOfRoom(tr.id).length) return null;
   return {r:tr, mismatch:used.some(u=>!sameGuest(guestOf(tr),u)), used};
 }
 function conflictBox(p){
@@ -1461,7 +1464,18 @@ function conflictBox(p){
   const since=Math.min(...sts.flatMap(s=>eqOf(s.id)).map(e=>e.created_at||now()));
   const who=guestOf(r)?`<b>${esc(guestOf(r))}</b>`:"a guest with no name";
   const info=`Room ${esc(r.room_number)} already has ${n} item${n===1?"":"s"} from ${who} (checked in ${fmtDay(isoOf(since))}${r.departure?`, leaves ${fmtDay(r.departure)}`:""}).`;
-  if(!c.mismatch || p.d.sameOk) return `<div class="panel occ-info">${info}<div class="muted tiny" style="margin-top:4px">The new items are added to this room.</div></div>`;
+  if(p.d.sameOk===r.id) return `<div class="panel occ-info">${info}<div class="muted tiny" style="margin-top:4px">Confirmed: same guest — the new items are added to this room.</div></div>`;
+  if(!c.mismatch){
+    // the name matches, but a name alone proves nothing: the valet confirms it is the same person
+    const faces=idPhotos(r);
+    return `<div class="panel occ-confirm"><div class="eyebrow">Confirm it is the same guest</div>
+      <p style="margin:6px 0 10px">${info}</p>
+      ${faces.length?`<div class="row" style="gap:10px;margin-bottom:10px;flex-wrap:wrap">${faces.map(id=>thumb(id,"ID photo · Room "+r.room_number).replace('class="thumb"','class="thumb id-big"')).join("")}
+          <span class="muted tiny" style="flex:1;min-width:160px">Compare with the guest at the counter.</span></div>`
+        :`<p class="hint" style="margin:0 0 10px">No ID photo for this room — check the guest's room key or ask for their name and room.</p>`}
+      <div class="btn-grid"><button class="btn primary" data-act="pc-same">Yes, same guest — add the items</button>
+        <button class="btn ghost" data-act="nav" data-view="room" data-id="${r.id}">Different guest — open room ${esc(r.room_number)}</button></div></div>`;
+  }
   return `<div class="panel occ-warn"><div class="eyebrow">Check before continuing</div>
     <p style="margin:6px 0 10px">${info} The pre-check-in is from <b>${esc(c.used.map(pcGuest).join(", "))}</b>. Is it the same guest?</p>
     <div class="btn-grid"><button class="btn" data-act="pc-same">Same guest — add the items</button>
@@ -1550,7 +1564,7 @@ async function stowSave(){
   if(!r && !d.room.trim()){ toast("Enter the room number","err"); $("#ciRoom")?.focus(); return; }
   if(!d.items.length){ toast("Add at least one item","err"); return; }
   const clash=stowConflict(p);
-  if(clash && clash.mismatch && !d.sameOk){ toast(`Room ${clash.r.room_number} has another guest's equipment — confirm it is the same guest first`,"err"); drawPc(); return; }
+  if(clash && d.sameOk!==clash.r.id){ toast(clash.mismatch?`Room ${clash.r.room_number} has another guest's equipment — confirm it is the same guest first`:`Confirm it is the same guest before adding items to room ${clash.r.room_number}`,"err"); drawPc(); return; }
   // C: every stay needs its departure date, so Departing today and Overdue catch every guest
   const known=r||(d.room.trim()?roomByNumber(d.room):null);
   if(!d.dep && !(known && known.status!=="checked_out" && known.departure)){ toast("Enter the guest's hotel departure date","err"); $("#ciDep")?.focus(); return; }
@@ -2656,7 +2670,7 @@ document.addEventListener("click", e=>{
     case "ci-save": stowSave(); break;
     case "pc-open": openPrecheck(id); break;
     case "pc-room": openRoomPrechecks(el.dataset.room); break;
-    case "pc-same": { const p=stowParams(); if(p){ p.d.sameOk=true; drawPc(); } break; }
+    case "pc-same": { const p=stowParams(), c=p&&stowConflict(p); if(c){ p.d.sameOk=c.r.id; drawPc(); } break; }
     case "co-room": go("room",{id}); break;
     case "dep-go": replaceView("departures",{mode:el.dataset.mode,day:el.dataset.day||undefined}); window.scrollTo(0,0); break;
     case "pc-use": usePrecheck(id); break;
