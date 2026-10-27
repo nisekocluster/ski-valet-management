@@ -30,12 +30,12 @@
   --body:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
-html,body{margin:0; height:100%}
+html,body{margin:0; height:100%; overflow:hidden}
 body{background:var(--night); color:var(--frost); font-family:var(--body); overflow:hidden;
   user-select:none; -webkit-user-select:none; touch-action:manipulation; overscroll-behavior:none}
 input{user-select:text; -webkit-user-select:text}
 [hidden]{display:none !important}
-.kiosk{width:1280px; height:800px; position:absolute; left:50%; top:50%; transform-origin:center; overflow:hidden;
+.kiosk{width:1280px; height:800px; position:fixed; left:0; top:0; transform-origin:0 0; overflow:hidden;
   background:radial-gradient(1200px 700px at 85% -10%, #173a55 0%, transparent 60%), var(--night)}
 
 .top{position:absolute; top:0; left:0; right:0; height:96px; display:flex; align-items:center; padding:0 40px; gap:24px}
@@ -432,15 +432,21 @@ const depShown = () => $("#depBox").classList.toggle("empty", !$("#dep").value);
 /* fit the layout to whatever screen this is: 1280×800 in landscape, 900×1300 in portrait, scaled up or down,
    and the drawing area grows to the screen's shape so a big 16:9 or 9:16 screen is filled edge to edge */
 function fit(){
-  const W = innerWidth, H = innerHeight, portrait = H > W * 1.1;
+  const de = document.documentElement;
+  const W = de.clientWidth || innerWidth, H = de.clientHeight || innerHeight, portrait = H > W * 1.1;
   const bw = portrait ? 900 : 1280, bh = portrait ? 1300 : 800;
   const s = Math.min(W / bw, H / bh), k = $("#kiosk");
   k.classList.toggle("portrait", portrait);
   k.style.width = W / s + "px"; k.style.height = H / s + "px";
-  k.style.transform = `translate(-50%, -50%) scale(${s})`;
+  k.style.transform = `scale(${s})`;           // pinned to the top-left corner and exactly the window's size
+  if(scrollX || scrollY) scrollTo(0, 0);       // a focused box must never leave the page shifted
 }
-addEventListener("resize", fit);
-document.addEventListener("fullscreenchange", fit);
+const refit = () => requestAnimationFrame(fit);   // after full screen / window changes the size settles a frame later
+addEventListener("resize", refit);
+addEventListener("scroll", () => { if(scrollX || scrollY) scrollTo(0, 0); });
+document.addEventListener("fullscreenchange", refit);
+document.addEventListener("webkitfullscreenchange", refit);
+if(window.ResizeObserver) new ResizeObserver(refit).observe(document.documentElement);
 
 function pad(kind, label){
   return [1,2,3,4,5,6,7,8,9].map(n => `<button data-${kind}="${n}">${n}</button>`).join("")
