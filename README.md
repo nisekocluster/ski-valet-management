@@ -64,9 +64,10 @@ python app.py                   # http://localhost:5000
 
 - **Fecha de salida obligatoria** en el kiosko (el cliente no puede seguir sin ella) y al confirmar el check-in del staff:
   así *Departing today* y *Overdue* cubren a todos los clientes.
-- **Pre-check-in en una habitación que ya tiene equipos:** si el apellido coincide, los equipos se añaden;
-  si no coincide, la app no deja guardar hasta que el staff elija *Same guest* o abra la habitación para
-  hacer primero el check-out del cliente anterior.
+- **Añadir equipos a una habitación que ya tiene equipos** (desde un pre-check-in o escribiendo el número):
+  siempre hay que confirmar que es el mismo cliente antes de guardar. Si el apellido coincide, el aviso es
+  naranja y muestra la foto de identificación (o pide comprobar la llave si no hay foto); si no coincide,
+  es rojo. Desde *+ Add more equipment* en la página de la habitación no se pregunta.
 - **Equipos no devueltos:** si unos equipos entregados el día X siguen con el cliente a las 11:00 del día
   X+1 (hora de check-out del hotel), sale un aviso en *Attention*; al tocarlo se abre *Check out & release*.
   No hay check-out automático: el staff confirma con recepción que el cliente se fue.
