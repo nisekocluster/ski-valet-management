@@ -67,6 +67,20 @@ KIOSK_COOKIE = "skivalet_kiosk"
 KIOSK_DAYS = 365                                                  # a paired screen stays signed in this long
 KIOSK_CODE_MINUTES = 10
 KIOSK_LANGS = {"en", "ja", "zh", "ko"}
+# The hotel's rooms: floors 5 to 18 (no 13th floor) and rooms 51 to 90 on each, so 551–590 … 1851–1890.
+# The kiosk only accepts these; the valet app and the admin warn about any other number.
+ROOM_FLOORS = [f for f in range(5, 19) if f != 13]
+ROOM_FROM, ROOM_TO = 51, 90
+HOTEL_ROOMS = {"floors": ROOM_FLOORS, "from": ROOM_FROM, "to": ROOM_TO}
+
+
+def hotel_room(num):
+    """True when the number is one of the hotel's rooms."""
+    num = str(num or "").strip()
+    if not re.fullmatch(r"[1-9]\d{2,3}", num):
+        return False
+    floor, n = divmod(int(num), 100)
+    return floor in ROOM_FLOORS and ROOM_FROM <= n <= ROOM_TO
 LOGIN_MAX_FAILS = 10                                              # per IP, per 10 minutes
 WRITE_LOCK = 734001                                               # pg advisory lock key
 
@@ -697,7 +711,7 @@ def me():
     with tx() as cur:
         u = load_user(cur)
         return jsonify(user=row_out("users", u, is_admin(u)) if u else None,
-                       staff_pin_set=any_pin_set(cur))
+                       staff_pin_set=any_pin_set(cur), hotel_rooms=HOTEL_ROOMS)
 
 
 @app.post("/api/login/pin")
@@ -1061,7 +1075,7 @@ def kiosk_icon(size):
 def kiosk_me():
     with tx() as cur:
         k = load_kiosk(cur)
-        return jsonify(kiosk={"id": k["id"], "name": k["name"]} if k else None)
+        return jsonify(kiosk={"id": k["id"], "name": k["name"]} if k else None, hotel_rooms=HOTEL_ROOMS)
 
 
 @app.post("/api/kiosk/pair")
@@ -1100,6 +1114,8 @@ def kiosk_precheck(cur, k):
     counts = {c: to_int(b.get(c)) or 0 for c in ("boots", "skis", "snowboards")}
     if not re.fullmatch(r"[0-9A-Z-]{1,8}", room):
         raise ApiError(400, "Enter the room number")
+    if not hotel_room(room):
+        raise ApiError(400, f"Room {room} does not exist. Check the number on your room key.")
     if not first or not last:
         raise ApiError(400, "Enter the first and last name")
     if any(n < 0 or n > 9 for n in counts.values()) or not sum(counts.values()):

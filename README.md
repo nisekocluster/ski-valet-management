@@ -107,6 +107,11 @@ python app.py                   # http://localhost:5000
 
 ## Kiosko: pre-check-in del cliente
 
+- **Habitaciones del hotel:** pisos 5 a 18 (sin piso 13) y habitaciones 51 a 90 en cada piso: 551–590 … 1851–1890.
+  Están en `app.py` (`ROOM_FLOORS`, `ROOM_FROM`, `ROOM_TO`) y el servidor las envía a las pantallas. El kiosko solo
+  acepta esos números (el servidor también lo comprueba); la app del staff y el admin avisan en rojo si se escribe otro
+  número, pero dejan seguir.
+
 - `static/kiosk.html` (ruta `/kiosk`) es la pantalla táctil donde el cliente se pre-registra solo:
   idioma (English, 日本語, 中文, 한국어), habitación, cuántas personas dejan equipo, fecha de salida del hotel
   (obligatoria) y, por persona, nombre y apellido y cuántos boots, skis y snowboards trae. No toma fotos ni elige ubicaciones.
