@@ -70,6 +70,9 @@ python app.py                   # http://localhost:5000
   siempre hay que confirmar que es el mismo cliente antes de guardar. Si el apellido coincide, el aviso es
   naranja y muestra la foto de identificación (o pide comprobar la llave si no hay foto); si no coincide,
   es rojo. Desde *+ Add more equipment* en la página de la habitación no se pregunta.
+- **Números de habitación repetidos:** si un número existe dos veces (un registro antiguo o vacío), la app
+  usa siempre el que tiene equipos o tarjetas, así el aviso de habitación ocupada sale igual. En Admin →
+  *Overview* → *Data health* aparece *Duplicate room number* con *Fix*, que borra los registros vacíos.
 - **Equipos no devueltos:** si unos equipos entregados el día X siguen con el cliente a las 11:00 del día
   X+1 (hora de check-out del hotel), sale un aviso en *Attention*; al tocarlo se abre *Check out & release*.
   No hay check-out automático: el staff confirma con recepción que el cliente se fue.
