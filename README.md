@@ -108,8 +108,8 @@ python app.py                   # http://localhost:5000
 ## Kiosko: pre-check-in del cliente
 
 - `static/kiosk.html` (ruta `/kiosk`) es la pantalla táctil donde el cliente se pre-registra solo:
-  idioma (English, 日本語, 中文, 한국어), habitación, nombre y apellido, fecha de salida del hotel (obligatoria)
-  y cuántos boots, skis y snowboards trae. No toma fotos ni elige ubicaciones.
+  idioma (English, 日本語, 中文, 한국어), habitación, cuántas personas dejan equipo, fecha de salida del hotel
+  (obligatoria) y, por persona, nombre y apellido y cuántos boots, skis y snowboards trae. No toma fotos ni elige ubicaciones.
 - Se adapta a cualquier pantalla, también a las grandes: en horizontal se dibuja a 1280×800 y en vertical
   (tótem) a 900×1300, ampliado hasta llenar la pantalla de borde a borde. La fecha de salida lleva su propio
   icono de calendario y todo el recuadro abre el calendario (algunas tablets no muestran el icono del sistema).
@@ -147,10 +147,12 @@ python app.py                   # http://localhost:5000
   caduca o se descarta sin confirmar.
 - **Pantalla completa:** el primer toque (dedo, lápiz, ratón o tecla) la activa. Mientras no está a pantalla
   completa se ve un botón ⛶ arriba a la derecha para activarla a mano.
-- **Varias personas de la misma habitación:** al terminar, la pantalla final ofrece *+ Add another person in room N*.
-  La siguiente persona empieza en el nombre, con la habitación y la fecha de salida ya puestas, y registra
-  sus propios equipos (y su foto, si quiere). Cada persona se envía como un pre-check-in aparte, así el valet
-  sabe de quién es cada equipo; en la app del staff salen juntas en la tarjeta de la habitación.
+- **Varias personas de la misma habitación:** después del número de habitación el kiosko pregunta cuántas
+  personas dejan equipo (hasta 8) y la fecha de salida del hotel. Luego, para cada persona: nombre → sus equipos →
+  foto opcional (el apellido de la anterior se propone). La revisión muestra a cada persona con sus equipos y
+  *Send all* envía un pre-check-in por persona (si falla a medias, *Send* reenvía solo los que faltan). En la app
+  del staff cada equipo queda a nombre de su dueño, agrupado por persona, y en la entrega *Select Emma's*
+  marca solo los suyos.
 - Tras cada registro la pantalla vuelve al inicio a los 5 s (o al tocarla); si nadie la toca durante 60 s avisa y
   se reinicia 15 s después, para que el siguiente cliente no vea datos del anterior.
 
