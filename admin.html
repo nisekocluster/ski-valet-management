@@ -1,0 +1,1911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1621">
+<meta name="robots" content="noindex">
+<title>Ski Valet · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SKI VALET ADMIN — same tokens as the valet app (index.html)
+   ============================================================ */
+:root{
+  --night:#0E1621; --slab:#16222F; --slab2:#1D2C3B; --line:#27394B;
+  --frost:#E7EEF5; --mist:#90A4B8; --dim:#63798F;
+  --signal:#FF6A2B; --signal-d:#E2551A; --glacier:#5EC8F2;
+  --st-available:#64748B; --st-preparing:#F0A93B; --st-occupied:#5EC8F2;
+  --st-ready:#35C36A; --st-guest:#A98BF5; --st-attention:#FF4D4D; --st-closed:#3C4A5A;
+  --r:14px; --r-s:10px;
+  --display:"Barlow Condensed", "Oswald", Impact, sans-serif;
+  --body:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--night);color:var(--frost);font-family:var(--body);font-size:15px;line-height:1.45}
+body{min-height:100vh;min-height:100dvh}
+button,input,select,textarea{font-family:inherit;font-size:15px;color:inherit}
+button{cursor:pointer;border:0;background:none}
+a{color:var(--glacier)}
+.hidden{display:none !important}
+:focus-visible{outline:3px solid var(--glacier);outline-offset:2px;border-radius:6px}
+
+/* ---------- shell ---------- */
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:10px 16px;
+  background:rgba(14,22,33,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.brand b{display:block;font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.6px;text-transform:uppercase;line-height:1}
+.brand span{display:block;font-size:11px;color:var(--signal);letter-spacing:1.6px;text-transform:uppercase}
+.topbar .sp{flex:1}
+.who{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mist)}
+.layout{display:flex;max-width:1400px;margin:0 auto}
+nav.side{width:210px;flex:none;padding:14px 10px;position:sticky;top:65px;align-self:flex-start;height:calc(100vh - 65px);height:calc(100dvh - 65px);overflow:auto}
+nav.side button{display:flex;width:100%;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  font-family:var(--display);font-size:17px;letter-spacing:.8px;text-transform:uppercase;color:var(--mist);text-align:left}
+nav.side button:hover{background:var(--slab)}
+nav.side button.on{background:var(--slab2);color:var(--frost);box-shadow:inset 3px 0 0 var(--signal)}
+nav.side .cnt{margin-left:auto;font-size:13px;color:var(--dim)}
+nav.side .cnt.bad{color:var(--st-attention)}
+main{flex:1;min-width:0;padding:18px 16px 60px}
+@media (max-width:820px){
+  .layout{flex-direction:column}
+  nav.side{width:auto;height:auto;position:static;align-self:stretch;display:flex;gap:6px;overflow-x:auto;padding:10px 16px;border-bottom:1px solid var(--line)}
+  nav.side button{width:auto;flex:none;padding:8px 12px;font-size:15px}
+  nav.side button.on{box-shadow:inset 0 -3px 0 var(--signal)}
+  .who,.hide-sm{display:none}
+  .brand b{font-size:19px}
+}
+
+/* ---------- type / blocks ---------- */
+h1{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.8px;text-transform:uppercase;margin:0 0 4px}
+.lead{color:var(--mist);margin:0 0 16px;font-size:14px}
+h2.sec{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-spacing:1.6px;font-size:14px;color:var(--mist);
+  margin:26px 0 10px;display:flex;align-items:center;gap:10px}
+h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+.panel{background:var(--slab);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.muted{color:var(--mist)} .dim{color:var(--dim)} .tiny{font-size:12px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--mist);margin:4px 0 16px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.map-area{margin-bottom:22px}
+.map-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.map-head h3{margin:0;font-family:var(--display);font-size:20px;letter-spacing:.6px;text-transform:uppercase}
+.map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.cell{position:relative;overflow:hidden;min-height:84px;border-radius:10px;background:var(--slab);border:1px solid var(--c,var(--line));
+  color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 4px 6px}
+.cell::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--c,var(--st-available))}
+.cell:hover{background:#243549}
+.cell .n{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.5px}
+.cell .k{font-size:10px;color:var(--dim);letter-spacing:.5px;text-transform:uppercase}
+.cell.add{border-style:dashed;border-color:var(--line);color:var(--mist);font-size:26px}
+.cell.add::before{display:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.stat{background:var(--slab);border:1px solid var(--line);border-left:4px solid var(--c,var(--line));border-radius:var(--r);padding:12px 14px;text-align:left}
+.stat b{display:block;font-family:var(--display);font-size:32px;line-height:1}
+.stat span{font-size:12px;color:var(--mist);text-transform:uppercase;letter-spacing:.8px}
+
+/* ---------- controls ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 14px;border-radius:var(--r-s);
+  background:var(--slab2);border:1px solid var(--line);font-family:var(--display);font-weight:600;font-size:16px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--frost);white-space:nowrap}
+.btn:hover{background:#243549}
+.btn.primary{background:var(--signal);border-color:var(--signal);color:#160B04}
+.btn.go{background:var(--st-ready);border-color:var(--st-ready);color:#06210F}
+.btn.danger{background:transparent;border-color:#5A2530;color:#FF8080}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:30px;padding:0 10px;font-size:14px}
+.btn:disabled{opacity:.4;pointer-events:none}
+.input{width:100%;min-height:40px;background:var(--night);border:1px solid var(--line);border-radius:var(--r-s);padding:8px 12px;outline:none}
+.input:focus{border-color:var(--glacier)}
+textarea.input{min-height:120px;resize:vertical}
+textarea.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;min-height:60vh;min-height:60dvh;white-space:pre}
+label.f{display:block;margin-bottom:12px}
+label.f>span{display:block;font-size:12px;color:var(--mist);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
+.searchbar{display:flex;gap:8px;align-items:center;background:var(--slab);border:1px solid var(--line);border-radius:var(--r-s);padding:0 12px}
+.searchbar input{flex:1;background:none;border:0;outline:none;min-height:42px;font-size:16px;font-weight:600;min-width:0}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar .searchbar{flex:1;min-width:220px}
+.toolbar select{width:auto}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-family:var(--display);font-weight:600;letter-spacing:1px;text-transform:uppercase;font-size:13px;color:var(--mist);
+  background:var(--slab);padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tr:hover td{background:rgba(255,255,255,.02)}
+tr.clk{cursor:pointer} tr.clk:hover td{background:rgba(255,255,255,.05)}
+.sheet.wide{max-width:820px}
+td.act{white-space:nowrap;text-align:right}
+td.act .btn+.btn{margin-left:4px}
+td.sel,th.sel{width:34px;padding-right:0;cursor:default}
+td.sel input,th.sel input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--st-attention);cursor:pointer}
+tr.picked td{background:rgba(255,77,77,.08)}
+.bulkbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:8px 12px;border:1px solid var(--st-attention);border-radius:var(--r-s);background:rgba(255,77,77,.07)}
+.warn{color:var(--st-attention)}
+.trace.with-photos{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:14px;align-items:start}
+.trace.with-photos .chain{gap:6px}
+.trace.with-photos .node{min-width:0;padding:8px 10px}
+.trace.with-photos .arrow{font-size:16px}
+.trace-photos{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.trace-photos a{display:block;color:inherit;text-decoration:none}
+.trace-photos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block;background:#060d15}
+.trace-photos span{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+@media(max-width:760px){.trace.with-photos{grid-template-columns:1fr}.trace-photos{flex-direction:row;flex-wrap:wrap}.trace-photos a{width:160px}}
+.id-ph{display:flex;flex-direction:column;align-items:center;gap:4px;text-decoration:none}
+.id-ph img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--glacier);background:var(--night)}
+.id-ph span{font-size:11px;color:var(--glacier);letter-spacing:.5px;text-transform:uppercase}
+.id-mini{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--glacier);flex:none}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.gallery .ph{background:var(--night);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.gallery .ph a,.gallery .ph .none{display:block;aspect-ratio:4/3;background:#060d15}
+.gallery .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.gallery .ph .none{display:grid;place-items:center;color:var(--dim);font-size:12px}
+.gallery .ph div{padding:6px 8px;font-size:12px;line-height:1.35}
+.gallery .ph b{font-family:var(--display);font-size:15px;letter-spacing:.4px;display:block}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-family:var(--display);font-weight:600;
+  text-transform:uppercase;letter-spacing:1px;font-size:12px;background:var(--slab2);border:1px solid var(--line);white-space:nowrap}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.s-available{color:var(--st-available)} .s-preparing{color:var(--st-preparing)} .s-occupied{color:var(--st-occupied)}
+.s-ready{color:var(--st-ready)} .s-guest_using{color:var(--st-guest)} .s-attention{color:var(--st-attention)} .s-closed{color:#7A8898}
+.s-active{color:var(--st-ready)} .s-released{color:var(--st-available)} .s-staying{color:var(--st-occupied)} .s-checked_out{color:var(--st-available)}
+.s-bad{color:var(--st-attention)}
+.lnk{color:var(--glacier);text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px;color:var(--mist)}
+
+/* ---------- issues / trace ---------- */
+.issue{display:flex;gap:12px;align-items:flex-start;background:var(--slab);border:1px solid var(--line);border-left:4px solid var(--st-preparing);
+  border-radius:var(--r-s);padding:10px 12px}
+.issue.hot{border-left-color:var(--st-attention)}
+.issue+.issue{margin-top:8px}
+.issue b{font-family:var(--display);font-size:16px;letter-spacing:.8px;text-transform:uppercase;display:block}
+.issue p{margin:2px 0 0;font-size:13px;color:var(--mist)}
+.issue .grow{min-width:0}
+.chain{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin:4px 0 10px}   /* headings on one line, even when a box holds a photo */
+.node{background:var(--night);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:120px}
+.node small{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+.node b{font-family:var(--display);font-size:19px;letter-spacing:.6px}
+.node.missing{border-style:dashed;border-color:var(--st-attention)}
+.node.missing b{color:var(--st-attention)}
+.arrow{color:var(--dim);font-size:20px;line-height:1;margin-top:18px}
+.hist{border-left:2px solid var(--line);margin-left:6px;padding-left:14px}
+.hev{position:relative;padding:0 0 12px}
+.hev::before{content:"";position:absolute;left:-20px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--slab2);border:2px solid var(--glacier)}
+.hev .t{font-family:var(--display);letter-spacing:1px;font-size:12px;color:var(--dim);text-transform:uppercase}
+.hev b{font-family:var(--display);font-size:16px;letter-spacing:.5px}
+.hev p{margin:1px 0 0;font-size:13px;color:var(--mist)}
+.hev.adm::before{border-color:var(--signal)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:980px){ .grid2{grid-template-columns:1fr} }
+
+/* ---------- login ---------- */
+.login{max-width:380px;margin:10vh auto 0;padding:20px}
+.login .a{font-family:var(--display);color:var(--signal);letter-spacing:2px;text-transform:uppercase;font-size:13px}
+.login .b{font-family:var(--display);font-weight:700;font-size:44px;text-transform:uppercase;line-height:1}
+.login .c{color:var(--mist);margin-bottom:24px}
+
+/* ---------- modal / toast ---------- */
+.modal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:rgba(5,9,14,.72);padding:16px}
+.sheet{width:100%;max-width:560px;max-height:92vh;max-height:92dvh;overflow:auto;background:var(--slab);border:1px solid var(--line);border-radius:18px;padding:20px}
+.sheet-x{float:right;position:sticky;top:0;z-index:2;width:34px;height:34px;margin:-6px -6px 6px 10px;border-radius:50%;border:1px solid var(--line);background:var(--slab);color:var(--mist);font-size:15px;line-height:1;cursor:pointer}
+.sheet-x:hover{color:inherit;border-color:var(--mist)}
+.sheet h3{font-family:var(--display);font-size:24px;letter-spacing:1px;text-transform:uppercase;margin:0 0 4px}
+.sheet .sub{color:var(--mist);font-size:14px;margin:0 0 16px}
+.sheet .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:99;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--st-ready);color:#06210F;border-radius:12px;padding:11px 16px;font-weight:700;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.toast.err{background:var(--st-attention);color:#fff}
+.toast.info{background:var(--glacier);color:#052637}
+.banner{background:#2A1A10;border:1px solid #5A3520;color:#FFC7A8;border-radius:var(--r-s);padding:10px 12px;font-size:13px;margin-bottom:14px}
+
+/* ---------- visual refinement ---------- */
+:root{--night:#09131f;--slab:#132333;--slab2:#1a3042;--line:#2b4357;--frost:#f1f7fc;--mist:#a8bdcf;--dim:#71899e;--r:16px;--r-s:11px}
+html,body{background:radial-gradient(900px 520px at 5% -10%,#1b3c52 0%,transparent 60%),var(--night)}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(120deg,rgba(94,200,242,.035),transparent 35%,rgba(255,106,43,.04))}
+.topbar{box-shadow:0 8px 24px rgba(3,10,17,.22);border-color:rgba(112,151,178,.3)}
+nav.side{border-right:1px solid rgba(112,151,178,.18)}
+nav.side button{transition:background .16s ease,color .16s ease,transform .16s ease}
+nav.side button.on{background:linear-gradient(90deg,rgba(255,106,43,.16),rgba(26,48,66,.8));box-shadow:inset 3px 0 0 var(--signal)}
+.panel,.stat,.cell,.issue,.node,.searchbar,.tbl-wrap{border-color:rgba(112,151,178,.3)}
+.panel{background:linear-gradient(145deg,rgba(27,48,66,.98),rgba(17,34,48,.98));box-shadow:0 10px 24px rgba(2,10,17,.14)}
+.stat{position:relative;overflow:hidden;box-shadow:0 8px 18px rgba(2,10,17,.12)}.stat::after{content:"";position:absolute;width:72px;height:72px;border-radius:50%;right:-36px;top:-36px;background:var(--c,var(--glacier));opacity:.08}
+.btn,.cell,.stat{transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease}
+@media(hover:hover){.btn:hover{transform:translateY(-1px);border-color:#49677e;box-shadow:0 8px 18px rgba(0,0,0,.2)}.btn.primary:hover{background:#ff7a42}.cell:hover,.stat:hover{transform:translateY(-2px);border-color:#49677e;box-shadow:0 12px 22px rgba(0,0,0,.18)}nav.side button:hover{transform:translateX(2px)}}
+.input{background:rgba(5,15,24,.58);border-color:rgba(112,151,178,.35);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}.input:focus{background:#0b1926;box-shadow:0 0 0 4px rgba(94,200,242,.12)}
+.searchbar{background:rgba(19,35,51,.9);box-shadow:0 7px 16px rgba(2,10,17,.1)}
+.tbl-wrap{box-shadow:0 10px 24px rgba(2,10,17,.13)}th{background:#1a3042}tr.clk:hover td,tr:hover td{background:rgba(94,200,242,.055)}
+.sheet{box-shadow:0 18px 48px rgba(0,0,0,.42);border-color:rgba(112,151,178,.42)}.modal{background:rgba(3,10,16,.86)}
+/* Overlay sheets: no blur behind them (re-blurring the page on every scroll frame made the
+   sheet flash see-through for a moment), the sheet scrolls on its own layer, its scroll never
+   passes to the page, and the page behind is locked while a sheet is open. */
+.modal{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+.sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;will-change:transform;transform:translateZ(0)}
+html.sheet-open,html.sheet-open body{overflow:hidden}
+html{scrollbar-gutter:stable}
+
+@media(min-width:1100px){.layout{padding:12px}.topbar{margin:10px 12px 0;border:1px solid rgba(112,151,178,.3);border-radius:16px}.layout{max-width:1424px}main{padding:26px 28px 72px}nav.side{top:77px;height:calc(100vh - 89px);border-radius:16px;background:rgba(19,35,51,.5)}}
+/* ---------- analytics ---------- */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-s);overflow:hidden;background:rgba(5,15,24,.4)}
+.seg button{padding:7px 14px;font-family:var(--display);letter-spacing:1px;text-transform:uppercase;font-size:14px;color:var(--mist)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--signal);color:#160B04;font-weight:700}
+.stat .dl{display:block;margin-top:6px;font-size:12px;letter-spacing:.3px;text-transform:none;color:var(--dim)}
+.stat .dl.up{color:var(--st-ready)} .stat .dl.dn{color:#FF8080}
+.an-chart{overflow-x:auto;padding-bottom:4px}
+.an-chart svg{display:block}
+.an-chart text{fill:var(--dim);font-size:11px;font-family:var(--body)}
+.an-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mist);margin:0 0 10px}
+.an-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.heat{display:grid;grid-template-columns:38px repeat(24,minmax(14px,1fr));gap:3px;font-size:10px;color:var(--dim);min-width:520px}
+.heat .hc{height:20px;border-radius:3px;background:var(--glacier)}
+.heat .hl{display:flex;align-items:center;font-family:var(--display);letter-spacing:1px;text-transform:uppercase;font-size:11px}
+.heat .hh{text-align:center}
+.bars .br{display:grid;grid-template-columns:minmax(90px,140px) 1fr 52px;gap:10px;align-items:center;font-size:13px;margin-bottom:7px}
+.bars .tr{height:10px;border-radius:5px;background:rgba(5,15,24,.55);overflow:hidden}
+.bars .tr i{display:block;height:100%;border-radius:5px;background:var(--c,var(--glacier))}
+.bars .n{text-align:right;font-variant-numeric:tabular-nums;color:var(--mist)}
+.insight{display:flex;gap:10px;align-items:baseline;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)}
+.insight:last-child{border-bottom:0}
+.insight b{font-family:var(--display);font-size:18px;letter-spacing:.5px;color:var(--frost);white-space:nowrap}
+  .stats.an4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:640px){.stats.an4{grid-template-columns:repeat(2,1fr)}}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast"></div>
+
+<script src="sync.js"></script>
+<script>
+"use strict";
+/* ==========================================================================
+   1. STORAGE — PostgreSQL on the server is the single source of truth, shared
+      with the valet app (sync.js). Every admin write asks the server to take a
+      snapshot first, so it can be undone from Backup & data.
+   ========================================================================== */
+const MAX_SNAPS = 15;
+function save(){ SkiSync.save(); }
+
+/* Apply a change: mutate → audit log → push (server snapshots the state before it) → redraw. */
+function commit(label, fn, logEntry){
+  const before = JSON.stringify(DB);
+  const res = fn();
+  if(res===false){ DB=JSON.parse(before); SESSION=user(SESSION.id)||SESSION; return false; }
+  const entry = typeof logEntry==="function" ? logEntry() : logEntry;
+  if(entry!==null) log(entry?.action||label, entry||{});
+  SkiSync.save(label); SNAPS=null; render();
+  return true;
+}
+
+/* ==========================================================================
+   2. DOMAIN (mirrors index.html)
+   ========================================================================== */
+const STATUS = {
+  available:"Available", occupied:"Stored",
+  guest_using:"Guest using", attention:"Needs attention", closed:"Closed"
+};
+const CARD_STATUS = {active:"Active", released:"Released"};
+const ROOM_STATUS = {staying:"Staying", checked_out:"Checked out"};
+/* only boots, skis (with poles) and snowboards are stored now; the rest is for older records */
+const CATS = {
+  boots:"Boots", skis:"Skis + poles", snowboard:"Snowboard", poles:"Poles",
+  sbboots:"Snowboard boots", helmet:"Helmet", goggles:"Goggles", other:"Other"
+};
+/* what the valet stores today; older kinds only show up while a record still uses one */
+const STORED = {boots:"Boots", skis:"Skis + poles", snowboard:"Snowboard"};
+const catChoices = () => { const o={...STORED};
+  DB.equipment.forEach(e=>{ if(e.category && !o[e.category]) o[e.category]=(CATS[e.category]||e.category)+" (old)"; });
+  return o; };
+/* what each area holds (same list as the valet app) */
+const KINDS = {boots:"Boots", ski:"Ski", ski_kids:"Kids", snowboard:"Snowboard", vip:"VIP"};
+const photoUrl = id => "/api/photos/"+encodeURIComponent(id);
+/* the guest's ID photos from the kiosk; the server deletes them when the room checks out */
+const idPhotos = r => r && r.status!=="checked_out" ? (r.face_photo_ids||[]) : [];
+const idLinks = r => idPhotos(r).map(id=>`<a class="id-ph" href="${photoUrl(id)}" target="_blank" rel="noopener" title="Guest ID photo · open full size">
+  <img src="${photoUrl(id)}" alt="Guest ID photo"><span>Guest ID</span></a>`).join("");
+const photoImg = id => id?`<a href="${photoUrl(id)}" target="_blank" rel="noopener"><img src="${photoUrl(id)}" alt="Equipment photo" loading="lazy" style="width:100%;max-width:360px;border-radius:10px;display:block;margin:6px 0 12px"></a>`:"";
+const EQ_STATUS = {stored:"Stored"};
+const COLLECTIONS = ["rooms","storages","cards","equipment","users","history"];
+
+let DB=null, SESSION=null, view="overview", params={}, loginUser=null;
+const now=()=>Date.now();
+const nextId = () => newId();          // unique across devices (sync.js)
+const room = id => id==null?null:DB.rooms.find(r=>r.id===id);
+const stor = id => id==null?null:DB.storages.find(s=>s.id===id);
+const card = id => id==null?null:DB.cards.find(c=>c.id===id);
+const user = id => id==null?null:DB.users.find(u=>u.id===id);
+const eqItem = id => DB.equipment.find(e=>e.id===id);
+const eqOf = id => DB.equipment.filter(e=>e.storage_id===id);
+const eqCount = id => eqOf(id).reduce((a,e)=>a+(+e.quantity||0),0);
+const cardsOfStorage = id => DB.cards.filter(c=>c.storage_id===id);
+const cardsOfRoom = id => DB.cards.filter(c=>c.room_id===id);
+const storagesOfRoom = id => DB.storages.filter(s=>s.room_id===id);
+const roomRank = r => storagesOfRoom(r.id).length ? 0 : cardsOfRoom(r.id).length ? 1 : 2;
+const byRoom = (a,b) => roomRank(a)-roomRank(b) || String(a.room_number??"").localeCompare(String(b.room_number??""),undefined,{numeric:true});
+const guestOf = r => r && r.status!=="checked_out" ? (r.guest_name||"") : "";
+function normCode(s){ return String(s??"").toUpperCase().replace(/[^A-Z0-9]/g,""); }
+
+function log(action,o={}){
+  DB.history.unshift({id:nextId(),user_id:SESSION?SESSION.id:null,action:"[Admin] "+action,
+    room_id:o.room_id??null,storage_id:o.storage_id??null,key_card_id:o.key_card_id??null,
+    equipment_id:o.equipment_id??null,timestamp:now(),notes:o.notes||"",prev:o.prev||null,next:o.next||null});
+  if(DB.history.length>5000) DB.history.length=5000;     // display cap only; the server keeps everything
+}
+function normalise(db){
+  if(!db || typeof db!=="object" || Array.isArray(db)) db={};
+  COLLECTIONS.forEach(k=>{ if(!Array.isArray(db[k])) db[k]=[]; });
+  return db;
+}
+/* Access model (same as index.html): ONE shared staff PIN and ONE admin login
+   (username + password), both checked by the server and stored there as hashes. */
+const validPin = p => /^\d{4}$/.test(String(p??""));
+const adminAcc = () => DB.users.find(u=>u.shared==="admin");
+const staffAcc = () => DB.users.find(u=>u.shared==="staff");
+const members  = () => DB.users.filter(u=>!u.shared&&!u.retired&&!u.archived).sort((a,b)=>String(a.name).localeCompare(b.name));
+const archived = () => DB.users.filter(u=>!u.shared&&u.archived);
+const nameTaken = (name,except) => members().some(u=>u!==except&&String(u.name).trim().toLowerCase()===name.trim().toLowerCase());
+function credError(user,pw,pw2){
+  if(!/^[A-Za-z0-9._-]{3,32}$/.test(user)) return "Username: 3–32 letters, numbers, . _ -";
+  if(pw.length<8) return "Password must be at least 8 characters";
+  if(pw!==pw2) return "The passwords do not match";
+  return null;
+}
+
+
+/* ==========================================================================
+   3. UTIL
+   ========================================================================== */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtDT(ts){ if(!ts) return "—"; const d=new Date(ts);
+  return `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
+function ago(ts){ if(!ts) return "—"; const m=Math.round((now()-ts)/6e4); if(m<1) return "just now"; if(m<60) return m+" min ago";
+  const h=Math.floor(m/60); if(h<24) return h+"h ago"; return Math.floor(h/24)+"d ago"; }
+function toast(msg,kind){ const t=document.createElement("div"); t.className="toast"+(kind?" "+kind:""); t.textContent=msg;
+  $("#toast").appendChild(t); setTimeout(()=>t.remove(),2800); }
+function chip(key,label){ return `<span class="chip s-${esc(key)}"><i class="dot"></i>${esc(label||key)}</span>`; }
+function download(name,text,type){ const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([text],{type:type||"application/json"})); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+const stamp=()=>new Date().toISOString().slice(0,16).replace(/[:T]/g,"-");
+const roomLabel = id => { if(id==null) return `<span class="dim">—</span>`; const r=room(id);
+  return r?`<span class="lnk" data-act="trace" data-q="${esc(r.room_number)}">Room ${esc(r.room_number)}</span>`:`<span class="warn">missing #${esc(id)}</span>`; };
+const storLabel = id => { if(id==null) return `<span class="dim">—</span>`; const s=stor(id);
+  return s?`<span class="lnk" data-act="trace" data-q="${esc(s.storage_number)}">${esc(s.storage_number)}</span>`:`<span class="warn">missing #${esc(id)}</span>`; };
+
+/* ==========================================================================
+   4. INTEGRITY CHECK — finds the broken links that make a search fail.
+      Each issue may carry a fix(); "Fix all" runs every safe fix.
+   ========================================================================== */
+function checkIntegrity(){
+  const out=[];
+  const add=(hot,t,p,fix,go)=>out.push({hot,t,p,fix,go});
+
+  // duplicate ids inside a collection
+  COLLECTIONS.forEach(k=>{ const seen=new Map();
+    DB[k].forEach(x=>{ if(seen.has(x.id)) add(true,`Duplicate id in ${k}`,`Two ${k} records share id ${x.id}. Links to this id are ambiguous.`,
+      ()=>{ x.id=nextId(); }); else seen.set(x.id,x); }); });
+
+  // duplicate card codes / storage numbers / room numbers
+  const dup=(arr,keyFn)=>{ const m={}; arr.forEach(x=>{ const k=keyFn(x); if(!k) return; (m[k]=m[k]||[]).push(x); });
+    return Object.entries(m).filter(([,v])=>v.length>1); };
+  dup(DB.cards,c=>normCode(c.card_code)).forEach(([code,list])=>add(true,"Duplicate card code",
+    `Card ${code} exists ${list.length} times — the scanner only ever finds the first one.`,null,{view:"cards",q:code}));
+  dup(DB.storages,s=>normCode(s.storage_number)).forEach(([n,list])=>add(true,"Duplicate storage number",
+    `${list[0].storage_number} exists ${list.length} times.`,null,{view:"storages",q:list[0].storage_number}));
+  // two records for one room number hide each other in the valet app: the empty ones can go
+  dup(DB.rooms,r=>String(r.room_number??"").trim().toLowerCase()).forEach(([n,list])=>{
+    const used=list.filter(r=>storagesOfRoom(r.id).length||cardsOfRoom(r.id).length), spare=list.filter(r=>!used.includes(r));
+    add(true,"Duplicate room number",
+      `Room ${list[0].room_number} exists ${list.length} times${used.length?` (${used.length} with equipment or key cards)`:""}. `
+      +(used.length<=1?"Fix removes the empty duplicate record(s); history is kept.":"More than one has equipment — open the rooms and move or check out one of them."),
+      used.length<=1 ? ()=>{ const keep=used[0]||list.reduce((a,b)=>(+b.updated_at||0)>(+a.updated_at||0)?b:a); const drop=new Set(list.filter(r=>r!==keep).map(r=>r.id));
+        DB.rooms=DB.rooms.filter(r=>!drop.has(r.id)); } : null,
+      {view:"rooms",q:list[0].room_number}); });
+
+  DB.cards.forEach(c=>{
+    if(!c.card_code) add(true,"Card without code",`Card record #${c.id} has an empty code and can never be scanned.`,()=>{ DB.cards=DB.cards.filter(x=>x!==c); });
+    else if(normCode(c.card_code)!==c.card_code) add(false,"Card code not normalised",`"${c.card_code}" is stored with lowercase or symbols; scans look for ${normCode(c.card_code)}.`,()=>{ c.card_code=normCode(c.card_code); });
+    if(c.room_id!=null && !room(c.room_id)) add(true,"Card points to a deleted room",`Card ${c.card_code} → room #${c.room_id}, which does not exist.`,()=>{ c.room_id=null; });
+    if(c.storage_id!=null && !stor(c.storage_id)) add(true,"Card points to a deleted storage",`Card ${c.card_code} → storage #${c.storage_id}, which does not exist.`,()=>{ c.storage_id=null; });
+    const s=stor(c.storage_id);
+    if(s && room(c.room_id) && s.room_id!==c.room_id) add(false,"Card room ≠ storage room",
+      `Card ${c.card_code} says room ${room(c.room_id).room_number} but ${s.storage_number} belongs to ${s.room_id?"room "+(room(s.room_id)?.room_number||"#"+s.room_id):"no room"}.`,
+      s.room_id&&room(s.room_id)?()=>{ c.room_id=s.room_id; }:()=>{ s.room_id=c.room_id; });
+    if(c.status==="active" && c.room_id==null && c.storage_id==null) add(false,"Active card linked to nothing",
+      `Card ${c.card_code} is active but has no room and no storage.`,()=>{ c.status="released"; c.released_at=now(); });
+    if(c.status==="released" && c.storage_id==null && c.room_id!=null && room(c.room_id)) add(false,"Released card still linked to a room",
+      `Card ${c.card_code} is released but still points to room ${room(c.room_id).room_number}.`,()=>{ c.last_room_id=c.room_id; c.room_id=null; c.updated_at=now(); });
+    if(c.status==="released" && (c.storage_id!=null)) add(false,"Released card still opens a storage",
+      `Card ${c.card_code} is released but still linked to ${stor(c.storage_id)?.storage_number||"#"+c.storage_id}.`,()=>{ c.status="active"; });
+    if(c.status && !CARD_STATUS[c.status]) add(false,"Unknown card status",`Card ${c.card_code} has status "${c.status}".`,()=>{ c.status=c.storage_id||c.room_id?"active":"released"; });
+  });
+
+  DB.equipment.forEach(e=>{
+    if(!stor(e.storage_id)) add(true,"Equipment in a deleted storage",
+      `${CATS[e.category]||e.category} ×${e.quantity} (#${e.id}) points to storage #${e.storage_id}, which does not exist.`,null,{view:"equipment",q:String(e.id)});
+    if(!CATS[e.category]) add(false,"Unknown equipment category",`Item #${e.id} has category "${e.category}".`,()=>{ e.category="other"; });
+    if(!(+e.quantity>=1)) add(false,"Invalid quantity",`Item #${e.id} has quantity "${e.quantity}".`,()=>{ e.quantity=1; });
+  });
+
+  DB.storages.forEach(s=>{
+    if(!STATUS[s.status]) add(true,"Unknown storage status",`${s.storage_number} has status "${s.status}" — the app will crash on it.`,()=>{ s.status="attention"; });
+    if(s.room_id!=null && !room(s.room_id)) add(true,"Storage points to a deleted room",`${s.storage_number} → room #${s.room_id}, which does not exist.`,()=>{ s.room_id=null; });
+    const items=eqCount(s.id);
+    if(s.status==="available" && items>0) add(false,"Available storage holds equipment",`${s.storage_number} is marked Available but holds ${items} items.`,()=>{ s.status="occupied"; });
+    if(s.status==="available" && s.room_id!=null && room(s.room_id)) add(false,"Available storage has a room",`${s.storage_number} is Available but still linked to room ${room(s.room_id).room_number}.`,()=>{ s.status="occupied"; });
+    if(["occupied","guest_using"].includes(s.status) && s.room_id==null && !items && !cardsOfStorage(s.id).length)
+      add(false,"Empty storage marked in use",`${s.storage_number} is "${STATUS[s.status]}" with no room, cards or equipment.`,()=>{ s.status="available"; });
+    if(!s.room_id && items) add(false,"Equipment without a room",`${s.storage_number} holds ${items} item${items===1?"":"s"} but no room is assigned — guests can't find it by room.`,null,{view:"trace",q:s.storage_number});
+    if(!s.section) add(false,"Storage without area",`${s.storage_number} has no area; it won't appear on the map.`,()=>{ s.section="Unassigned area"; });
+  });
+
+  DB.rooms.forEach(r=>{
+    if(!storagesOfRoom(r.id).length && !cardsOfRoom(r.id).length && (r.status!=="checked_out"||r.guest_name||r.departure))
+      add(false,"Room not released",`Room ${r.room_number} has no storage or cards but still shows ${r.guest_name?"guest "+r.guest_name:"as staying"}.`,
+        ()=>{ r.status="checked_out"; r.guest_name=""; r.departure=""; r.updated_at=now(); });
+    if(r.status==="checked_out" && storagesOfRoom(r.id).length) add(false,"Checked-out room still owns storage",
+      `Room ${r.room_number} is checked out but still has ${storagesOfRoom(r.id).map(s=>s.storage_number).join(", ")}.`,()=>{ r.status="staying"; });
+    if(r.room_number==null||String(r.room_number).trim()==="") add(false,"Room without number",`Room record #${r.id} has no number.`,null,{view:"rooms",q:String(r.id)});
+  });
+
+  if(!staffAcc()?.pin_set && !members().some(u=>u.pin_set)) add(true,"Staff PIN not set","Valets cannot sign in to the app.",null,{view:"users"});
+  else if(staffAcc()?.pin_set && members().some(u=>!u.pin_set)) add(false,"Staff without a personal PIN",members().filter(u=>!u.pin_set).map(u=>u.name).join(", ")+" still sign in with the shared PIN, so anyone who knows it can use their name.",null,{view:"users"});
+  return out;
+}
+
+/* ==========================================================================
+   5. RENDER
+   ========================================================================== */
+const V = {};
+const NAV = [
+  ["overview","Overview"],["health","Data health"],["trace","Trace / find"],["rooms","Rooms"],["storages","Storages"],["map","Storage map"],
+  ["cards","Key cards"],["equipment","Equipment"],["users","Staff & access"],["kiosks","Kiosks"],["history","History"],["analytics","Analytics"],["data","Backup & data"]
+];
+function go(v,p={}){ view=v; params=p; render(); window.scrollTo(0,0); }
+function render(){
+  if(!SESSION){ $("#app").innerHTML=viewLogin(); return; }
+  const issues=checkIntegrity().length;
+  const counts={rooms:DB.rooms.length,storages:DB.storages.length,cards:DB.cards.length,equipment:DB.equipment.length,history:DB.history.length};
+  const fn=V[view]||V.overview;
+  const out=fn(params);
+  $("#app").innerHTML=`
+    <header class="topbar">
+      <div class="brand"><b>Ski Valet</b><span>Admin console</span></div>
+      <div class="sp"></div>
+      <a class="btn sm ghost hide-sm" href="index.html">Open valet app</a>
+      <div class="who">${esc(SESSION.name)}</div>
+      <button class="btn sm" data-act="signout">Sign out</button>
+    </header>
+    <div class="layout">
+      <nav class="side">${NAV.map(([k,l])=>`<button class="${view===k?"on":""}" data-act="go" data-view="${k}">${l}
+        ${k==="health"&&issues?`<span class="cnt bad">${issues}</span>`:counts[k]!=null?`<span class="cnt">${counts[k]}</span>`:""}</button>`).join("")}</nav>
+      <main>${out.body}</main>
+    </div>`;
+  if(out.after) out.after();
+}
+
+/* ---------- login ---------- */
+let busy=false;
+function viewLogin(){
+  return `<div class="login">
+    <div class="a">Ski Valet</div><div class="b">Admin</div><div class="c">Back-office for fixing storage records</div>
+    <label class="f"><span>Username</span><input class="input" id="lUser" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus></label>
+    <label class="f"><span>Password</span><input class="input" id="lPass" type="password" autocomplete="current-password"></label>
+    <button class="btn primary" style="width:100%" data-act="login">Sign in</button>
+    <p class="dim tiny" style="margin-top:14px">Same admin login as the valet app.</p>
+  </div>`;
+}
+async function doLogin(){
+  if(!$("#lUser")||busy) return; busy=true;
+  const u=$("#lUser").value, p=$("#lPass").value;
+  try{
+    const r=await API("/api/login/admin",{username:u,password:p});
+    await SkiSync.start();
+    SESSION=user(r.user.id)||r.user;
+    log("Admin console opened",{}); save(); go("overview");
+  }catch(e){ toast(e.message,"err"); const f=$("#lPass"); if(f) f.value=""; }
+  finally{ busy=false; }
+}
+async function signOut(){
+  closeSheet(); SESSION=null; AN={key:null,rows:null,from:0,oldest:null,total:null,truncated:false,err:null,loading:null}; AN_H=null; HD={day:null,rows:null,truncated:false,err:null,loading:null};
+  if(SkiSync.pending()){ try{ await SkiSync.save(); }catch(_){} }
+  SkiSync.stop(); DB=normalise(null);
+  try{ await API("/api/logout",{}); }catch(_){}
+  render();
+}
+
+/* ---------- overview ---------- */
+V.overview = () => {
+  const issues=checkIntegrity(), fixable=issues.filter(i=>i.fix).length;
+  const st=k=>DB.storages.filter(s=>s.status===k).length;
+  const S=(n,l,c,v)=>`<button class="stat" style="--c:${c}" data-act="go" data-view="${v}"><b>${n}</b><span>${l}</span></button>`;
+  return {body:`
+    <h1>Overview</h1>
+    <p class="lead">Everything the valet app has stored in the database (PostgreSQL on the server) · ${(JSON.stringify(DB).length/1024).toFixed(1)} KB loaded · last change ${ago(DB.history[0]?.timestamp)}.</p>
+    <div class="searchbar" style="margin-bottom:16px">🔎<input id="ovQ" placeholder="Find equipment: card code, room, guest, storage or item…" autocomplete="off"></div>
+    <div class="stats">
+      ${S(DB.rooms.length,"Rooms","var(--signal)","rooms")}
+      ${S(DB.storages.length,"Storages","var(--glacier)","storages")}
+      ${S(DB.cards.filter(c=>c.status==="active").length,"Active cards","var(--st-ready)","cards")}
+      ${S(DB.equipment.reduce((a,e)=>a+(+e.quantity||0),0),"Items stored","var(--st-occupied)","equipment")}
+      ${S(st("guest_using"),"With guests","var(--st-guest)","storages")}
+      ${S(st("attention"),"Need attention","var(--st-attention)","storages")}
+      ${S(staffAcc()?.pin_set?"✓":"!","Staff PIN","var(--mist)","users")}
+      ${S(DB.history.length,"History records","var(--dim)","history")}
+    </div>
+    <h2 class="sec">Data health · ${issues.length?issues.length+" issue"+(issues.length===1?"":"s"):"clean"}</h2>
+    ${healthList(issues,fixable)}
+    <h2 class="sec">Latest activity</h2>
+    <div class="hist">${DB.history.slice(0,8).map(histEvent).join("")||`<div class="dim">Nothing yet.</div>`}</div>`,
+  after(){ const i=$("#ovQ"); i.addEventListener("keydown",e=>{ if(e.key==="Enter"&&i.value.trim()) go("trace",{q:i.value.trim()}); }); }};
+};
+
+/* ---------- data health: the integrity check, with a fix where one is safe ---------- */
+function healthList(issues,fixable){
+  return `${issues.length?`<div class="row" style="margin-bottom:10px"><span class="muted tiny grow">Each fix takes a snapshot first — you can undo it from <span class="lnk" data-act="go" data-view="data">Backup &amp; data</span>.</span>
+      ${fixable?`<button class="btn primary sm" data-act="fix-all">Fix all ${fixable} automatic</button>`:""}</div>`:""}
+    ${issues.map((i,n)=>`<div class="issue ${i.hot?"hot":""}"><div class="grow"><b>${esc(i.t)}</b><p>${esc(i.p)}</p></div>
+      ${i.fix?`<button class="btn sm" data-act="fix" data-n="${n}">Fix</button>`:""}
+      ${i.go?`<button class="btn sm ghost" data-act="go" data-view="${i.go.view}" data-q="${esc(i.go.q||"")}">Open</button>`:""}</div>`).join("")
+      ||`<div class="panel muted" style="text-align:center">No broken links. Every card, storage and item points to something that exists.</div>`}`;
+}
+V.health = () => {
+  const issues=checkIntegrity(), fixable=issues.filter(i=>i.fix).length;
+  return {body:`<h1>Data health</h1>
+    <p class="lead">Checks the links between rooms, storages, key cards and equipment: duplicate room numbers, equipment left without a room, locations marked in use with nothing in them… ${issues.length?issues.length+" issue"+(issues.length===1?"":"s")+" found.":"Everything is clean."}</p>
+    ${healthList(issues,fixable)}`};
+};
+
+/* ---------- trace ---------- */
+function histEvent(h){
+  const bits=[];
+  if(h.room_id!=null) bits.push("Room "+(room(h.room_id)?.room_number||"#"+h.room_id+" (deleted)"));
+  if(h.storage_id!=null) bits.push(stor(h.storage_id)?.storage_number||"storage #"+h.storage_id+" (deleted)");
+  if(h.key_card_id!=null) bits.push("Card "+(card(h.key_card_id)?.card_code||"#"+h.key_card_id+" (deleted)"));
+  if(h.prev&&h.next) bits.push(h.prev+" → "+h.next); else if(h.next) bits.push("→ "+h.next);
+  if(h.notes) bits.push(h.notes);
+  return `<div class="hev ${String(h.action).startsWith("[Admin]")?"adm":""}"><div class="t">${fmtDT(h.timestamp)} · ${esc(user(h.user_id)?.name||"System")}</div>
+    <b>${esc(h.action)}</b><p>${esc(bits.join(" · "))}</p></div>`;
+}
+function traceStorage(s, why){
+  const r=room(s.room_id), cards=cardsOfStorage(s.id), eq=eqOf(s.id);
+  const roomCards = r ? cardsOfRoom(r.id).filter(c=>c.storage_id!==s.id) : [];
+  const ids={s:s.id,r:s.room_id,c:new Set([...cards,...roomCards].map(c=>c.id))};
+  const hist=DB.history.filter(h=>h.storage_id===ids.s||(ids.r!=null&&h.room_id===ids.r)||ids.c.has(h.key_card_id)).slice(0,12);
+  // the equipment photos sit in a column on the right, so the history starts right under the boxes
+  const photos=eq.filter(e=>e.photo_id).map(e=>`<a href="${photoUrl(e.photo_id)}" target="_blank" rel="noopener" title="Open full size">
+      <img src="${photoUrl(e.photo_id)}" alt="${esc(CATS[e.category]||e.category)}" loading="lazy"><span>${esc(CATS[e.category]||e.category)}${e.kids?" (kids)":""}</span></a>`).join("");
+  return `<div class="panel" style="margin-bottom:12px">
+    <div class="row"><span class="eyebrow dim tiny grow">${esc(why)}</span>
+      <button class="btn sm" data-act="edit" data-col="storages" data-id="${s.id}">Edit storage</button>
+      ${r?`<button class="btn sm" data-act="edit" data-col="rooms" data-id="${r.id}">Edit room</button>`:""}</div>
+    <div class="trace ${photos?"with-photos":""}"><div class="trace-main">
+    <div class="chain">
+      ${cards.length?cards.map(c=>`<div class="node"><small>Key card · ${esc(c.status)}</small><b class="mono">${esc(c.card_code)}</b></div>`).join("")
+        :`<div class="node missing"><small>Key card</small><b>none</b></div>`}
+      <span class="arrow">→</span>
+      <div class="node ${s.room_id!=null&&!r?"missing":""}"><small>Room</small><b>${r?esc(r.room_number)+(guestOf(r)?" · "+esc(guestOf(r)):""):s.room_id!=null?"deleted #"+s.room_id:"—"}</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><small>Storage · ${esc(s.section||"")}</small><b>${esc(s.storage_number)}</b> ${chip(s.status,STATUS[s.status]||s.status)}</div>
+      <span class="arrow">→</span>
+      <div class="node"><small>Equipment</small><b>${eq.length?eq.map(e=>`${esc(CATS[e.category]||e.category)}${e.kids?" (kids)":""} ×${esc(e.quantity)}`).join(", "):"empty"}</b></div>
+    </div>
+    ${roomCards.length?`<div class="issue"><div class="grow"><b>Room cards not linked to this storage</b>
+      <p>${roomCards.map(c=>`${esc(c.card_code)} → ${c.storage_id?esc(stor(c.storage_id)?.storage_number||"deleted #"+c.storage_id):"no storage"}`).join(" · ")}</p></div>
+      <button class="btn sm" data-act="link-room-cards" data-id="${s.id}">Link them here</button></div>`:""}
+    <div class="hist" style="margin-top:12px">${hist.map(histEvent).join("")||`<div class="dim tiny">No history for this chain.</div>`}</div>
+    </div>
+    ${photos?`<div class="trace-photos">${photos}</div>`:""}
+  </div></div>`;
+}
+/* Earlier photos of a room, kept in the history (equipment records go when the guest
+   checks out, the photo stays). */
+function roomGallery(r){
+  const eq=storagesOfRoom(r.id).flatMap(s=>eqOf(s.id).map(e=>({e,s})))
+    .sort((a,b)=>String(a.s.storage_number).localeCompare(String(b.s.storage_number),undefined,{numeric:true}));
+  const now_ids=new Set(eq.map(x=>x.e.photo_id).filter(Boolean));
+  const past=DB.history.filter(h=>h.room_id===r.id&&h.photo_id&&!now_ids.has(h.photo_id));
+  const card=(pid,title,sub)=>`<div class="ph">${pid?`<a href="${photoUrl(pid)}" target="_blank" rel="noopener" title="Open full size"><img src="${photoUrl(pid)}" alt="${esc(title)}" loading="lazy"></a>`
+    :`<span class="none">No photo</span>`}<div><b>${esc(title)}</b><span class="dim">${sub}</span></div></div>`;
+  // photos of what is stored now are shown in each storage's Equipment box below
+  if(!past.length) return "";
+  return `<div class="panel" style="margin-bottom:12px">
+    ${past.length?`<div class="eyebrow dim tiny" style="margin:4px 0 8px">Earlier photos · ${past.length}</div>
+      <div class="gallery">${past.slice(0,40).map(h=>card(h.photo_id,h.notes||h.action,
+        `${esc(stor(h.storage_id)?.storage_number||"")} · ${esc(fmtDT(h.timestamp))}`)).join("")}</div>`:""}
+  </div>`;
+}
+/* Click any row → everything behind it, without hunting for the room/storage link. */
+function openDetail(col,id){
+  const rec=DB[col]&&DB[col].find(x=>x.id===id); if(!rec) return;
+  const H = list => `<div class="hist">${list.slice(0,15).map(histEvent).join("")||`<div class="dim tiny">No history.</div>`}</div>`;
+  const kv = (k,v) => `<div class="row"><span class="grow muted">${k}</span><b>${v}</b></div>`;
+  let title="", sub="", body="";
+  if(col==="storages"){
+    title=rec.storage_number; sub=`${esc(rec.section||"Unassigned area")} · ${STATUS[rec.status]||esc(rec.status)}`;
+    body=traceStorage(rec,"Storage");
+  } else if(col==="rooms"){
+    const sts=storagesOfRoom(rec.id), cs=cardsOfRoom(rec.id);
+    title="Room "+rec.room_number; sub=`${esc(guestOf(rec)||"No guest name")} · ${ROOM_STATUS[rec.status]||esc(rec.status||"staying")}`;
+    body=`<div class="panel tiny" style="margin-bottom:12px">
+        ${kv("Departure",esc(rec.departure||"—"))}${kv("Key cards",cs.map(c=>`<span class="mono">${esc(c.card_code)}</span>`).join(", ")||"—")}
+        ${kv("Storages",sts.map(s=>esc(s.storage_number)).join(", ")||"—")}${kv("Items",sts.reduce((a,s)=>a+eqCount(s.id),0))}</div>
+      ${idPhotos(rec).length?`<div class="panel id-panel" style="margin-bottom:12px"><span class="eyebrow dim tiny">Guest ID photo · deleted at check-out</span>
+        <div class="row" style="gap:10px;margin-top:8px;flex-wrap:wrap">${idLinks(rec)}</div></div>`:""}
+      ${roomGallery(rec)}
+      ${sts.map(s=>traceStorage(s,"Storage "+s.storage_number)).join("")
+        ||`<div class="panel" style="margin-bottom:12px"><p class="muted tiny" style="margin:0 0 10px">No storage is linked to this room.</p>${H(DB.history.filter(h=>h.room_id===rec.id))}</div>`}`;
+  } else if(col==="cards"){
+    const st=stor(rec.storage_id), r=room(rec.room_id);
+    title="Card "+rec.card_code; sub=`${CARD_STATUS[rec.status]||esc(rec.status)} · ${r?"Room "+esc(r.room_number):"no room"}`;
+    body=st?traceStorage(st,`Card ${rec.card_code} opens this storage`)
+      :`<div class="panel" style="margin-bottom:12px">${kv("Room",r?esc(r.room_number):rec.room_id!=null?`<span class="warn">deleted #${esc(rec.room_id)}</span>`:"—")}
+        ${kv("Storage",rec.storage_id!=null?`<span class="warn">deleted #${esc(rec.storage_id)}</span>`:"none")}
+        ${rec.status==="released"?kv("Released",ago(rec.released_at)):""}<div style="margin-top:10px">${H(DB.history.filter(h=>h.key_card_id===rec.id))}</div></div>`;
+  } else if(col==="equipment"){
+    const st=stor(rec.storage_id);
+    title=(CATS[rec.category]||rec.category)+" ×"+rec.quantity; sub=[rec.size,rec.type,rec.description].filter(Boolean).map(esc).join(" · ")||"No size or type";
+    body=photoImg(rec.photo_id)+(st?traceStorage(st,"Stored in "+st.storage_number)
+      :`<div class="issue hot"><div class="grow"><b>Orphan item</b><p>Its storage #${esc(rec.storage_id)} no longer exists.</p></div></div>`);
+  } else if(col==="users"){
+    const mine=DB.history.filter(h=>h.user_id===rec.id);
+    title=rec.name; sub=`${rec.shared?(rec.shared==="admin"?"Admin login":"Shared staff account"):rec.archived?"Removed staff member":"Staff member"} · ${mine.length} actions`;
+    body=`<div class="panel">${H(mine)}</div>`;
+  }
+  const canEdit=SCHEMA[col]&&!(col==="users");
+  openSheet(`<h3>${esc(title)}</h3><p class="sub">${sub}</p>${body}
+    <div class="foot">
+      ${canEdit?`<button class="btn danger" data-act="del" data-col="${col}" data-id="${id}">Delete</button>`:""}
+      <span class="grow"></span><button class="btn" data-act="close">Close</button>
+      ${col==="rooms"&&storagesOfRoom(rec.id).length?`<button class="btn" data-act="change-room" data-id="${id}">Change room</button>`:""}
+      ${canEdit?`<button class="btn primary" data-act="edit" data-col="${col}" data-id="${id}">Edit</button>`:""}
+      ${col==="users"&&!rec.shared?`<button class="btn primary" data-act="edit-member" data-id="${id}">Edit</button>`:""}</div>`,true);
+}
+V.trace = (p) => {
+  const q=(p.q||"").trim();
+  return {body:`
+    <h1>Trace equipment</h1>
+    <p class="lead">Search by card code, room, guest, storage or item. Shows the full chain card → room → storage → equipment, what is broken in it, and the history — including records that were already deleted or released.</p>
+    <div class="searchbar">🔎<input id="tQ" value="${esc(q)}" placeholder="Card code, room, guest, storage or item" autocomplete="off"></div>
+    <div id="tOut" style="margin-top:16px"></div>`,
+  after(){
+    const i=$("#tQ"); i.focus(); i.setSelectionRange(i.value.length,i.value.length);
+    const draw=()=>{ params.q=i.value; $("#tOut").innerHTML=traceHTML(i.value.trim()); };
+    let t; i.addEventListener("input",()=>{ clearTimeout(t); t=setTimeout(draw,150); }); draw();
+  }};
+};
+function traceHTML(q){
+  if(!q) return `<div class="dim" style="text-align:center;padding:30px">Type something to search.</div>`;
+  const L=q.toLowerCase(), N=normCode(q), out=[], shown=new Set();
+  const cards=N.length>2?DB.cards.filter(c=>normCode(c.card_code).includes(N)):[];
+  const rooms=DB.rooms.filter(r=>String(r.room_number).toLowerCase()===L||(L.length>1&&guestOf(r).toLowerCase().includes(L))||(L.length>1&&String(r.room_number).toLowerCase().includes(L))).sort(byRoom);
+  const sts=DB.storages.filter(s=>String(s.storage_number).toLowerCase().includes(L)||normCode(s.storage_number)===N);
+  const eqs=DB.equipment.filter(e=>[CATS[e.category],e.category,e.type,e.size,e.description].join(" ").toLowerCase().includes(L));
+
+  // cards first — that's what the valet scanned
+  cards.forEach(c=>{
+    if(c.storage_id!=null && stor(c.storage_id)){ const s=stor(c.storage_id); if(!shown.has(s.id)){ shown.add(s.id); out.push(traceStorage(s,`Card ${c.card_code} opens this storage`)); } return; }
+    const lr=room(c.last_room_id), ls=stor(c.last_storage_id);
+    out.push(`<div class="panel" style="margin-bottom:12px">
+      <div class="row"><b class="mono grow" style="font-size:18px">${esc(c.card_code)}</b>${chip(c.status||"bad",CARD_STATUS[c.status]||c.status)}
+        <button class="btn sm" data-act="edit" data-col="cards" data-id="${c.id}">Edit card</button></div>
+      <div class="chain">
+        <div class="node"><small>Key card</small><b class="mono">${esc(c.card_code)}</b></div><span class="arrow">→</span>
+        <div class="node ${c.room_id!=null&&!room(c.room_id)?"missing":""}"><small>Room</small><b>${c.room_id==null?"—":room(c.room_id)?esc(room(c.room_id).room_number):"deleted #"+c.room_id}</b></div><span class="arrow">→</span>
+        <div class="node missing"><small>Storage</small><b>${c.storage_id==null?"none":"deleted #"+c.storage_id}</b></div>
+      </div>
+      <p class="muted tiny" style="margin:0">${c.status==="released"
+        ?`Released ${ago(c.released_at)}${lr||ls?` — last used by ${lr?"room "+esc(lr.room_number):""}${ls?" in "+esc(ls.storage_number):""}`:""}. Scanning it in the app starts a new registration.`
+        :"This card is not linked to any existing storage, so a scan cannot show equipment. Edit the card to link a storage."}</p>
+      <div class="hist" style="margin-top:10px">${DB.history.filter(h=>h.key_card_id===c.id).slice(0,8).map(histEvent).join("")}</div>
+    </div>`);
+  });
+  rooms.forEach(r=>{
+    const sts=storagesOfRoom(r.id);
+    sts.forEach(s=>{ if(!shown.has(s.id)){ shown.add(s.id); out.push(traceStorage(s,`Room ${r.room_number}${guestOf(r)?" · "+guestOf(r):""}`)); } });
+    if(!sts.length) out.push(`<div class="panel" style="margin-bottom:12px"><div class="row"><b class="grow" style="font-family:var(--display);font-size:20px">Room ${esc(r.room_number)} ${guestOf(r)?"· "+esc(guestOf(r)):""}</b>
+      ${chip(r.status||"staying",ROOM_STATUS[r.status]||r.status)}<button class="btn sm" data-act="edit" data-col="rooms" data-id="${r.id}">Edit room</button></div>
+      <p class="muted tiny">No storage is linked to this room. Cards: ${cardsOfRoom(r.id).map(c=>esc(c.card_code)).join(", ")||"none"}.</p>
+      <div class="hist">${DB.history.filter(h=>h.room_id===r.id).slice(0,8).map(histEvent).join("")||`<div class="dim tiny">No history.</div>`}</div></div>`);
+  });
+  sts.forEach(s=>{ if(!shown.has(s.id)){ shown.add(s.id); out.push(traceStorage(s,"Storage number match")); } });
+  eqs.forEach(e=>{ const s=stor(e.storage_id);
+    if(s){ if(!shown.has(s.id)){ shown.add(s.id); out.push(traceStorage(s,`Holds ${CATS[e.category]||e.category}${e.size?" "+e.size:""}`)); } }
+    else out.push(`<div class="issue hot"><div class="grow"><b>Orphan item #${e.id}</b><p>${esc(CATS[e.category]||e.category)} ×${esc(e.quantity)} — its storage #${esc(e.storage_id)} no longer exists.</p></div>
+      <button class="btn sm" data-act="edit" data-col="equipment" data-id="${e.id}">Move to a storage</button></div>`);
+  });
+  // history mentions — finds records that were deleted or released
+  const hm=DB.history.filter(h=>[h.action,h.notes,h.prev,h.next].join(" ").toLowerCase().includes(L)
+    ||(N.length>2&&normCode(card(h.key_card_id)?.card_code||"").includes(N))).slice(0,25);
+  if(hm.length) out.push(`<h2 class="sec">History mentions · ${hm.length}</h2><div class="hist">${hm.map(histEvent).join("")}</div>`);
+  return out.join("")||`<div class="dim" style="text-align:center;padding:30px">No record or history entry matches “${esc(q)}”.</div>`;
+}
+
+/* ==========================================================================
+   6. GENERIC TABLES + EDIT FORMS
+   ========================================================================== */
+const opt=(o)=>Object.entries(o).map(([v,l])=>({v,l}));
+const roomOpts=()=>[{v:"",l:"— none —"},...[...DB.rooms].sort(byRoom).map(r=>({v:r.id,l:"Room "+r.room_number+(guestOf(r)?" · "+guestOf(r):"")}))];
+const storOpts=()=>[{v:"",l:"— none —"},...[...DB.storages].sort((a,b)=>String(a.storage_number).localeCompare(b.storage_number,undefined,{numeric:true})).map(s=>({v:s.id,l:s.storage_number+" · "+(STATUS[s.status]||s.status)+(s.room_id?" · room "+(room(s.room_id)?.room_number||"?"):"")}))];
+const storOptsReq=()=>storOpts().slice(1);
+
+const SCHEMA = {
+  rooms:{ title:"Rooms", one:"room", label:r=>"Room "+r.room_number,
+    fields:[
+      {k:"room_number",l:"Room number",req:true},
+      {k:"guest_name",l:"Guest name"},
+      {k:"departure",l:"Departure",type:"date"},
+      {k:"status",l:"Status",type:"select",opts:()=>opt(ROOM_STATUS),def:"staying"}],
+    cols:[["Room",r=>`<b>${esc(r.room_number)}</b>`],["Guest",r=>`<span class="row" style="gap:8px">${idPhotos(r).slice(0,1).map(id=>`<img class="id-mini" src="${photoUrl(id)}" alt="" loading="lazy">`).join("")}${esc(guestOf(r)||"—")}</span>`],["Departure",r=>esc(r.status!=="checked_out"&&r.departure||"—")],
+      ["Status",r=>chip(r.status||"staying",ROOM_STATUS[r.status]||r.status)],
+      ["Storages",r=>storagesOfRoom(r.id).map(s=>storLabel(s.id)).join(", ")||`<span class="dim">—</span>`],
+      ["Cards",r=>cardsOfRoom(r.id).length],
+      ["Photos",r=>{ const n=storagesOfRoom(r.id).flatMap(s=>eqOf(s.id)).filter(e=>e.photo_id).length; return n?`📷 ${n}`:`<span class="dim">—</span>`; }],["Updated",r=>ago(r.updated_at)]],
+    text:r=>[r.id,r.room_number,r.guest_name,r.departure,r.status].join(" "),
+    sort:byRoom,
+    unique:(v,rec)=>roomTaken(v.room_number,rec),
+    del(r){ const sts=storagesOfRoom(r.id), n=sts.reduce((a,s)=>a+eqCount(s.id),0);
+      return {warn: n
+        ? `Room ${r.room_number} still holds ${n} item${n===1?"":"s"}${guestOf(r)?" of "+guestOf(r):""} in ${sts.map(s=>s.storage_number).join(", ")}. If you delete it, the equipment stays in the hall without a room: staff can't find it by room number and those locations stay occupied.`
+        : `${sts.length} storage(s) and ${cardsOfRoom(r.id).length} card(s) will be unlinked from this room.`,
+      danger: n ? `Delete anyway — leave ${n} item${n===1?"":"s"} without a room` : "",
+      tip: n ? `To give the equipment back and free the locations, use Check out & release in the valet app instead.` : "",
+      run(){ storagesOfRoom(r.id).forEach(s=>{ s.room_id=null; s.updated_at=now(); }); cardsOfRoom(r.id).forEach(c=>{ c.room_id=null; c.updated_at=now(); });
+        DB.rooms=DB.rooms.filter(x=>x!==r); }}; }
+  },
+  storages:{ title:"Storages", one:"storage", label:s=>s.storage_number,
+    fields:[
+      {k:"storage_number",l:"Storage number",req:true,upper:true},
+      {k:"section",l:"Area / section",def:"Unassigned area",list:()=>[...new Set(DB.storages.map(s=>s.section).filter(Boolean))]},
+      {k:"kind",l:"Holds",type:"select",opts:()=>[{v:"",l:"Not set (read from the area name)"},...opt(KINDS)],def:""},
+      {k:"status",l:"Status",type:"select",opts:()=>opt(STATUS),def:"available"},
+      {k:"room_id",l:"Room",type:"select",opts:roomOpts,num:true}],
+    cols:[["Storage",s=>`<b>${esc(s.storage_number)}</b>`],["Area",s=>esc(s.section||"—")],["Holds",s=>esc(KINDS[s.kind]||"—")],["Status",s=>chip(s.status,STATUS[s.status]||s.status)],
+      ["Room",s=>roomLabel(s.room_id)],["Items",s=>eqCount(s.id)],["Cards",s=>cardsOfStorage(s.id).map(c=>`<span class="mono tiny">${esc(c.card_code)}</span>`).join("<br>")||`<span class="dim">—</span>`],
+      ["Updated",s=>ago(s.updated_at)]],
+    text:s=>[s.id,s.storage_number,s.section,s.status,STATUS[s.status],room(s.room_id)?.room_number].join(" "),
+    filter:{k:"status",opts:STATUS},
+    sort:(a,b)=>String(a.storage_number).localeCompare(b.storage_number,undefined,{numeric:true}),
+    unique:(v,rec)=>(!normCode(v.storage_number)&&"Storage number needs letters or digits")||(DB.storages.some(s=>s!==rec&&normCode(s.storage_number)===normCode(v.storage_number))&&`${v.storage_number} already exists (the app treats S-127 and S127 as the same)`),
+    del(s){ const eq=eqOf(s.id), cs=cardsOfStorage(s.id);
+      return {warn:`${eq.length} equipment record(s) will be deleted and ${cs.length} card(s) unlinked.`,
+      run(){ DB.equipment=DB.equipment.filter(e=>e.storage_id!==s.id); cs.forEach(c=>{ c.storage_id=null; c.updated_at=now(); });
+        DB.storages=DB.storages.filter(x=>x!==s); }}; }
+  },
+  cards:{ title:"Key cards", one:"key card", label:c=>"Card "+c.card_code,
+    fields:[
+      {k:"card_code",l:"Card code",req:true,upper:true,norm:true},
+      {k:"status",l:"Status",type:"select",opts:()=>opt(CARD_STATUS),def:"active"},
+      {k:"room_id",l:"Room",type:"select",opts:roomOpts,num:true},
+      {k:"storage_id",l:"Storage",type:"select",opts:storOpts,num:true}],
+    cols:[["Code",c=>`<b class="mono">${esc(c.card_code)}</b>`],["Status",c=>chip(c.status||"bad",CARD_STATUS[c.status]||c.status)],
+      ["Room",c=>roomLabel(c.room_id)],["Storage",c=>storLabel(c.storage_id)],
+      ["Last room",c=>c.last_room_id!=null?roomLabel(c.last_room_id):`<span class="dim">—</span>`],
+      ["Last scan",c=>ago(c.last_scanned_at)]],
+    text:c=>[c.id,c.card_code,c.status,room(c.room_id)?.room_number,stor(c.storage_id)?.storage_number].join(" "),
+    filter:{k:"status",opts:CARD_STATUS},
+    sort:(a,b)=>(b.updated_at||0)-(a.updated_at||0),
+    unique:(v,rec)=>DB.cards.some(c=>c!==rec&&normCode(c.card_code)===normCode(v.card_code))&&`Card ${normCode(v.card_code)} already exists`,
+    check(v){ const s=stor(v.storage_id); if(s&&v.room_id!=null&&s.room_id!=null&&s.room_id!==v.room_id)
+      return `${s.storage_number} belongs to room ${room(s.room_id)?.room_number}. Pick that room or change the storage's room first.`; },
+    del(c){ return {warn:"The card will no longer be recognised when scanned.",run(){ DB.cards=DB.cards.filter(x=>x!==c); }}; }
+  },
+  equipment:{ title:"Equipment", one:"item", label:e=>(CATS[e.category]||e.category)+" #"+e.id,
+    fields:[
+      {k:"storage_id",l:"Storage",type:"select",opts:storOptsReq,num:true,req:true},
+      {k:"category",l:"Category",type:"select",opts:()=>opt(catChoices()),def:"skis"},
+      {k:"quantity",l:"Quantity",type:"number",def:1,req:true},
+      {k:"size",l:"Size"},
+      {k:"type",l:"Type / brand"},
+      {k:"description",l:"Description"}],
+    cols:[["#",e=>`<span class="dim">${e.id}</span>`],["Item",e=>`<b>${esc(CATS[e.category]||e.category)}</b>${e.kids?" (kids)":""}${e.photo_id?" 📷":""}`],["Qty",e=>esc(e.quantity)],
+      ["Size",e=>esc(e.size||"—")],["Type",e=>esc([e.type,e.description].filter(Boolean).join(" · ")||"—")],
+      ["Storage",e=>storLabel(e.storage_id)],["Room",e=>roomLabel(stor(e.storage_id)?.room_id)],["Updated",e=>ago(e.updated_at)]],
+    text:e=>[e.id,CATS[e.category],e.category,e.size,e.type,e.description,stor(e.storage_id)?.storage_number,room(stor(e.storage_id)?.room_id)?.room_number].join(" "),
+    filter:{k:"category",get opts(){ return catChoices(); }},
+    sort:(a,b)=>String(stor(a.storage_id)?.storage_number||"~").localeCompare(String(stor(b.storage_id)?.storage_number||"~"),undefined,{numeric:true}),
+    check(v){ if(!(v.quantity>=1)) return "Quantity must be at least 1"; },
+    del(e){ return {run(){ DB.equipment=DB.equipment.filter(x=>x!==e); }}; }
+  }
+};
+
+function tableView(col){
+  const S=SCHEMA[col];
+  return (p)=>{
+    const q=p.q||"", f=p.f||"";
+    return {body:`
+      <h1>${S.title}</h1>
+      <p class="lead">${DB[col].length} records. Click a linked room or storage to trace it. Edits are logged in the history and can be undone from a snapshot.</p>
+      <div class="toolbar">
+        <div class="searchbar">🔎<input id="tblQ" value="${esc(q)}" placeholder="Filter ${S.title.toLowerCase()}…" autocomplete="off"></div>
+        ${S.filter?`<select class="input" id="tblF"><option value="">All</option>${Object.entries(S.filter.opts).map(([v,l])=>`<option value="${v}" ${f===v?"selected":""}>${esc(l)}</option>`).join("")}</select>`:""}
+        <button class="btn primary" data-act="new" data-col="${col}">+ New ${S.one}</button>
+        <button class="btn ghost" data-act="csv" data-col="${col}">CSV</button>
+      </div>
+      <div class="bulkbar hidden" id="bulkBar"><b id="bulkN"></b><span class="grow"></span>
+        <button class="btn sm" data-act="sel-clear">Clear selection</button>
+        <button class="btn sm danger" data-act="bulk-del" data-col="${col}">Delete selected</button></div>
+      <div class="tbl-wrap"><table><thead><tr><th class="sel" data-act="noop"><input type="checkbox" id="selAll" aria-label="Select all shown"></th>${S.cols.map(c=>`<th>${c[0]}</th>`).join("")}<th></th></tr></thead><tbody id="tblBody"></tbody></table></div>
+      <div class="pager" id="tblPager"></div>`,
+    after(){
+      if(SEL.col!==col){ SEL.col=col; SEL.ids.clear(); }
+      const draw=()=>{
+        const q=$("#tblQ").value.trim().toLowerCase(), f=$("#tblF")?$("#tblF").value:"";
+        params.q=$("#tblQ").value; params.f=f;
+        const rows=[...DB[col]].filter(r=>(!f||r[S.filter.k]===f)&&(!q||S.text(r).toLowerCase().includes(q))).sort(S.sort);
+        const LIM=300;
+        SEL.shown=rows.slice(0,LIM).map(r=>r.id);
+        $("#tblBody").innerHTML=rows.slice(0,LIM).map(r=>`<tr class="clk ${SEL.ids.has(r.id)?"picked":""}" data-act="detail" data-col="${col}" data-id="${r.id}">
+          <td class="sel" data-act="noop"><input type="checkbox" data-sel="${r.id}" ${SEL.ids.has(r.id)?"checked":""} aria-label="Select"></td>${S.cols.map(c=>`<td>${c[1](r)}</td>`).join("")}
+          <td class="act"><button class="btn sm" data-act="edit" data-col="${col}" data-id="${r.id}">Edit</button><button class="btn sm danger" data-act="del" data-col="${col}" data-id="${r.id}">✕</button></td></tr>`).join("")
+          ||`<tr><td colspan="${S.cols.length+1}" class="dim" style="text-align:center;padding:24px">Nothing matches.</td></tr>`;
+        $("#tblPager").textContent=rows.length>LIM?`Showing ${LIM} of ${rows.length} — refine the filter`:`${rows.length} shown`;
+        selBar();
+      };
+      SEL.redraw=draw;
+      $("#tblQ").addEventListener("input",draw); $("#tblF")&&$("#tblF").addEventListener("change",draw); draw();
+    }};
+  };
+}
+["rooms","storages","cards","equipment"].forEach(c=>V[c]=tableView(c));
+
+/* ---------- multi-select: delete several records at once ---------- */
+const SEL={col:null, ids:new Set(), shown:[], redraw:null};
+function selBar(){
+  const have=new Set(DB[SEL.col]?DB[SEL.col].map(r=>r.id):[]);
+  [...SEL.ids].forEach(id=>{ if(!have.has(id)) SEL.ids.delete(id); });   // deleted meanwhile
+  const bar=$("#bulkBar"); if(!bar) return;
+  bar.classList.toggle("hidden",!SEL.ids.size);
+  $("#bulkN").textContent=`${SEL.ids.size} selected`;
+  const all=$("#selAll"), on=SEL.shown.filter(id=>SEL.ids.has(id)).length;
+  if(all){ all.checked=!!SEL.shown.length&&on===SEL.shown.length; all.indeterminate=on>0&&on<SEL.shown.length; }
+}
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="selAll"){ SEL.shown.forEach(id=>t.checked?SEL.ids.add(id):SEL.ids.delete(id)); SEL.redraw&&SEL.redraw(); return; }
+  if(t.dataset&&t.dataset.sel){ const id=+t.dataset.sel; t.checked?SEL.ids.add(id):SEL.ids.delete(id);
+    t.closest("tr")?.classList.toggle("picked",t.checked); selBar(); }
+});
+function askBulkDelete(col){
+  const S=SCHEMA[col], recs=DB[col].filter(r=>SEL.ids.has(r.id));
+  if(!recs.length){ toast("Nothing selected","info"); return; }
+  const plan=recs.map(r=>({r,d:S.del(r)})), ok=plan.filter(x=>!x.d.block), blocked=plan.filter(x=>x.d.block);
+  if(!ok.length){ toast(blocked[0].d.block,"err"); return; }
+  const warns=[...new Set(ok.map(x=>x.d.warn).filter(Boolean))];
+  openSheet(`<h3 style="color:var(--st-attention)">Delete ${ok.length} ${ok.length===1?S.one:S.title.toLowerCase()}</h3>
+    <p class="sub">${esc(ok.slice(0,12).map(x=>S.label(x.r)).join(", "))}${ok.length>12?` and ${ok.length-12} more`:""}.</p>
+    ${warns.length?`<div class="panel tiny" style="margin-bottom:10px">${warns.slice(0,6).map(w=>`<div>• ${esc(w)}</div>`).join("")}${warns.length>6?`<div class="dim">…and ${warns.length-6} more notes</div>`:""}</div>`:""}
+    ${ok.some(x=>x.d.danger)?`<div class="issue hot" style="margin-bottom:10px"><div class="grow"><b>${ok.filter(x=>x.d.danger).length} of them still hold equipment</b><p>That equipment will stay in the hall without a room. Use Check out &amp; release in the valet app to free it properly.</p></div></div>`:""}
+    ${blocked.length?`<p class="warn tiny">${blocked.length} can't be deleted and will be skipped: ${esc(blocked[0].d.block)}</p>`:""}
+    <p class="tiny muted">A snapshot is taken first, so everything can be restored.</p>
+    <div class="foot"><span class="grow"></span><button class="btn" data-act="close">Cancel</button>
+      <button class="btn danger" data-act="do-bulk-del" data-col="${col}">${ok.some(x=>x.d.danger)?"Delete anyway":"Delete"} ${ok.length}</button></div>`);
+}
+function doBulkDelete(col){
+  const S=SCHEMA[col], recs=DB[col].filter(r=>SEL.ids.has(r.id)).filter(r=>!S.del(r).block);
+  if(!recs.length){ closeSheet(); return; }
+  const labels=recs.map(r=>S.label(r));
+  // each record's own delete rule runs, in the same order as one-by-one deletes, in ONE commit (one snapshot)
+  commit(`Delete ${recs.length} ${S.title.toLowerCase()}`,()=>{ recs.forEach(r=>{ if(DB[col].includes(r)) S.del(r).run(); }); },
+    {action:`${recs.length} ${S.title.toLowerCase()} deleted`,notes:labels.join(", ").slice(0,1000)});
+  SEL.ids.clear(); closeSheet(); toast(`${recs.length} deleted`);
+}
+
+/* ---------- storage map ---------- */
+const STC = k => `var(--st-${k==="guest_using"?"guest":k})`;
+const areaOf = s => s.section||"Unassigned area";
+V.map = () => {
+  const areas=[...new Set(DB.storages.map(areaOf))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const sorted = a => DB.storages.filter(s=>areaOf(s)===a).sort((x,y)=>String(x.storage_number).localeCompare(String(y.storage_number),undefined,{numeric:true}));
+  const busy = s => s.status!=="available"||s.room_id!=null||eqCount(s.id)>0||cardsOfStorage(s.id).length>0;
+  return {body:`
+    <h1>Storage map</h1>
+    <p class="lead">Same hall layout as the valet app. Click a location to edit or delete it; use ＋ to add one to an area. ${DB.storages.length} locations in ${areas.length} area${areas.length===1?"":"s"}.</p>
+    <div class="toolbar">
+      <button class="btn primary" data-act="map-range">+ Add range</button>
+      <button class="btn" data-act="map-new">+ New storage</button>
+      ${SkiSync.missingLayout(DB).length?`<button class="btn" data-act="load-layout" title="${esc([...new Set(SkiSync.missingLayout(DB).map(x=>x.section))].join(" · "))}">Restore default layout (${SkiSync.missingLayout(DB).length} missing)</button>`:""}
+    </div>
+    <div class="legend">${Object.entries(STATUS).map(([k,l])=>`<span><i style="background:${STC(k)}"></i>${esc(l)}</span>`).join("")}</div>
+    ${areas.length?areas.map(a=>{ const rows=sorted(a), free=rows.filter(s=>!busy(s)).length;
+      return `<div class="map-area">
+        <div class="map-head"><h3>${esc(a)}</h3><span class="dim tiny">${esc(KINDS[(rows.find(s=>KINDS[s.kind])||{}).kind]||"type not set")} · ${rows.length} locations · ${rows.length-free} in use</span><span class="grow"></span>
+          <button class="btn sm" data-act="map-rename" data-area="${esc(a)}">Rename</button>
+          ${free?`<button class="btn sm danger" data-act="map-drop-free" data-area="${esc(a)}">Delete ${free} free</button>`:""}</div>
+        <div class="map-grid">${rows.map(s=>`<button class="cell" style="--c:${STC(s.status)}" data-act="map-cell" data-id="${s.id}" title="${esc(STATUS[s.status]||s.status)}">
+            <span class="n">${esc(s.storage_number)}</span>
+            <span class="k">${room(s.room_id)?"R"+esc(room(s.room_id).room_number):"free"}</span>
+            ${eqCount(s.id)?`<span class="k" style="color:var(--frost,#DCEBFA)">${eqCount(s.id)} items</span>`:""}</button>`).join("")}
+          <button class="cell add" data-act="map-new" data-area="${esc(a)}" title="Add a storage to ${esc(a)}">＋</button></div></div>`; }).join("")
+    :`<div class="panel dim">No storage locations yet. Use “Add range” to create a whole rack row.</div>`}`};
+};
+function mapCell(id){
+  const s=stor(id); if(!s) return;
+  const eq=eqOf(s.id), cs=cardsOfStorage(s.id);
+  openSheet(`<h3>${esc(s.storage_number)}</h3>
+    <p class="sub">${esc(areaOf(s))} · ${chip(s.status,STATUS[s.status]||s.status)} · ${room(s.room_id)?"Room "+esc(room(s.room_id).room_number):"no room"}</p>
+    <div class="panel tiny">
+      <div class="row"><span class="grow muted">Equipment</span><b>${eq.length?eq.map(e=>`${esc(CATS[e.category]||e.category)} ×${esc(e.quantity)}`).join(", "):"—"}</b></div>
+      ${eq.filter(e=>e.photo_id).map(e=>photoImg(e.photo_id)).join("")}
+      <div class="row"><span class="grow muted">Key cards</span><b class="mono">${cs.map(c=>esc(c.card_code)).join(", ")||"—"}</b></div>
+      <div class="row"><span class="grow muted">Updated</span><b>${ago(s.updated_at)}</b></div>
+    </div>
+    <div class="foot">
+      <button class="btn danger" data-act="map-del" data-id="${s.id}">Delete</button>
+      <button class="btn ghost" data-act="trace" data-q="${esc(s.storage_number)}">Trace</button>
+      <span class="grow"></span>
+      <button class="btn" data-act="close">Close</button>
+      <button class="btn primary" data-act="map-edit" data-id="${s.id}">Edit</button></div>`);
+}
+function mapNew(area){
+  openForm("storages",null);
+  if(area){ const f=$('#frm [name="section"]'); if(f) f.value=area; }
+}
+function mapRange(){
+  const areas=[...new Set(DB.storages.map(areaOf))];
+  openSheet(`<h3>Add a range</h3><p class="sub">Creates a whole rack row, e.g. S-101 to S-112. Numbers that already exist are skipped.</p>
+    <label class="f"><span>Area</span><input class="input" id="mrArea" list="mrAreas" placeholder="Main hall" autocomplete="off">
+      <datalist id="mrAreas">${areas.map(a=>`<option value="${esc(a)}">`).join("")}</datalist></label>
+    <label class="f"><span>Holds</span><select class="input" id="mrKind"><option value="">Not set (read from the area name)</option>${Object.entries(KINDS).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("")}</select></label>
+    <label class="f"><span>Prefix</span><input class="input" id="mrPfx" value="S-" autocomplete="off"></label>
+    <div class="row"><label class="f grow"><span>From</span><input class="input" id="mrFrom" inputmode="numeric" placeholder="101"></label>
+      <label class="f grow"><span>To</span><input class="input" id="mrTo" inputmode="numeric" placeholder="112"></label></div>
+    <div class="foot"><span class="grow"></span><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="map-range-go">Create</button></div>`);
+  setTimeout(()=>$("#mrArea")?.focus(),50);
+}
+function mapRangeGo(){
+  const area=$("#mrArea").value.trim()||"Unassigned area", pfx=$("#mrPfx").value.trim().toUpperCase(), kind=$("#mrKind").value;
+  const from=parseInt($("#mrFrom").value,10), to=parseInt($("#mrTo").value,10);
+  if(isNaN(from)||isNaN(to)||from<0||to<from){ toast("Check the From / To numbers","err"); return; }
+  if(to-from>199){ toast("Maximum 200 locations at a time","err"); return; }
+  const nums=[]; for(let i=from;i<=to;i++){ const n=pfx+i; if(!DB.storages.some(s=>normCode(s.storage_number)===normCode(n))) nums.push(n); }
+  if(!nums.length){ toast("All of those numbers already exist","info"); return; }
+  commit("Storage range created",()=>{ nums.forEach(n=>DB.storages.push({id:nextId(),storage_number:n,section:area,status:"available",room_id:null,created_at:now(),updated_at:now(),...(kind?{kind}:{})})); },
+    {action:"Storage range created",notes:`${area}: ${nums[0]} – ${nums[nums.length-1]} (${nums.length})`});
+  closeSheet(); toast(nums.length+" locations created");
+}
+function mapRename(area){
+  openSheet(`<h3>Rename area</h3><p class="sub">${esc(area)} · every location in it moves to the new name. Using an existing name merges the areas.</p>
+    <label class="f"><span>New name</span><input class="input" id="mrName" value="${esc(area)}" autocomplete="off"></label>
+    <div class="foot"><span class="grow"></span><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="map-rename-go" data-area="${esc(area)}">Save</button></div>`);
+  setTimeout(()=>$("#mrName")?.select(),50);
+}
+function mapRenameGo(area){
+  const name=$("#mrName").value.trim(); if(!name){ toast("Enter a name","err"); return; }
+  if(name===area){ closeSheet(); return; }
+  commit("Area renamed",()=>{ DB.storages.filter(s=>areaOf(s)===area).forEach(s=>{ s.section=name; s.updated_at=now(); }); },{action:"Area renamed",notes:`${area} → ${name}`});
+  closeSheet(); toast("Area renamed");
+}
+function mapDropFree(area){
+  const rows=DB.storages.filter(s=>areaOf(s)===area&&s.status==="available"&&s.room_id==null&&!eqCount(s.id)&&!cardsOfStorage(s.id).length);
+  if(!rows.length) return;
+  confirmSheet(`Delete ${rows.length} free location${rows.length===1?"":"s"}`,`In ${esc(area)}: ${rows.map(s=>esc(s.storage_number)).join(", ")}. Locations in use are kept.`,"Delete",
+    ()=>{ const ids=new Set(rows.map(s=>s.id)); commit("Free locations deleted",()=>{ DB.storages=DB.storages.filter(s=>!ids.has(s.id)); },{action:"Free locations deleted",notes:`${area}: ${rows.length}`}); toast(rows.length+" deleted","info"); });
+}
+
+/* ---------- access ---------- */
+V.users = () => {
+  const acts = id => DB.history.filter(h=>h.user_id===id).length;
+  const retired = DB.users.filter(u=>u.retired), st=staffAcc(), a=adminAcc(), arch=archived();
+  const hist = u => `<span class="lnk" data-act="go" data-view="history" data-q="${esc(u.name)}">${acts(u.id)}</span>`;
+  return {body:`
+    <h1>Staff &amp; access</h1>
+    <p class="lead">Give every valet their own 4-digit PIN: they sign in with it directly, so nobody can act under someone else's name and the history shows who really did what. Members without a personal PIN still use the shared staff PIN and tap their name. The admin has its own username and password.</p>
+    <h3 style="margin:0 0 10px">Staff members · ${members().length}</h3>
+    <div class="toolbar">
+      <input class="input" id="mName" placeholder="Full name" autocomplete="off" style="max-width:260px">
+      <input class="input" id="mMail" placeholder="Email (optional)" autocomplete="off" style="max-width:260px">
+      <button class="btn primary" data-act="add-member">+ Add staff member</button>
+    </div>
+    <div class="tbl-wrap" style="margin-bottom:22px"><table><thead><tr><th>Name</th><th>Email</th><th>PIN</th><th>Actions</th><th>Added</th><th></th></tr></thead><tbody>
+      ${members().map(u=>`<tr class="clk" data-act="detail" data-col="users" data-id="${u.id}"><td><b>${esc(u.name)}</b></td><td>${esc(u.email||"—")}</td>
+        <td>${u.pin_set?`<span class="mono">●●●●</span> personal`:`<span class="dim">shared PIN</span>`}</td><td>${hist(u)}</td><td>${u.created_at?fmtDT(u.created_at):"—"}</td>
+        <td class="act"><button class="btn sm" data-act="member-pin" data-id="${u.id}">${u.pin_set?"Change PIN":"Set PIN"}</button><button class="btn sm" data-act="edit-member" data-id="${u.id}">Edit</button><button class="btn sm danger" data-act="rm-member" data-id="${u.id}">Remove</button></td></tr>`).join("")
+        ||`<tr><td colspan="6" class="dim" style="text-align:center;padding:20px">No staff members yet — everyone signs in as “Staff”. Add each valet above, then use <b>Set PIN</b> on their row.</td></tr>`}
+    </tbody></table></div>
+    ${arch.length?`<p class="dim tiny" style="margin:-10px 0 22px">Removed (history kept): ${arch.map(u=>`${esc(u.name)} · ${hist(u)} <span class="lnk" data-act="restore-member" data-id="${u.id}">restore</span>`).join(" &nbsp;|&nbsp; ")}</p>`:""}
+    <div class="grid2">
+      <div class="panel">
+        <h3 style="margin:0 0 4px">Staff PIN</h3>
+        <p class="muted tiny" style="margin:0 0 12px">For members without a personal PIN (they tap their name after it).<br>PIN <span class="mono">${st.pin_set?"set":"not set"}</span> (stored encrypted on the server) ·
+          <span class="lnk" data-act="go" data-view="history" data-q="${esc(st.name)}">${acts(st.id)} actions</span></p>
+        <div class="row"><input class="input" id="pin_staff" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="New 4-digit PIN" autocomplete="off" style="max-width:180px">
+        <button class="btn primary" data-act="set-pin">Change</button></div>
+      </div>
+      <div class="panel">
+        <h3 style="margin:0 0 4px">Admin login</h3>
+        <p class="muted tiny" style="margin:0 0 12px">Username <span class="mono">${esc(a.username)}</span> ·
+          <span class="lnk" data-act="go" data-view="history" data-q="${esc(a.name)}">${acts(a.id)} actions</span></p>
+        <form id="acFrm" onsubmit="return false">
+          <label class="f"><span>Current password</span><input class="input" id="acCur" type="password" autocomplete="current-password"></label>
+          <label class="f"><span>Username</span><input class="input" id="acUser" value="${esc(a.username)}" autocapitalize="none" spellcheck="false" autocomplete="username"></label>
+          <label class="f"><span>New password (min. 8)</span><input class="input" id="acPass" type="password" autocomplete="new-password"></label>
+          <label class="f"><span>Repeat new password</span><input class="input" id="acPass2" type="password" autocomplete="new-password"></label>
+        </form>
+        <button class="btn primary" data-act="set-admin">Save admin login</button>
+      </div>
+    </div>
+    ${retired.length?`<p class="dim tiny" style="margin-top:16px">${retired.length} older personal account${retired.length===1?"":"s"} (${retired.map(u=>esc(u.name)).join(", ")}) can no longer sign in; kept only so past history shows who did what.</p>`:""}`};
+};
+/* ---------- kiosk screens (guest self pre-check-in) ---------- */
+let KI=null;   // {list, minutes} | {err} | {loading}
+async function loadKiosks(){
+  KI={loading:true};
+  try{ const r=await API("/api/admin/kiosks"); KI={list:r.kiosks,minutes:r.code_minutes}; }catch(e){ KI={err:e.message}; }
+  if(SESSION&&view==="kiosks") render();
+}
+V.kiosks = () => {
+  if(!KI) setTimeout(loadKiosks);
+  const list=KI&&KI.list||[];
+  const state=k=>k.paired?(k.code_pending?`<span class="chip">Paired · new code waiting</span>`:`<span class="chip">Paired</span>`)
+    :k.code_pending?`<span class="chip">Waiting for the code</span>`:`<span class="dim">Not paired</span>`;
+  return {body:`
+    <h1>Kiosks</h1>
+    <p class="lead">Touch screens where guests pre-register their equipment by themselves. Add a screen here, then open
+      <span class="mono">${esc(location.origin)}/kiosk</span> on it and type the 6-digit code shown. The screen stays paired for a year and can only send pre-check-ins — it never sees any data.</p>
+    <div class="toolbar">
+      <input class="input" id="kName" placeholder="Screen name, e.g. Lobby 1" autocomplete="off" maxlength="60" style="max-width:260px">
+      <button class="btn primary" data-act="kiosk-add">+ Add screen</button>
+    </div>
+    ${KI&&KI.err?`<p class="warn">${esc(KI.err)} <span class="lnk" data-act="kiosk-reload">Try again</span></p>`:""}
+    <div class="tbl-wrap"><table><thead><tr><th>Screen</th><th>Status</th><th>Last seen</th><th>Added</th><th></th></tr></thead><tbody>
+      ${list.map(k=>`<tr><td><b>${esc(k.name)}</b></td><td>${state(k)}</td><td>${k.last_seen?fmtDT(k.last_seen):"—"}</td><td>${fmtDT(k.created_at)}</td>
+        <td class="act"><button class="btn sm" data-act="kiosk-code" data-id="${k.id}">${k.paired?"Re-pair":"New code"}</button><button class="btn sm danger" data-act="kiosk-rm" data-id="${k.id}">Remove</button></td></tr>`).join("")
+        ||`<tr><td colspan="5" class="dim" style="text-align:center;padding:20px">${KI&&!KI.loading?"No kiosk screens yet.":"Loading…"}</td></tr>`}
+    </tbody></table></div>`};
+};
+function showKioskCode(k,code){
+  openSheet(`<h3>Pairing code for ${esc(k.name)}</h3>
+    <p class="sub">On the kiosk screen open <span class="mono">${esc(location.origin)}/kiosk</span> and type this code. It works once, for ${KI&&KI.minutes||10} minutes.${k.paired?" Pairing a screen with it replaces the one paired now.":""}</p>
+    <div class="mono" style="font-size:56px;text-align:center;letter-spacing:10px;margin:18px 0">${esc(code)}</div>
+    <div class="foot"><span class="grow"></span><button class="btn primary" data-act="close">Done</button></div>`);
+}
+async function kioskAdd(){
+  const name=($("#kName")?.value||"").trim();
+  if(!name){ toast("Give the screen a name","err"); return; }
+  try{ const r=await API("/api/admin/kiosks",{name}); await loadKiosks(); showKioskCode(r.kiosk,r.code); }
+  catch(e){ toast(e.message,"err"); }
+}
+async function kioskCode(id){
+  try{ const r=await API(`/api/admin/kiosks/${id}/code`,{}); await loadKiosks(); showKioskCode(r.kiosk,r.code); }
+  catch(e){ toast(e.message,"err"); }
+}
+function kioskRemove(id){
+  const k=(KI&&KI.list||[]).find(x=>x.id===id); if(!k) return;
+  confirmSheet(`Remove ${esc(k.name)}`,"The screen stops working at once and shows the setup page. Pre-check-ins it already sent are kept.","Remove",
+    async()=>{ try{ await API(`/api/admin/kiosks/${id}/remove`,{}); toast("Kiosk screen removed","info"); }catch(e){ toast(e.message,"err"); } loadKiosks(); });
+}
+
+async function setPin(){
+  const v=$("#pin_staff").value.trim(), st=staffAcc();
+  if(!validPin(v)){ toast("PIN must be exactly 4 digits","err"); return; }
+  try{ await API("/api/admin/pin",{pin:v}); }catch(e){ toast(e.message,"err"); return; }
+  if(st) st.pin_set=true;
+  log("Staff PIN changed",{}); save(); render();
+  toast("Staff PIN updated");
+}
+function memberPin(id){
+  const u=user(id); if(!u||u.shared) return;
+  openSheet(`<h3>PIN for ${esc(u.name)}</h3><p class="sub">${u.pin_set?"A personal PIN is set. Enter a new one to replace it.":"No personal PIN yet — this member signs in with the shared staff PIN."}
+      Each member needs a different PIN; tell it to ${esc(u.name)} in person.</p>
+    <label class="f"><span>New 4-digit PIN</span><input class="input" id="mpPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label>
+    <div class="foot">${u.pin_set?`<button class="btn danger" data-act="clear-member-pin" data-id="${u.id}">Remove PIN</button>`:""}<span class="grow"></span>
+      <button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="save-member-pin" data-id="${u.id}">Save PIN</button></div>`);
+  setTimeout(()=>$("#mpPin")?.focus(),60);
+}
+async function saveMemberPin(id,clear){
+  const u=user(id); if(!u) return;
+  const v=clear?"":$("#mpPin").value.trim();
+  if(!clear && !validPin(v)){ toast("PIN must be exactly 4 digits","err"); return; }
+  if(SkiSync.pending()){ try{ await SkiSync.save(); }catch(_){} }     // a member just added must reach the server first
+  try{ await API("/api/admin/member-pin",{id:u.id,pin:v}); }catch(e){ toast(e.message,"err"); return; }
+  await SkiSync.refresh();
+  closeSheet(); render(); toast(clear?`PIN removed — ${u.name} uses the shared PIN again`:`PIN saved for ${u.name}`);
+}
+function addMember(){
+  const name=$("#mName").value.trim(), email=$("#mMail").value.trim();
+  if(!name){ toast("Enter a name","err"); return; }
+  if(nameTaken(name)){ toast("That name already exists","err"); return; }
+  commit("Staff member added",()=>{ DB.users.push({id:nextId(),name,email,role:"staff",created_at:now()}); },{action:"Staff member added",notes:name});
+  toast(name+" added");
+}
+function editMember(id){
+  const u=user(id); if(!u) return;
+  openSheet(`<h3>Edit staff member</h3><p class="sub">id ${u.id} · ${acts0(u.id)} actions in history</p>
+    <label class="f"><span>Name *</span><input class="input" id="emName" value="${esc(u.name)}"></label>
+    <label class="f"><span>Email</span><input class="input" id="emMail" value="${esc(u.email||"")}"></label>
+    <div class="foot"><span class="grow"></span><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="save-member" data-id="${u.id}">Save</button></div>`);
+}
+const acts0 = id => DB.history.filter(h=>h.user_id===id).length;
+function saveMember(id){
+  const u=user(id), name=$("#emName").value.trim(), email=$("#emMail").value.trim(); if(!u) return;
+  if(!name){ toast("Enter a name","err"); return; }
+  if(nameTaken(name,u)){ toast("That name already exists","err"); return; }
+  const old=u.name;
+  commit("Staff member edited",()=>{ u.name=name; u.email=email; u.updated_at=now(); },{action:"Staff member edited",notes:old===name?name:`${old} → ${name}`});
+  closeSheet(); toast("Saved");
+}
+function removeMember(id){
+  const u=user(id); if(!u||u.shared) return;
+  confirmSheet("Remove "+esc(u.name),"They will no longer appear at sign-in. Their history stays and they can be restored.","Remove",
+    ()=>{ commit("Staff member removed",()=>{ u.archived=true; u.updated_at=now(); },{action:"Staff member removed",notes:u.name}); toast(u.name+" removed","info"); });
+}
+function restoreMember(id){
+  const u=user(id); if(!u) return;
+  if(nameTaken(u.name)){ toast("An active member already has that name","err"); return; }
+  commit("Staff member restored",()=>{ delete u.archived; u.updated_at=now(); },{action:"Staff member restored",notes:u.name});
+}
+async function setAdminLogin(){
+  const cur=$("#acCur").value, user=$("#acUser").value.trim(), p1=$("#acPass").value, p2=$("#acPass2").value;
+  const err=credError(user,p1,p2); if(err){ toast(err,"err"); return; }
+  try{ await API("/api/admin/login",{current:cur,username:user,password:p1,password2:p2}); }catch(e){ toast(e.message,"err"); return; }
+  log("Admin login changed",{notes:user}); save(); render();
+  toast("Admin login updated");
+}
+
+function fieldHTML(f,val){
+  const v=val??f.def??"";
+  if(f.type==="select") return `<select class="input" name="${f.k}">${f.opts().map(o=>`<option value="${esc(o.v)}" ${String(o.v)===String(v)?"selected":""}>${esc(o.l)}</option>`).join("")}</select>`;
+  const dl=f.list?`list="dl_${f.k}"`:"";
+  return `<input class="input" name="${f.k}" type="${f.type||"text"}" value="${esc(v)}" ${dl} autocomplete="off" ${f.type==="number"?'min="1"':""}>`
+    +(f.list?`<datalist id="dl_${f.k}">${f.list().map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`:"");
+}
+function openForm(col,id){
+  const S=SCHEMA[col], rec=id!=null?DB[col].find(x=>x.id===id):null;
+  if(id!=null&&!rec){ toast("Record not found","err"); return; }
+  openSheet(`<h3>${rec?"Edit":"New"} ${S.one}</h3>
+    <p class="sub">${rec?`${esc(S.label(rec))} · id ${rec.id}${rec.created_at?" · created "+fmtDT(rec.created_at):""}`:"Creates the record directly in the valet data."}</p>
+    <form id="frm" onsubmit="return false">${S.fields.map(f=>`<label class="f"><span>${f.l}${f.req?" *":""}</span>${fieldHTML(f,rec?rec[f.k]:undefined)}</label>`).join("")}</form>
+    <div class="foot">
+      <span class="grow"></span>
+      <button class="btn" data-act="close">Cancel</button>
+      <button class="btn primary" data-act="save" data-col="${col}" data-id="${rec?rec.id:""}">Save</button></div>`);
+  setTimeout(()=>$("#frm .input")?.focus(),50);
+  if(col==="rooms"){                       // warn while typing, not only on Save
+    const i=$('#frm [name="room_number"]');
+    i.insertAdjacentHTML("afterend",`<span class="warn tiny" id="rnWarn" style="display:block;margin-top:6px;text-transform:none;letter-spacing:0;font-family:inherit;font-size:13px;color:var(--st-attention)"></span>`);
+    const chk=()=>{ $("#rnWarn").textContent=roomTaken(i.value,rec); };
+    i.addEventListener("input",chk);
+  }
+}
+/* ---- Change room: same as in the valet app. Everything follows the guest to the new
+   room, the equipment stays in its locations, the old room is left free. ---- */
+const roomByNum = n => { const k=String(n??"").trim().toLowerCase(); if(!k) return null;   // the room in use wins over an old duplicate
+  const all=DB.rooms.filter(r=>String(r.room_number??"").trim().toLowerCase()===k), live=all.filter(r=>r.status!=="checked_out");
+  return live.find(r=>storagesOfRoom(r.id).length||cardsOfRoom(r.id).length) || live[0] || all[0] || null; };
+function roomBusy(target, from){
+  if(!target || target===from) return "";
+  if(storagesOfRoom(target.id).length) return `Room ${target.room_number} still has equipment in the valet — check it out first.`;
+  if(cardsOfRoom(target.id).some(c=>c.status!=="released")) return `Room ${target.room_number} still has key cards linked — release them first.`;
+  return "";
+}
+function openChangeRoom(id){
+  const r=room(id); if(!r) return;
+  openSheet(`<h3>Change room</h3>
+    <p class="sub">Room ${esc(r.room_number)}${guestOf(r)?" · "+esc(guestOf(r)):""}. The equipment stays in its locations; it now belongs to the new room.</p>
+    <label class="f"><span>New room number</span><input class="input" id="crNum" autocomplete="off"></label>
+    <span id="crHint" style="display:block;margin:-4px 0 10px;font-size:13px"></span>
+    <p class="muted tiny">Room ${esc(r.room_number)} is left free and its key cards are released. A snapshot is taken first, so this can be undone from Backup &amp; data.</p>
+    <div class="foot"><span class="grow"></span><button class="btn" data-act="close">Cancel</button>
+      <button class="btn primary" data-act="do-change-room" data-id="${r.id}" id="crGo" disabled>Change room</button></div>`);
+  const i=$("#crNum"), hint=$("#crHint"), goBtn=$("#crGo");
+  i.addEventListener("input",()=>{
+    const n=i.value.trim(), t=roomByNum(n), busy=roomBusy(t,r);
+    const same=n && n.toLowerCase()===String(r.room_number).toLowerCase();
+    hint.textContent = same?"That is the current room." : busy || (n?`Move to room ${n}${t?" (free, reused)":""}`:"");
+    hint.style.color = same||busy ? "var(--st-attention)" : "var(--mist)";
+    goBtn.disabled = !n || same || !!busy;
+  });
+  setTimeout(()=>i.focus(),60);
+}
+function doChangeRoom(id){
+  const r=room(id), n=($("#crNum")?.value||"").trim(); if(!r||!n) return;
+  let t=roomByNum(n);
+  if(t===r || roomBusy(t,r)){ toast(roomBusy(t,r)||"That is the current room","err"); return; }
+  const from=r.room_number;
+  closeSheet();
+  commit(`Change room ${from} → ${n}`,()=>{
+    if(!t){ t={id:nextId(),room_number:n,status:"staying",created_at:now(),updated_at:now()}; DB.rooms.push(t); }
+    const faces=r.face_photo_ids||[];
+    Object.assign(t,{status:"staying",guest_name:r.guest_name||"",departure:r.departure||"",vip:!!r.vip,updated_at:now()});
+    if(faces.length) t.face_photo_ids=[...faces]; else delete t.face_photo_ids;
+    storagesOfRoom(r.id).forEach(s=>{ s.room_id=t.id; s.updated_at=now(); });
+    cardsOfRoom(r.id).forEach(c=>{ c.last_room_id=r.id; c.last_storage_id=c.storage_id;
+      c.room_id=null; c.storage_id=null; c.status="released"; c.released_at=now(); c.updated_at=now(); });
+    (DB.prechecks||[]).filter(p=>p.room_id===r.id&&p.status==="confirmed").forEach(p=>{ p.room_id=t.id; p.updated_at=now(); });
+    delete r.face_photo_ids;
+    Object.assign(r,{status:"checked_out",guest_name:"",departure:"",vip:false,updated_at:now()});
+    log("Room changed",{room_id:t.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)});
+  },()=>({action:"Room changed",room_id:r.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)}));
+  toast(`Moved to room ${n} · room ${from} is free`);
+}
+
+/* a room number another record already uses: two records with one number would get mixed up */
+function roomTaken(num,rec){
+  const n=String(num??"").trim().toLowerCase();
+  const other=n&&DB.rooms.find(r=>r!==rec&&String(r.room_number??"").trim().toLowerCase()===n);
+  return other ? `Room ${String(num).trim()} already exists${rec?" — to move a guest to another room, use Change room on the room page of the valet app":""}.` : "";
+}
+function readForm(S){
+  const v={};
+  S.fields.forEach(f=>{ let x=$(`#frm [name="${f.k}"]`).value;
+    if(f.type!=="select") x=x.trim();
+    if(f.upper) x=x.toUpperCase();
+    if(f.norm) x=normCode(x);
+    if(f.num) x=x===""?null:+x;
+    if(f.type==="number") x=parseInt(x,10);
+    v[f.k]=x; });
+  return v;
+}
+function saveForm(col,id){
+  const S=SCHEMA[col], rec=id?DB[col].find(x=>x.id===+id):null, v=readForm(S);
+  const miss=S.fields.find(f=>f.req&&(v[f.k]===""||v[f.k]==null||Number.isNaN(v[f.k])));
+  if(miss){ toast(miss.l+" is required","err"); return; }
+  const err=(S.unique&&S.unique(v,rec))||(S.check&&S.check(v,rec));
+  if(err){ toast(err,"err"); return; }
+  const diff=rec?S.fields.filter(f=>String(rec[f.k]??"")!==String(v[f.k]??"")).map(f=>`${f.l}: ${rec[f.k]??"—"} → ${v[f.k]??"—"}`):[];
+  if(rec&&!diff.length){ closeSheet(); return; }
+  let target=rec;
+  commit(rec?`Edit ${S.label(rec)}`:`New ${S.one}`,()=>{
+    if(rec){ Object.assign(rec,v); if("updated_at" in rec||col!=="users") rec.updated_at=now(); }
+    else { target={id:nextId(),...v,created_at:now()};
+      if(col!=="users") target.updated_at=now();
+      if(col==="equipment") target.status="stored";
+      if(col==="cards") target.last_scanned_at=null;
+      DB[col].push(target); }
+    // keep the app's invariants: a card linked to a storage follows its room
+    if(col==="cards"&&target.storage_id!=null&&target.room_id==null&&stor(target.storage_id)?.room_id!=null) target.room_id=stor(target.storage_id).room_id;
+    if(col==="cards"&&target.status==="released"){
+      // the app only reuses a released card when it is linked to nothing
+      if(target.room_id!=null) target.last_room_id=target.room_id;
+      if(target.storage_id!=null) target.last_storage_id=target.storage_id;
+      target.room_id=null; target.storage_id=null;
+      if(!rec||rec.status!=="released"||!target.released_at) target.released_at=now(); }
+    if(col==="cards"&&target.status==="active") target.released_at=null;
+    if(col==="storages"&&target.room_id!=null&&target.status==="available") target.status="occupied";
+    if(col==="equipment"){ const s=stor(target.storage_id); if(s&&s.status==="available"){ s.status="occupied"; s.updated_at=now(); } }
+    if(col==="rooms"&&target.status==="staying"&&!rec) target.updated_at=now();
+    if(col==="rooms"&&target.status==="checked_out"){
+      target.guest_name=""; target.departure="";
+      cardsOfRoom(target.id).forEach(c=>{ c.last_room_id=c.room_id; c.last_storage_id=c.storage_id??c.last_storage_id;
+        c.room_id=null; c.storage_id=null; c.status="released"; c.released_at=now(); c.updated_at=now(); });
+      storagesOfRoom(target.id).forEach(st=>{ st.room_id=null; st.updated_at=now(); }); }
+  },()=>({action:rec?`${S.one[0].toUpperCase()+S.one.slice(1)} edited`:`${S.one[0].toUpperCase()+S.one.slice(1)} created`,
+     ...refsOf(col,target||v),notes:rec?diff.join(" · "):S.label(target)}));
+  closeSheet(); toast("Saved");
+}
+function refsOf(col,r){
+  if(!r) return {};
+  if(col==="rooms") return {room_id:r.id??null};
+  if(col==="storages") return {storage_id:r.id??null,room_id:r.room_id??null};
+  if(col==="cards") return {key_card_id:r.id??null,room_id:r.room_id??null,storage_id:r.storage_id??null};
+  if(col==="equipment") return {equipment_id:r.id??null,storage_id:r.storage_id??null,room_id:stor(r.storage_id)?.room_id??null};
+  return {};
+}
+function askDelete(col,id){
+  const S=SCHEMA[col], rec=DB[col].find(x=>x.id===id); if(!rec) return;
+  const d=S.del(rec);
+  if(d.block){ toast(d.block,"err"); return; }
+  openSheet(`<h3 style="color:var(--st-attention)">${d.danger?"This room has equipment":"Delete "+esc(S.label(rec))}</h3>
+    ${d.danger?`<div class="issue hot" style="margin:6px 0 10px"><div class="grow"><b>Are you sure you want to delete ${esc(S.label(rec))}?</b><p>${esc(d.warn)}</p></div></div>
+      <p class="sub">${esc(d.tip)} A snapshot is taken first, so it can be restored.</p>`
+      :`<p class="sub">${esc(d.warn||"This record will be removed.")} A snapshot is taken first, so it can be restored.</p>`}
+    <div class="foot"><button class="btn ${d.danger?"primary":""}" data-act="close">Cancel</button>
+      <button class="btn danger" data-act="do-del" data-col="${col}" data-id="${id}">${esc(d.danger||"Delete")}</button></div>`);
+}
+function doDelete(col,id){
+  const S=SCHEMA[col], rec=DB[col].find(x=>x.id===id); if(!rec) return;
+  const d=S.del(rec), label=S.label(rec), refs=refsOf(col,rec);
+  commit(`Delete ${label}`,()=>d.run(),{action:`${S.one[0].toUpperCase()+S.one.slice(1)} deleted`,...refs,notes:label});
+  closeSheet(); toast("Deleted");
+}
+function openRaw(col,id){
+  const rec=DB[col].find(x=>x.id===id);
+  openSheet(`<h3>Raw record</h3><p class="sub">${col} · id ${id}. Edit any field — must stay valid JSON and keep the same id.</p>
+    <textarea class="input code" id="rawRec" style="min-height:40vh" spellcheck="false">${esc(JSON.stringify(rec,null,2))}</textarea>
+    <div class="foot"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="save-raw" data-col="${col}" data-id="${id}">Save record</button></div>`);
+}
+function saveRaw(col,id){
+  let v; try{ v=JSON.parse($("#rawRec").value); }catch(e){ toast("Invalid JSON: "+e.message,"err"); return; }
+  if(!v||typeof v!=="object"||Array.isArray(v)||v.id!==id){ toast("Must be an object with id "+id,"err"); return; }
+  const rec=DB[col].find(x=>x.id===id);
+  commit(`Raw edit ${col} #${id}`,()=>{ Object.keys(rec).forEach(k=>delete rec[k]); Object.assign(rec,v); },
+    {action:"Raw record edited",...refsOf(col,v),notes:`${col} #${id}`});
+  closeSheet(); toast("Record saved");
+}
+function toCSV(col,rows=DB[col],name){
+  if(!rows.length){ toast("Nothing to export","info"); return; }
+  const keys=[...new Set(rows.flatMap(r=>Object.keys(r)))];
+  const cell=v=>{ const s=v==null?"":typeof v==="object"?JSON.stringify(v):String(v); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; };
+  download(name||`skivalet-${col}-${stamp()}.csv`,[keys.join(","),...rows.map(r=>keys.map(k=>cell(r[k])).join(","))].join("\n"),"text/csv");
+}
+
+/* ---------- history ----------
+   "All" shows what this console holds (the latest 5,000 records), grouped by day.
+   Picking a day loads that whole day straight from the database, so older days
+   work too; new records arriving through SkiSync are merged in live. */
+let HD={day:null,rows:null,truncated:false,err:null,loading:null}, histRedraw=null, histRows=[];
+const isoToday = () => dKey(now());
+function dayBounds(iso){ const [y,m,d]=iso.split("-").map(Number); return [new Date(y,m-1,d).getTime(), new Date(y,m-1,d+1).getTime()]; }
+function shiftDay(iso,n){ const [y,m,d]=iso.split("-").map(Number); return dKey(new Date(y,m-1,d+n).getTime()); }
+function dayLabel(iso){
+  const [y,m,d]=iso.split("-").map(Number), t=isoToday();
+  const rel=iso===t?" · Today":iso===shiftDay(t,-1)?" · Yesterday":"";
+  return `${WD[wdIdx(new Date(y,m-1,d).getTime())]} ${d} ${MON[m-1]} ${y}${rel}`;
+}
+async function hdLoad(day){
+  if(HD.loading===day) return; HD.loading=day;
+  const [a,b]=dayBounds(day);
+  try{ const r=await API(`/api/admin/history?from=${a}&to=${b}`); HD={day,rows:r.rows,truncated:!!r.truncated,err:null,loading:null}; }
+  catch(e){ HD={day,rows:null,truncated:false,err:e.message,loading:null}; }
+  if(SESSION && view==="history" && params.day===day && histRedraw) histRedraw();
+}
+function dayRows(day){
+  const [a,b]=dayBounds(day), live=DB.history.filter(h=>h.timestamp>=a&&h.timestamp<b);
+  if(HD.day!==day || !HD.rows) return live;
+  const ids=new Set(HD.rows.map(h=>h.id));
+  return live.filter(h=>!ids.has(h.id)).concat(HD.rows).sort((x,y)=>y.timestamp-x.timestamp);
+}
+function daySummary(rows){
+  const c={checkin:0,items:0,handout:0,return:0,depart:0,arrive:0}, staff=new Set();
+  rows.forEach(h=>{ const k=anKind(h); if(k&&c[k]!=null) c[k]++;
+    if(k==="checkin") c.items+=anItems(h.notes).reduce((a,[,q])=>a+q,0);
+    if(!String(h.action).startsWith("[Admin]")&&h.user_id!=null) staff.add(h.user_id); });
+  const T=(n,l,col)=>`<div class="stat" style="--c:${col}"><b>${n}</b><span>${l}</span></div>`;
+  return `<div class="stats an4" style="margin-bottom:16px">
+    ${T(c.checkin,"Check-ins","var(--glacier)")}${T(c.items,"Items checked in","var(--st-occupied)")}
+    ${T(c.handout,"Hand-outs","var(--st-guest)")}${T(c.return,"Returns","var(--st-ready)")}
+    ${T(c.depart,"Departures","var(--signal)")}${T(c.arrive,"Cards registered","var(--mist)")}
+    ${T(staff.size,"Active staff","var(--st-preparing)")}${T(rows.length,"Records","var(--dim)")}</div>`;
+}
+function histCSV(){
+  if(!histRows.length){ toast("Nothing to export","info"); return; }
+  const rows=histRows.map(h=>({time:fmtDT(h.timestamp),staff:user(h.user_id)?.name||"System",action:h.action,
+    room:room(h.room_id)?.room_number??(h.room_id??""),storage:stor(h.storage_id)?.storage_number??(h.storage_id??""),
+    card:card(h.key_card_id)?.card_code??(h.key_card_id??""),notes:h.notes||"",from:h.prev||"",to:h.next||""}));
+  toCSV("history",rows,`skivalet-history-${params.day||"latest"}-${stamp()}.csv`);
+}
+V.history = (p) => {
+  const day=p.day||"", t=isoToday(), y=shiftDay(t,-1), uSel=String(p.u||"");
+  return {body:`
+  <h1>History</h1>
+  <p class="lead">Full audit trail. Admin changes are marked <span style="color:var(--signal)">[Admin]</span>.
+    Pick a day to see every record of that day — older days are loaded from the database.</p>
+  <div class="toolbar">
+    <div class="seg">
+      <button class="${day?"":"on"}" data-act="hist-day" data-day="">All</button>
+      <button class="${day===t?"on":""}" data-act="hist-day" data-day="${t}">Today</button>
+      <button class="${day===y?"on":""}" data-act="hist-day" data-day="${y}">Yesterday</button>
+    </div>
+    <button class="btn sm" data-act="hist-shift" data-n="-1" title="Previous day">‹</button>
+    <input class="input" type="date" id="hDay" value="${esc(day)}" max="${t}" style="width:auto">
+    <button class="btn sm" data-act="hist-shift" data-n="1" title="Next day" ${day&&day<t?"":"disabled"}>›</button>
+  </div>
+  <div id="hSum"></div>
+  <div class="toolbar">
+    <div class="searchbar">🔎<input id="hQ" value="${esc(p.q||"")}" placeholder="Action, staff, room, storage, card, note…" autocomplete="off"></div>
+    <select class="input" id="hU"><option value="">Everyone</option>${DB.users.filter(u=>(!u.retired&&!u.archived)||DB.history.some(h=>h.user_id===u.id))
+      .map(u=>`<option value="${u.id}" ${uSel===String(u.id)?"selected":""}>${esc(u.name)}</option>`).join("")}<option value="sys" ${uSel==="sys"?"selected":""}>System</option></select>
+    <button class="btn ghost" data-act="hist-csv">CSV</button>
+  </div>
+  <div id="hList"></div><div class="pager" id="hPager"></div>`,
+  after(){
+    if(day && HD.day!==day && HD.loading!==day) hdLoad(day);
+    const draw=()=>{
+      if(!$("#hQ")) return;
+      const q=$("#hQ").value.trim().toLowerCase(), u=$("#hU").value; params.q=$("#hQ").value; params.u=u;
+      const base=day?dayRows(day):DB.history;
+      const rows=base.filter(h=>{
+        if(u==="sys"&&h.user_id!=null) return false;
+        if(u&&u!=="sys"&&h.user_id!==+u) return false;
+        if(!q) return true;
+        return [h.action,user(h.user_id)?.name,room(h.room_id)?.room_number,stor(h.storage_id)?.storage_number,card(h.key_card_id)?.card_code,h.notes,h.prev,h.next].join(" ").toLowerCase().includes(q); });
+      histRows=rows;
+      const LIM=day?1000:250;
+      if(day){
+        const st = HD.day===day
+          ? (HD.err?`<div class="banner">Couldn't load this day from the database (${esc(HD.err)}) — showing only the records this console holds.</div>`
+            :HD.truncated?`<div class="banner">Very busy day — only the newest ${HD.rows.length} records were loaded.</div>`:"")
+          : `<p class="dim tiny" style="margin:0 0 10px">Loading the full day from the database…</p>`;
+        $("#hSum").innerHTML=`<h2 class="sec" style="margin-top:4px">${esc(dayLabel(day))}</h2>${st}${daySummary(base)}`;
+        $("#hList").innerHTML=rows.length?`<div class="hist">${rows.slice(0,LIM).map(histEvent).join("")}</div>`
+          :`<div class="panel dim" style="text-align:center">${base.length?"No records match the filter.":"No activity on this day."}</div>`;
+      } else {
+        $("#hSum").innerHTML="";
+        const per={}; rows.forEach(h=>{ const k=dKey(h.timestamp); per[k]=(per[k]||0)+1; });
+        let html="", curDay=null, open=false;
+        rows.slice(0,LIM).forEach(h=>{ const k=dKey(h.timestamp);
+          if(k!==curDay){ if(open) html+=`</div>`; curDay=k; open=true;
+            html+=`<h2 class="sec"><span class="lnk" data-act="hist-day" data-day="${k}">${esc(dayLabel(k))}</span> · ${per[k]}</h2><div class="hist">`; }
+          html+=histEvent(h); });
+        if(open) html+=`</div>`;
+        $("#hList").innerHTML=html||`<div class="dim">No records match.</div>`;
+      }
+      $("#hPager").textContent=rows.length>LIM?`Showing ${LIM} of ${rows.length}`:`${rows.length} records`;
+    };
+    histRedraw=draw;
+    $("#hQ").addEventListener("input",draw); $("#hU").addEventListener("change",draw);
+    $("#hDay").addEventListener("change",e=>go("history",{q:params.q,u:params.u,day:e.target.value}));
+    draw();
+  }};
+};
+
+/* ---------- analytics ----------
+   Everything is computed from the audit trail the valet app already writes, plus
+   the current hall state — no extra tracking is needed in index.html.
+   The console's normal sync only holds the latest 5,000 history rows, so the page
+   fetches the full window from /api/admin/analytics and merges in live rows that
+   arrive through SkiSync afterwards. If that call fails it falls back to DB.history. */
+const AN_KIND = {
+  "Equipment checked in":"checkin", "Equipment checked out":"handout",
+  "Equipment returned":"return",     "Checked out & released":"depart",
+  "Key card registered":"arrive",    "Key card reused":"arrive",
+  "Key card scanned":"scan",         "Signed in":"signin",
+  "Storage cleared":"clear"
+};
+const AN_FLOW = [["checkin","Check-ins","var(--glacier)"],["handout","Hand-outs","var(--st-guest)"],
+                 ["return","Returns","var(--st-ready)"],["depart","Departures","var(--signal)"]];
+const AN_OPS = new Set(["checkin","handout","return","depart","arrive","scan"]);   // "movements" at the desk
+const AN_RANGES = [["today","Today"],["7","7 days"],["30","30 days"],["all","Season"]];
+const DAYMS = 864e5, WD = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const anKind = h => AN_KIND[h.action] || null;
+const sod = ts => { const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); };
+const pad2 = n => String(n).padStart(2,"0");
+const dKey = ts => { const d=new Date(ts); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
+const wdIdx = ts => (new Date(ts).getDay()+6)%7;          // Monday = 0
+const anMean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+const anMedian = a => { if(!a.length) return null; const s=[...a].sort((x,y)=>x-y), i=s.length>>1; return s.length%2?s[i]:(s[i-1]+s[i])/2; };
+/* "Skis ×2, Poles ×1 · 2 cards released" → [["Skis",2],["Poles",1]] */
+function anItems(notes){
+  return String(notes||"").split(" · ")[0].split(",")
+    .map(x=>x.trim().match(/^(.+?)\s*×\s*(\d+)$/)).filter(Boolean).map(m=>[m[1],+m[2]]);
+}
+function fmtDur(ms){
+  if(ms==null||!isFinite(ms)) return "—";
+  const m=Math.round(ms/6e4); if(m<60) return m+" min";
+  if(m<1440) return Math.floor(m/60)+"h "+pad2(m%60)+"m";
+  return (m/1440).toFixed(1)+" days";
+}
+let AN = {key:null, rows:null, from:0, oldest:null, total:null, truncated:false, err:null, loading:null};
+let AN_H = null;                                           // merged history for the current render
+const AN_LOOKBACK = 21*DAYMS;                              // extra days so stays/trips that began earlier still pair up
+const anSrc = () => AN_H || DB.history;
+function anHist(r){
+  if(AN.key!==r || !AN.rows) return DB.history;
+  const ids=new Set(AN.rows.map(h=>h.id));
+  const live=DB.history.filter(h=>h.timestamp>=AN.from && !ids.has(h.id));
+  return live.length ? live.concat(AN.rows) : AN.rows;
+}
+async function anLoad(r){
+  if(AN.loading===r) return;
+  const rg=anRange(r), from = r==="all" ? 0 : Math.min(rg.from, rg.pFrom??rg.from) - AN_LOOKBACK;
+  AN.loading=r;
+  try{
+    const d=await API(`/api/admin/analytics?from=${Math.floor(from)}&to=${now()+6e4}`);
+    AN={key:r, from, oldest:d.oldest, total:d.total, truncated:!!d.truncated, err:null, loading:null,
+        rows:d.rows.map(([id,timestamp,user_id,action,storage_id,notes])=>({id,timestamp,user_id,action,storage_id,notes:notes||""}))};
+  }catch(e){ AN={key:r, rows:null, from:0, oldest:null, total:null, truncated:false, err:e.message, loading:null}; }
+  if(SESSION && view==="analytics" && (params.range||"7")===r) render();
+}
+function anRange(r){
+  const t=now(), today=sod(t);
+  if(r==="today") return {from:today,to:t,pFrom:today-DAYMS,pTo:t-DAYMS,prevLbl:"yesterday",hourly:true};
+  if(r==="all"){ const oldest=AN.key==="all"&&AN.oldest!=null ? AN.oldest : anSrc().reduce((m,h)=>Math.min(m,h.timestamp||t),t);
+    return {from:sod(Math.min(oldest,t)),to:t}; }
+  const n=+r, from=today-(n-1)*DAYMS;
+  return {from,to:t,pFrom:from-n*DAYMS,pTo:from-1,prevLbl:`prev. ${n} days`};
+}
+function anSummary(from,to){
+  const c={checkin:0,handout:0,return:0,depart:0,arrive:0,scan:0,signin:0,items:0,actions:0,ops:0}, staff=new Set();
+  const rows=anSrc().filter(h=>h.timestamp>=from&&h.timestamp<=to);
+  rows.forEach(h=>{
+    const k=anKind(h); if(k&&c[k]!=null) c[k]++;
+    if(AN_OPS.has(k)) c.ops++;
+    if(k==="checkin") c.items+=anItems(h.notes).reduce((a,[,q])=>a+q,0);
+    if(!String(h.action).startsWith("[Admin]")&&h.user_id!=null){ c.actions++; staff.add(h.user_id); }
+  });
+  c.staff=staff.size; c.rows=rows; return c;
+}
+/* Pair events per storage over the whole loaded history (oldest → newest):
+   stay = first check-in → final check-out; out = hand-out → return. */
+function anDurations(){
+  const stay=[], out=[], firstIn={}, lastOut={};
+  [...anSrc()].sort((a,b)=>a.timestamp-b.timestamp).forEach(h=>{
+    const k=anKind(h), s=h.storage_id; if(s==null||!k) return;
+    if(k==="checkin"){ if(firstIn[s]==null) firstIn[s]=h.timestamp; }
+    else if(k==="handout") lastOut[s]=h.timestamp;
+    else if(k==="return"){ if(lastOut[s]!=null) out.push({end:h.timestamp,ms:h.timestamp-lastOut[s]}); lastOut[s]=null; }
+    else if(k==="depart"||k==="clear"){
+      if(k==="depart"&&firstIn[s]!=null) stay.push({end:h.timestamp,ms:h.timestamp-firstIn[s]});
+      firstIn[s]=null; lastOut[s]=null; }
+  });
+  return {stay,out};
+}
+function anBuckets(rg){
+  const list=[];
+  if(rg.hourly){ for(let i=0;i<24;i++) list.push({key:i,label:`${pad2(i)}:00–${pad2(i+1)}:00`,short:pad2(i),vals:{}}); }
+  else for(let d=rg.from; d<=rg.to; d+=DAYMS){ const dt=new Date(d);
+    list.push({key:dKey(d),label:`${WD[wdIdx(d)]} ${dt.getDate()} ${MON[dt.getMonth()]}`,short:`${dt.getDate()} ${MON[dt.getMonth()]}`,vals:{}}); }
+  const idx=Object.fromEntries(list.map((b,i)=>[b.key,i]));
+  return {list,at:h=>list[idx[rg.hourly?new Date(h.timestamp).getHours():dKey(h.timestamp)]]};
+}
+function anBarSVG(list,W){
+  const H=210, pl=34, pb=26, pt=12, n=list.length||1;
+  const tot=b=>AN_FLOW.reduce((a,[k])=>a+(b.vals[k]||0),0);
+  const max=Math.max(4,...list.map(tot)), y=v=>pt+(H-pt-pb)*(1-v/max);
+  const step=(W-pl)/n, bw=Math.max(3,Math.min(34,step*.68)), every=Math.max(1,Math.ceil(n/Math.max(1,Math.floor((W-pl)/52))));
+  let g=[...new Set([0,Math.round(max/2),max])].map(t=>
+    `<line x1="${pl}" x2="${W}" y1="${y(t)}" y2="${y(t)}" style="stroke:var(--line)" ${t?'stroke-dasharray="2 4"':""}/><text x="${pl-7}" y="${y(t)+4}" text-anchor="end">${t}</text>`).join("");
+  list.forEach((b,i)=>{
+    const x=pl+i*step+(step-bw)/2; let acc=0;
+    const tip=`${b.label} — `+AN_FLOW.map(([k,l])=>`${l}: ${b.vals[k]||0}`).join(", ");
+    AN_FLOW.forEach(([k,,c])=>{ const v=b.vals[k]||0; if(!v) return;
+      g+=`<rect x="${x}" y="${y(acc+v)}" width="${bw}" height="${Math.max(1,y(acc)-y(acc+v)-1)}" rx="2" style="fill:${c}"/>`; acc+=v; });
+    g+=`<rect x="${pl+i*step}" y="${pt}" width="${step}" height="${H-pt-pb}" fill="transparent"><title>${esc(tip)}</title></rect>`;
+    if(i%every===0) g+=`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle">${esc(b.short)}</text>`;
+  });
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Activity chart">${g}</svg>`;
+}
+function anBars(entries,color){
+  const max=Math.max(1,...entries.map(e=>e[1]));
+  return `<div class="bars">${entries.map(([l,v,sub])=>`<div class="br"><span>${esc(l)}</span>
+    <span class="tr"><i style="width:${(v/max*100).toFixed(1)}%;--c:${color}"></i></span><span class="n">${sub??v}</span></div>`).join("")}</div>`;
+}
+function anCSV(){
+  AN_H=anHist(params.range||"7");
+  const rg=anRange(params.range||"7"), out=[["date","check_ins","items_checked_in","hand_outs","returns","departures","cards_registered","card_scans","sign_ins","active_staff","staff_actions"]];
+  for(let d=sod(rg.from); d<=rg.to; d+=DAYMS){ const c=anSummary(d,d+DAYMS-1);
+    out.push([dKey(d),c.checkin,c.items,c.handout,c.return,c.depart,c.arrive,c.scan,c.signin,c.staff,c.actions]); }
+  download(`skivalet-analytics-${stamp()}.csv`,out.map(r=>r.join(",")).join("\n"),"text/csv");
+}
+
+V.analytics = (p) => {
+  const r=p.range||"7"; AN_H=anHist(r);
+  const fresh=AN.key===r&&AN.rows, failed=AN.key===r&&AN.err;
+  const rg=anRange(r), cur=anSummary(rg.from,rg.to), prev=rg.pFrom!=null?anSummary(rg.pFrom,rg.pTo):null;
+  const delta=k=>{ if(!prev) return ""; const a=cur[k], b=prev[k];
+    if(!b) return `<span class="dl ${a?"up":""}">${a?"▲ new":"—"} vs ${rg.prevLbl}</span>`;
+    const d=Math.round((a-b)/b*100);
+    return `<span class="dl ${d>0?"up":d<0?"dn":""}">${d>0?"▲":d<0?"▼":"="} ${Math.abs(d)}% vs ${rg.prevLbl}</span>`; };
+  const T=(k,n,l,c)=>`<div class="stat" style="--c:${c}"><b>${n}</b><span>${l}</span>${k?delta(k):""}</div>`;
+
+  /* durations that finished inside the range */
+  const D=anDurations(), inR=x=>x.end>=rg.from&&x.end<=rg.to;
+  const stays=D.stay.filter(inR).map(x=>x.ms), outs=D.out.filter(inR).map(x=>x.ms);
+
+  /* heatmap weekday × hour, staff, equipment mix */
+  const heat=Array.from({length:7},()=>Array(24).fill(0)), staff={}, mix={};
+  cur.rows.forEach(h=>{
+    const k=anKind(h), adm=String(h.action).startsWith("[Admin]");
+    if(AN_OPS.has(k)){ const d=new Date(h.timestamp); heat[wdIdx(h.timestamp)][d.getHours()]++; }
+    if(!adm&&h.user_id!=null){ const s=staff[h.user_id]||(staff[h.user_id]={id:h.user_id,total:0,last:0});
+      s.total++; if(k) s[k]=(s[k]||0)+1; s.last=Math.max(s.last,h.timestamp); }
+    if(h.action==="Equipment checked in"||h.action==="Equipment added") anItems(h.notes).forEach(([l,q])=>mix[l]=(mix[l]||0)+q);
+  });
+  const hmax=Math.max(1,...heat.flat());
+  const hourTot=Array(24).fill(0); heat.forEach(row=>row.forEach((v,i)=>hourTot[i]+=v));
+  const peakH=hourTot.indexOf(Math.max(...hourTot));
+  const byDay={}; cur.rows.forEach(h=>{ if(AN_OPS.has(anKind(h))) byDay[dKey(h.timestamp)]=(byDay[dKey(h.timestamp)]||0)+1; });
+  const busiest=Object.entries(byDay).sort((a,b)=>b[1]-a[1])[0];
+  const staffRows=Object.values(staff).sort((a,b)=>b.total-a.total);
+
+  /* live state */
+  const inUse=DB.storages.filter(s=>s.status!=="available"&&s.status!=="closed"), open=DB.storages.filter(s=>s.status!=="closed");
+  const areas=[...new Set(DB.storages.map(areaOf))].sort().map(a=>{ const all=DB.storages.filter(s=>areaOf(s)===a&&s.status!=="closed"), u=all.filter(s=>s.status!=="available");
+    return [a,u.length,`${u.length}/${all.length}`]; });
+  const util=open.length?Math.round(inUse.length/open.length*100):0;
+
+  const oldest=fresh&&AN.oldest!=null ? AN.oldest : DB.history.reduce((m,h)=>Math.min(m,h.timestamp||Infinity),Infinity);
+  const src = fresh
+    ? `${AN.total} records in the database${isFinite(oldest)?`, oldest ${fmtDT(oldest)}`:""}.
+       ${AN.truncated?`<span style="color:var(--st-preparing)">This period is very large, so only the newest rows were loaded.</span>`:""}`
+    : failed
+    ? `<span style="color:var(--st-preparing)">Couldn't load the full history from the server (${esc(AN.err)}) — showing the latest ${DB.history.length} records held by this console.</span>`
+    : `<span class="dim">Loading full history from the database…</span>`;
+  const ins=(v,l)=>`<div class="insight"><b>${v}</b><span class="muted">${l}</span></div>`;
+  const dayLbl=k=>{ const [y,m,d]=k.split("-").map(Number), dt=new Date(y,m-1,d); return `${WD[wdIdx(dt)]} ${d} ${MON[m-1]}`; };
+
+  return {body:`
+    <h1>Analytics</h1>
+    <p class="lead">How the valet desk is being used — built from the activity history the app already records.
+      ${src}</p>
+    <div class="toolbar">
+      <div class="seg">${AN_RANGES.map(([k,l])=>`<button class="${k===r?"on":""}" data-act="an-range" data-r="${k}">${l}</button>`).join("")}</div>
+      <span class="grow"></span>
+      <button class="btn ghost" data-act="an-csv">Daily CSV</button>
+    </div>
+
+    <div class="stats an4">
+      ${T("checkin",cur.checkin,"Check-ins","var(--glacier)")}
+      ${T("items",cur.items,"Items checked in","var(--st-occupied)")}
+      ${T("handout",cur.handout,"Hand-outs","var(--st-guest)")}
+      ${T("return",cur.return,"Returns","var(--st-ready)")}
+      ${T("depart",cur.depart,"Departures","var(--signal)")}
+      ${T("arrive",cur.arrive,"Cards registered","var(--mist)")}
+      ${T("scan",cur.scan,"Card scans","var(--dim)")}
+      ${T("staff",cur.staff,"Active staff","var(--st-preparing)")}
+    </div>
+
+    <h2 class="sec">Desk activity · ${rg.hourly?"by hour":"by day"}</h2>
+    <div class="panel">
+      <div class="an-legend">${AN_FLOW.map(([,l,c])=>`<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>
+      <div class="an-chart" id="anChart"></div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <h2 class="sec">Key numbers</h2>
+        <div class="panel">
+          ${ins(busiest?dayLbl(busiest[0]):"—",busiest?`busiest day · ${busiest[1]} movements`:"busiest day")}
+          ${ins(cur.ops?`${pad2(peakH)}:00–${pad2(peakH+1)}:00`:"—",cur.ops?`peak hour · ${Math.round(hourTot[peakH]/cur.ops*100)}% of movements`:"peak hour")}
+          ${ins(fmtDur(anMedian(stays)),`typical stay, check-in → final check-out${stays.length?` · ${stays.length} stays, avg ${fmtDur(anMean(stays))}`:""}`)}
+          ${ins(fmtDur(anMedian(outs)),`typical time out with guest, hand-out → return${outs.length?` · ${outs.length} trips`:""}`)}
+          ${ins(cur.checkin?(cur.items/cur.checkin).toFixed(1):"—","items per check-in")}
+          ${ins(cur.signin,"staff sign-ins")}
+        </div>
+      </div>
+      <div>
+        <h2 class="sec">Right now · ${util}% in use</h2>
+        <div class="panel">
+          <div class="row" style="margin-bottom:12px;gap:18px">
+            <span class="muted tiny"><b style="color:var(--frost)">${inUse.length}</b> of ${open.length} storages in use</span>
+            <span class="muted tiny"><b style="color:var(--frost)">${DB.storages.filter(s=>s.status==="guest_using").length}</b> with guests</span>
+            <span class="muted tiny"><b style="color:var(--frost)">${DB.equipment.reduce((a,e)=>a+(+e.quantity||0),0)}</b> items stored</span>
+          </div>
+          ${areas.length?anBars(areas,"var(--glacier)"):`<div class="dim">No storage locations yet.</div>`}
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">When the desk is busy · weekday × hour</h2>
+    <div class="panel an-chart">
+      <div class="heat">
+        <span></span>${Array.from({length:24},(_,i)=>`<span class="hh">${i%3===0?pad2(i):""}</span>`).join("")}
+        ${heat.map((row,d)=>`<span class="hl">${WD[d]}</span>${row.map((v,h)=>`<span class="hc" title="${WD[d]} ${pad2(h)}:00 · ${v} movement${v===1?"":"s"}"
+          style="${v?`opacity:${(.15+.85*v/hmax).toFixed(2)}`:"background:var(--slab2)"}"></span>`).join("")}`).join("")}
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <h2 class="sec">Staff activity</h2>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Staff</th><th class="num">In</th><th class="num">Out</th><th class="num">Back</th><th class="num">Dep.</th><th class="num">Total</th><th>Last active</th></tr></thead>
+          <tbody>${staffRows.map(s=>{ const n=user(s.id)?.name||"#"+s.id;
+            return `<tr><td><span class="lnk" data-act="go" data-view="history" data-q="${esc(n)}">${esc(n)}</span></td>
+              <td class="num">${s.checkin||0}</td><td class="num">${s.handout||0}</td><td class="num">${s.return||0}</td><td class="num">${s.depart||0}</td>
+              <td class="num"><b>${s.total}</b></td><td class="muted">${ago(s.last)}</td></tr>`; }).join("")
+            ||`<tr><td colspan="7" class="dim">No staff activity in this period.</td></tr>`}</tbody>
+        </table></div>
+      </div>
+      <div>
+        <h2 class="sec">Equipment checked in</h2>
+        <div class="panel">${Object.keys(mix).length?anBars(Object.entries(mix).sort((a,b)=>b[1]-a[1]),"var(--st-occupied)"):`<div class="dim">No equipment checked in during this period.</div>`}</div>
+      </div>
+    </div>`,
+  after(){
+    if(AN.key!==r && AN.loading!==r) anLoad(r);
+    const el=$("#anChart"); if(!el) return;
+    const B=anBuckets(rg);
+    cur.rows.forEach(h=>{ const k=anKind(h), b=B.at(h); if(b&&AN_FLOW.some(([f])=>f===k)) b.vals[k]=(b.vals[k]||0)+1; });
+    el.innerHTML=anBarSVG(B.list,Math.max(el.clientWidth||600,B.list.length*12+40));
+  }};
+};
+
+/* ---------- backup & data ---------- */
+let SNAPS=null;                 // snapshot list, loaded from the server when this view opens
+V.data = () => {
+  const snaps=SNAPS||[];
+  return {body:`
+    <h1>Backup &amp; data</h1>
+    <p class="lead">All data lives in the PostgreSQL database on the server. Download a backup before large repairs; it can be restored here at any time.</p>
+    <div class="grid2">
+      <div class="panel">
+        <h2 class="sec" style="margin-top:0">Backup</h2>
+        <div class="row"><button class="btn primary" data-act="export">Download full backup (.json)</button></div>
+        <h2 class="sec">Restore</h2>
+        <p class="muted tiny" style="margin-top:0">Replaces all current data with a backup file. A snapshot of the current state is taken first.</p>
+        <input type="file" id="impFile" accept=".json,application/json" class="input">
+      </div>
+      <div class="panel">
+        <h2 class="sec" style="margin-top:0">Undo snapshots · ${SNAPS?snaps.length:"…"}</h2>
+        <p class="muted tiny" style="margin-top:0">Taken automatically before every admin change (latest ${MAX_SNAPS}). Restoring also snapshots the current state.</p>
+        ${snaps.map(s=>`<div class="issue" style="border-left-color:var(--glacier)"><div class="grow"><b>${esc(s.label)}</b>
+          <p>${fmtDT(s.ts)} · ${esc(s.by)} · before this change</p></div>
+          <button class="btn sm" data-act="snap-restore" data-sid="${s.id}">Restore</button>
+          <button class="btn sm ghost" data-act="snap-dl" data-sid="${s.id}">⬇</button></div>`).join("")||`<div class="dim tiny">${SNAPS?"No snapshots yet.":"Loading…"}</div>`}
+      </div>
+    </div>
+    <h2 class="sec">Raw database editor</h2>
+    <p class="muted tiny">Last resort: edit the full JSON directly. It is validated before saving. History records are kept as they are on the server.</p>
+    <textarea class="input code" id="rawDB" spellcheck="false">${esc(JSON.stringify(DB,null,2))}</textarea>
+    <div class="row" style="margin-top:10px;justify-content:flex-end">
+      <button class="btn ghost" data-act="raw-reload">Discard edits</button>
+      <button class="btn primary" data-act="raw-save">Validate &amp; save</button></div>
+    <h2 class="sec">Danger zone</h2>
+    <div class="row">
+      <button class="btn danger" data-act="clear-history">Clear history</button>
+      <button class="btn danger" data-act="wipe">Erase all hall data (keep staff)</button>
+    </div>`,
+  after(){ if(!SNAPS) loadSnaps();
+    $("#impFile").addEventListener("change",e=>{ const f=e.target.files[0]; if(!f) return;
+    const rd=new FileReader(); rd.onload=()=>importJSON(rd.result,f.name); rd.readAsText(f); }); }};
+};
+function validateDB(o){
+  if(!o||typeof o!=="object"||Array.isArray(o)) return "Top level must be an object";
+  for(const k of COLLECTIONS) if(o[k]!==undefined&&!Array.isArray(o[k])) return `"${k}" must be an array`;
+  for(const k of COLLECTIONS) for(const x of (o[k]||[])) if(!x||typeof x!=="object"||x.id==null) return `Every ${k} record needs an id`;
+  return null;
+}
+async function loadSnaps(){
+  if(SkiSync.pending()) await new Promise(r=>setTimeout(r,900));   // let the snapshot of the last change land
+  try{ SNAPS=(await API("/api/admin/snapshots")).snapshots; }catch(e){ SNAPS=[]; toast(e.message,"err"); }
+  if(view==="data" && document.activeElement?.id!=="rawDB" && $("#modal").classList.contains("hidden")) render();
+}
+/* Replace everything on the server (backup restore, raw edit). The server takes
+   a snapshot first, writes the new data and makes every device reload. */
+async function replaceDB(next,label,notes,keepHistory){
+  const err=validateDB(next); if(err){ toast(err,"err"); return false; }
+  if(SkiSync.pending()){ try{ await SkiSync.save(); }catch(_){} }
+  try{ await API("/api/admin/replace",{data:next,label,notes,keep_history:!!keepHistory}); AN.key=null; HD.day=null; }
+  catch(e){ toast(e.message,"err"); return false; }
+  await SkiSync.reload(); SNAPS=null; render(); return true;
+}
+async function serverAction(path,body,okMsg){
+  try{ await API(path,body||{}); await SkiSync.reload(); SNAPS=null; AN.key=null; HD.day=null; render(); if(okMsg) toast(okMsg); }
+  catch(e){ toast(e.message,"err"); }
+}
+function importJSON(text,name){
+  let o; try{ o=JSON.parse(text); }catch(e){ toast("Not valid JSON","err"); return; }
+  if(o&&o.skivalet_backup&&o.data) o=o.data;
+  const err=validateDB(o); if(err){ toast(err,"err"); return; }
+  openSheet(`<h3>Restore backup</h3><p class="sub">${esc(name)}</p>
+    <div class="panel tiny">${COLLECTIONS.map(k=>`<div class="row"><span class="grow muted">${k}</span><b>${(o[k]||[]).length}</b><span class="dim">now ${DB[k].length}</span></div>`).join("")}</div>
+    <div class="foot"><button class="btn" data-act="close">Cancel</button><button class="btn primary" id="doImp">Replace current data</button></div>`);
+  $("#doImp").onclick=async()=>{ closeSheet(); if(await replaceDB(o,"Backup restored",name,false)) toast("Backup restored"); };
+}
+
+/* ---------- modal ---------- */
+function openSheet(html,wide){ const m=$("#modal"); m.innerHTML=`<div class="sheet${wide?" wide":""}"><button class="sheet-x" aria-label="Close">✕</button>${html}</div>`; m.classList.remove("hidden");
+  document.documentElement.classList.add("sheet-open");
+  m.onclick=e=>{ if(e.target===m || e.target.closest(".sheet-x")) closeSheet(); }; }
+function closeSheet(){ const m=$("#modal"); m.classList.add("hidden"); m.innerHTML=""; document.documentElement.classList.remove("sheet-open"); }
+function confirmSheet(title,sub,btn,fn){
+  openSheet(`<h3 style="color:var(--st-attention)">${title}</h3><p class="sub">${sub}</p>
+    <div class="foot"><button class="btn" data-act="close">Cancel</button><button class="btn danger" id="cfOk">${btn}</button></div>`);
+  $("#cfOk").onclick=()=>{ closeSheet(); fn(); };
+}
+
+/* ==========================================================================
+   7. EVENTS
+   ========================================================================== */
+document.addEventListener("click",e=>{
+  const el=e.target.closest("[data-act]"); if(!el) return;
+  const a=el.dataset.act, col=el.dataset.col, id=el.dataset.id?+el.dataset.id:null;
+  switch(a){
+    case "login": doLogin(); break;
+    case "set-pin": setPin(); break;
+    case "set-admin": setAdminLogin(); break;
+    case "add-member": addMember(); break;
+    case "map-cell": openDetail("storages",id); break;
+    case "detail": openDetail(col,id); break;
+    case "map-edit": closeSheet(); openForm("storages",id); break;
+    case "map-del": closeSheet(); askDelete("storages",id); break;
+    case "map-new": mapNew(el.dataset.area); break;
+    case "map-range": mapRange(); break;
+    case "load-layout": el.disabled=true;
+      SkiSync.loadLayout().then(n=>{ toast(n?n+" locations created":"Nothing missing", n?"":"info"); render(); })
+        .catch(e=>{ toast(e.message,"err"); el.disabled=false; }); break;
+    case "map-range-go": mapRangeGo(); break;
+    case "map-rename": mapRename(el.dataset.area); break;
+    case "map-rename-go": mapRenameGo(el.dataset.area); break;
+    case "map-drop-free": mapDropFree(el.dataset.area); break;
+    case "edit-member": editMember(id); break;
+    case "member-pin": memberPin(id); break;
+    case "save-member-pin": saveMemberPin(id); break;
+    case "clear-member-pin": confirmSheet("Remove PIN",esc(user(id)?.name||"")+" will sign in with the shared staff PIN again.","Remove PIN",()=>saveMemberPin(id,true)); break;
+    case "save-member": saveMember(id); break;
+    case "rm-member": removeMember(id); break;
+    case "restore-member": restoreMember(id); break;
+    case "signout": signOut(); break;
+    case "change-room": openChangeRoom(id); break;
+    case "do-change-room": doChangeRoom(id); break;
+    case "kiosk-add": kioskAdd(); break;
+    case "kiosk-code": kioskCode(id); break;
+    case "kiosk-rm": kioskRemove(id); break;
+    case "kiosk-reload": loadKiosks(); break;
+    case "an-range": go("analytics",{range:el.dataset.r}); break;
+    case "an-csv": anCSV(); break;
+    case "hist-day": go("history",{q:params.q,u:params.u,day:el.dataset.day}); break;
+    case "hist-shift": { const t=isoToday(), d=params.day?shiftDay(params.day,+el.dataset.n):t;
+      if(d<=t) go("history",{q:params.q,u:params.u,day:d}); break; }
+    case "hist-csv": histCSV(); break;
+    case "go": go(el.dataset.view, el.dataset.q?{q:el.dataset.q}:{}); break;
+    case "trace": closeSheet(); go("trace",{q:el.dataset.q}); break;
+    case "close": closeSheet(); break;
+    case "fix": { const i=checkIntegrity()[+el.dataset.n]; if(!i||!i.fix) break;
+      commit("Fix: "+i.t,()=>i.fix(),{action:"Data repaired",notes:i.t+" — "+i.p}); toast("Fixed"); break; }
+    case "fix-all": { let n=0, guard=0;
+      commit("Fix all automatic issues",()=>{ let list;
+        // re-check after each pass — one fix can reveal or clear another
+        while((list=checkIntegrity().filter(i=>i.fix)).length && guard++<20){ list.forEach(i=>{ i.fix(); n++; }); } },
+        {action:"Data repaired",notes:"Automatic repair"});
+      toast(n+" fix"+(n===1?"":"es")+" applied"); break; }
+    case "link-room-cards": { const s=stor(id);
+      commit(`Link room cards to ${s.storage_number}`,()=>{ cardsOfRoom(s.room_id).forEach(c=>{ c.storage_id=s.id; c.status="active"; c.updated_at=now(); }); },
+        {action:"Key cards linked",storage_id:s.id,room_id:s.room_id,notes:"All room cards now open "+s.storage_number}); toast("Cards linked"); break; }
+    case "new": openForm(col,null); break;
+    case "edit": openForm(col,id); break;
+    case "save": saveForm(col,el.dataset.id); break;
+    case "del": askDelete(col,id); break;
+    case "do-del": doDelete(col,id); break;
+    case "bulk-del": askBulkDelete(col); break;
+    case "do-bulk-del": doBulkDelete(col); break;
+    case "sel-clear": SEL.ids.clear(); SEL.redraw&&SEL.redraw(); break;
+    case "noop": break;
+    case "raw": openRaw(col,id); break;
+    case "save-raw": saveRaw(col,id); break;
+    case "csv": toCSV(col); break;
+    case "export": API("/api/admin/export").then(b=>download(`skivalet-backup-${stamp()}.json`,JSON.stringify(b,null,2))).catch(e=>toast(e.message,"err")); break;
+    case "snap-restore": { const s=(SNAPS||[]).find(x=>x.id===+el.dataset.sid); if(!s) break;
+      confirmSheet("Restore snapshot",`Go back to the state before “${esc(s.label)}” (${fmtDT(s.ts)}). Changes made after it, in the app or here, are lost — the current state is snapshotted first. History is kept.`,
+        "Restore",()=>serverAction(`/api/admin/snapshots/${s.id}/restore`,{},"Snapshot restored")); break; }
+    case "snap-dl": { const s=(SNAPS||[]).find(x=>x.id===+el.dataset.sid); if(!s) break;
+      API(`/api/admin/snapshots/${s.id}`).then(d=>download(`skivalet-snapshot-${s.ts}.json`,JSON.stringify(d,null,2))).catch(e=>toast(e.message,"err")); break; }
+    case "raw-reload": render(); break;
+    case "raw-save": { let o; try{ o=JSON.parse($("#rawDB").value); }catch(err){ toast("Invalid JSON: "+err.message,"err"); break; }
+      replaceDB(o,"Raw database edit","Full JSON edited",true).then(ok=>{ if(ok) toast("Database saved"); }); break; }
+    case "clear-history": confirmSheet("Clear history","Removes every audit record. Rooms, storages, cards and equipment stay.","Clear history",
+      ()=>serverAction("/api/admin/clear-history",{},"History cleared")); break;
+    case "wipe": confirmSheet("Erase all hall data","Every room, key card, storage and item is removed. Staff accounts stay.","Erase everything",
+      ()=>{ commit("Erase all hall data",()=>{ DB.rooms=[]; DB.storages=[]; DB.cards=[]; DB.equipment=[]; },{action:"Hall erased"}); toast("Hall erased","info"); }); break;
+  }
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape") closeSheet();
+  if(e.key==="Enter"&&(e.target.id==="lUser"||e.target.id==="lPass")) doLogin();
+  if(e.key==="Enter"&&(e.target.id==="mName"||e.target.id==="mMail")) addMember();
+  if(e.key==="Enter"&&e.target.id==="mpPin"){ const b=$('[data-act="save-member-pin"]'); b&&b.click(); }
+  if(e.key==="Enter"&&e.target.closest&&e.target.closest("#frm")){ const b=$('[data-act="save"]'); b&&b.click(); }
+});
+
+/* Changes from the valet app / other devices arrive through SkiSync. */
+SkiSync.init({
+  get: () => DB,
+  set: d => { DB = normalise(d); },
+  canWriteUsers: () => true,
+  onRemote: () => {
+    if(!SESSION) return;
+    const u=user(SESSION.id); if(!u){ SkiSync._authLost(); return; } SESSION=u;
+    // don't clobber a form or raw editor the admin is typing in
+    if(!$("#modal").classList.contains("hidden")||(view==="data"&&document.activeElement?.id==="rawDB")) return;
+    if(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    render();
+  },
+  onConflict: msg => { toast(msg,"info"); if(SESSION){ SESSION=user(SESSION.id)||SESSION; closeSheet(); render(); } },
+  onAuthLost: () => { const was=!!SESSION; SESSION=null; DB=normalise(null); closeSheet(); render(); if(was) toast("Signed out — please sign in again","info"); }
+});
+
+/* ==========================================================================
+   8. BOOT
+   ========================================================================== */
+(async function boot(){
+  DB=normalise(null);
+  try{
+    const me=await API("/api/me");
+    if(me.user && me.user.role==="admin"){ await SkiSync.start(); SESSION=user(me.user.id)||null; }
+  }catch(e){ toast(e.message,"err"); }
+  render();
+})();
+</script>
+</body>
+</html>
