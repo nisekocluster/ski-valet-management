@@ -295,6 +295,8 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
 .thumb{width:44px;height:44px;border-radius:9px;overflow:hidden;flex:none;padding:0;border:1px solid var(--line);background:var(--night)}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .ci-item{background:var(--slab);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:10px}
+.ci-person{display:flex;flex-direction:column;gap:2px;margin:16px 2px 8px}
+.ci-person b{font-size:18px}.ci-person small{color:var(--mist)}
 .ci-item .hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .ci-item .hd b{flex:1;font-family:var(--display);font-size:20px;letter-spacing:.6px;text-transform:uppercase}
 .ci-item .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -1495,8 +1497,8 @@ function usePrecheck(id){
   if(d.pcs.includes(pc.id)) return;
   if(!p.room_id && !d.pcs.length){ d.room=pc.room_number; d.guest=pcGuest(pc); if(pc.departure) d.dep=pc.departure; }
   d.pcs.push(pc.id);
-  // two of a kind = several people (a family registered together): the valet asks whose each item is
-  const owner = PC_ITEMS.some(([f])=>+pc[f]>1) ? "" : String(pc.first_name||"").trim();
+  // the kiosk registers each person of the room on their own, so every item is theirs
+  const owner = String(pc.first_name||"").trim();
   PC_ITEMS.forEach(([f,k])=>{ for(let n=0;n<(+pc[f]||0);n++) d.items.push({...newItem(k),owner,pc:pc.id}); });
   render();
 }
@@ -1526,10 +1528,13 @@ function drawItems(){
   const names=r?ownersOfRoom(r.id,d.items.map(i=>i.owner)):[...new Set(d.items.map(i=>String(i.owner||"").trim()).filter(Boolean))];
   box.innerHTML = itemsSummary(d) + ownerList("ciOwners",names) + d.items.map((i,n)=>{
     const c=catInfo(i.category), dest=stor(i.storage_id||i.auto);
+    // items from the kiosk come one person after another: a heading per person
+    const pc=i.pc&&precheck(i.pc), head=pc&&(n===0||d.items[n-1].pc!==i.pc)
+      ? `<div class="ci-person"><span class="eyebrow">Equipment of</span><b>${esc(pcGuest(pc))}</b><small>${esc(pcItems(pc))}</small></div>` : "";
     const free=freeAll.filter(s=>fitsItem(i,s,d.vip)), areas=[...new Set(free.map(s=>s.section||"Unassigned area"))];
     const want=kindsFor(i,false).map(k=>KINDS[k]).join(" / ");
     const usedByOthers=new Set(d.items.filter(x=>x!==i).map(x=>x.storage_id||x.auto).filter(Boolean));
-    return `<div class="ci-item" data-key="${i.key}">
+    return `${head}<div class="ci-item" data-key="${i.key}">
       <div class="hd"><span style="font-size:22px">${c.ic}</span><b>${esc(c.label)}</b>
         <button class="btn sm ghost" data-act="ci-del" data-key="${i.key}" aria-label="Remove">✕</button></div>
       <input class="input" data-ci="owner" value="${esc(i.owner||"")}" list="ciOwners" placeholder="Whose is it? e.g. Maria, Dad, red jacket" autocomplete="off" style="margin-bottom:8px">

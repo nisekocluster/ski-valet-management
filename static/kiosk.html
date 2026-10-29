@@ -43,10 +43,9 @@ input{user-select:text; -webkit-user-select:text}
 .brand i{width:14px; height:14px; border-radius:4px; background:var(--signal); display:inline-block}
 .pill.fs{width:56px; padding:0; display:grid; place-items:center; color:var(--glacier)}
 .pill.fs svg{width:28px; height:28px}
-.steps{flex:1; display:flex; justify-content:center; gap:10px}
-.steps span{width:56px; height:6px; border-radius:3px; background:var(--line)}
-.steps span.on{background:var(--signal)}
-.steps span.done{background:var(--glacier)}
+.steps{flex:1; max-width:420px; margin:0 auto; height:6px; border-radius:3px; background:var(--line); overflow:hidden; visibility:hidden}
+.steps.on{visibility:visible}
+.steps i{display:block; height:100%; width:0; background:var(--signal); border-radius:3px; transition:width .25s}
 .pill{height:56px; padding:0 24px; border-radius:999px; border:1px solid var(--line); background:var(--slab);
   color:var(--frost); font:600 20px var(--body); cursor:pointer}
 .screen{position:absolute; inset:96px 0 0 0; padding:20px 64px 40px; display:none; flex-direction:column}
@@ -150,7 +149,12 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
 .privacy{font-size:18px; color:var(--dim); line-height:1.5}
 
 /* review */
-.sum{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:22px}
+.sum{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:18px; max-height:100%; overflow-y:auto; align-content:start;
+  touch-action:pan-y; overscroll-behavior:contain}
+.sum .it.person b{font-size:28px}
+.sum .it.person em{display:block; font-style:normal; font-size:20px; color:var(--frost); margin-top:4px}
+.sum .it .ini{width:76px; height:76px; flex:none; border-radius:50%; background:var(--slab2); display:grid; place-items:center;
+  font:700 30px var(--display); color:var(--glacier)}
 .sum .it{background:var(--slab); border:2px solid var(--line); border-radius:var(--r); padding:22px 26px; display:flex;
   align-items:center; gap:20px; min-height:120px}
 .sum .it div{flex:1}
@@ -168,8 +172,11 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
 .done .sub{max-width:900px}
 .reset{margin-top:40px; color:var(--dim); font-size:22px}
 .done .group{color:var(--glacier); margin-top:14px; min-height:34px}
-.btn.add{margin-top:22px; background:transparent; border:2px solid var(--glacier); color:var(--glacier); min-width:520px}
-.btn.add:active{background:#0f2a3d}
+/* people of the room */
+.card.grp{width:360px; flex:none; padding:36px 28px}
+.card.grp .count output{font-size:96px; width:110px}
+.card.grp .unit{font-size:22px; margin-top:0}
+[data-s="group"] .fields{flex:1; width:auto}
 
 /* idle warning */
 .idle{position:absolute; inset:0; background:rgba(5,11,18,.82); display:none; place-items:center; z-index:5}
@@ -183,6 +190,9 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
 .portrait .body{flex-direction:column; justify-content:center; gap:40px}
 .portrait .fields{width:100%}
 .portrait [data-s="2"] .body{justify-content:flex-start; padding-top:48px}   /* stay above the screen keyboard */
+.portrait .card.grp{width:100%; display:flex; flex-direction:row; justify-content:center; gap:36px}
+.portrait [data-s="group"] .fields{width:100%; flex:none}
+.portrait .card.grp .unit{align-self:center}
 .portrait .kb-note{display:none}
 .portrait .langs{grid-template-columns:repeat(2, 330px); gap:24px}
 .portrait .lang{height:180px}
@@ -203,7 +213,7 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
 
   <div class="top">
     <div class="brand"><i></i>Ski Valet</div>
-    <div class="steps" id="steps"></div>
+    <div class="steps" id="steps"><i id="bar"></i></div>
     <button class="pill fs" id="fsBtn" hidden aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="pill" id="restart" data-t="startover" style="visibility:hidden"></button>
   </div>
@@ -243,9 +253,26 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
     <div class="foot"><button class="btn ghost" data-go="-1" data-t="back"></button><button class="btn go" data-go="1" id="roomNext" data-t="next"></button></div>
   </section>
 
-  <!-- 2 · name + departure -->
+  <!-- group · how many people of the room leave equipment + the hotel check-out date -->
+  <section class="screen" data-s="group">
+    <h1 data-t="grp_t"></h1>
+    <p class="sub" id="grpSub"></p>
+    <div class="body">
+      <div class="card grp">
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><circle cx="24" cy="20" r="9"/><path d="M8 54c0-10 7-17 16-17s16 7 16 17"/><circle cx="44" cy="22" r="7"/><path d="M42 37c8 0 14 6 14 15"/></svg>
+        <div class="count"><button data-ppl="-1">−</button><output id="pplN">1</output><button class="plus" data-ppl="1">+</button></div>
+        <div class="unit" id="pplU"></div>
+      </div>
+      <div class="fields">
+        <label class="field"><span data-t="checkout"></span><span class="datebox empty" id="depBox"><input id="dep" type="date"><em data-t="dep_pick"></em><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><rect x="7" y="13" width="3" height="3" rx=".5" fill="currentColor" stroke="none"/></svg></span><small data-t="dep_h"></small></label>
+      </div>
+    </div>
+    <div class="foot"><button class="btn ghost" data-go="-1" data-t="back"></button><button class="btn go" data-go="1" id="grpNext" data-t="next"></button></div>
+  </section>
+
+  <!-- 2 · name (one person) -->
   <section class="screen" data-s="2">
-    <h1 data-t="name_t"></h1>
+    <h1 id="nameTitle"></h1>
     <p class="sub" data-t="name_h"></p>
     <div class="body">
       <div class="fields">
@@ -253,7 +280,6 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
           <label class="field"><span data-t="firstname"></span><input id="first" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="60"></label>
           <label class="field last"><span data-t="lastname"></span><input id="last" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="60"></label>
         </div>
-        <label class="field"><span data-t="checkout"></span><span class="datebox empty" id="depBox"><input id="dep" type="date"><em data-t="dep_pick"></em><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><rect x="7" y="13" width="3" height="3" rx=".5" fill="currentColor" stroke="none"/></svg></span><small data-t="dep_h"></small></label>
       </div>
       <div class="kb-note" data-t="kb_note"></div>
     </div>
@@ -262,7 +288,7 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
 
   <!-- 3 · equipment -->
   <section class="screen" data-s="3">
-    <h1 data-t="eq_t"></h1>
+    <h1 id="eqTitle"></h1>
     <p class="sub" data-t="eq_h"></p>
     <div class="body"><div class="eq" id="eq"></div></div>
     <div class="foot"><button class="btn ghost" data-go="-1" data-t="back"></button>
@@ -272,7 +298,7 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
 
   <!-- 4 · identification photo (optional, with consent) -->
   <section class="screen" data-s="4">
-    <h1 data-t="ph_t"></h1>
+    <h1 id="phTitle"></h1>
     <p class="sub" data-t="ph_h"></p>
     <div class="body" style="justify-content:center">
       <div class="cam" id="cam">
@@ -292,7 +318,7 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
   <!-- 5 · review + send -->
   <section class="screen" data-s="5">
     <h1 data-t="rv_t"></h1>
-    <p class="sub" data-t="rv_h"></p>
+    <p class="sub" id="rvSub"></p>
     <div class="body"><div class="sum" id="sum"></div></div>
     <div class="foot"><button class="btn ghost" data-go="-1" data-t="back"></button>
       <span class="warn" id="sendWarn"></span>
@@ -306,7 +332,6 @@ h1{font-family:var(--display); font-weight:700; font-size:64px; line-height:1; m
     <div class="bigroom" id="doneRoom"></div>
     <p class="sub" data-t="done_h"></p>
     <p class="sub group" id="doneCount"></p>
-    <button class="btn add" id="addPerson"></button>
     <div class="reset" id="reset"></div>
   </section>
 
@@ -336,8 +361,11 @@ const T = {
     equipment:"Equipment", edit:"Edit", send:"Send", sending:"Sending…",
     err_net:"No connection. Please try again, or go to the valet counter.", err:"Something went wrong. Please go to the valet counter.", busy:"This screen is busy. Please wait a moment and tap Send again.",
     done_t:"You're pre-registered!", done_h:"Take your equipment to the valet counter and tell the staff your room number.",
-    add_person:"+ Add another person in room {n}", done_count:"{n} people pre-registered for this room",
-    next_h:"Next person in room {n}. Enter their name; each person registers their own equipment.",
+    done_count:"{n} people pre-registered for this room",
+    grp_t:"How many people are leaving equipment?", grp_h:"Everyone in room {n} who leaves boots, skis or a snowboard. Next, each person enters their own name and items.",
+    ppl_1:"person", ppl_n:"people", person_t:"Person {n} of {m}: name", eq_tp:"What is {n} leaving with us?",
+    ph_tp:"A photo of {n} for security", rv_hg:"Check each person's name and equipment. Tap Edit to change anything.",
+    send_all:"Send all ({n})", sent_part:"{n} sent. Tap Send to try the rest again.",
     reset:"Tap anywhere to start the next check-in · resets in {n} s", idle_t:"Are you still there?", idle_s:"For your privacy, this screen resets in {n} s.",
     idle_b:"Continue", back:"Back", next:"Next", startover:"Start over"},
   ja:{welcome:"ようこそ", welcome_sub:"スキー・スノーボード預かり — セルフチェックイン。言語を選んで始めてください。",
@@ -355,8 +383,11 @@ const T = {
     equipment:"用具", edit:"修正", send:"送信する", sending:"送信中…",
     err_net:"接続できません。もう一度お試しいただくか、バレーカウンターへお越しください。", err:"エラーが発生しました。バレーカウンターへお越しください。", busy:"ただいま混み合っています。少しお待ちいただき、もう一度「送信する」をタップしてください。",
     done_t:"事前登録が完了しました", done_h:"用具をお持ちのうえ、バレーカウンターでスタッフにお部屋番号をお伝えください。",
-    add_person:"＋ 同じお部屋の方を追加（{n}号室）", done_count:"このお部屋で{n}名が事前登録済みです",
-    next_h:"{n}号室の次の方のお名前を入力してください。用具はお一人ずつ登録します。",
+    done_count:"このお部屋で{n}名が事前登録済みです",
+    grp_t:"用具をお預けになる方は何名ですか？", grp_h:"{n}号室でブーツ・スキー・スノーボードをお預けになる方の人数です。このあと、お一人ずつお名前と用具を入力します。",
+    ppl_1:"名", ppl_n:"名", person_t:"{n}人目のお名前（全{m}名）", eq_tp:"{n}様のお預けになる用具は？",
+    ph_tp:"{n}様の本人確認用の写真", rv_hg:"お一人ずつ、お名前と用具をご確認ください。変更する場合は「修正」をタップしてください。",
+    send_all:"まとめて送信（{n}名）", sent_part:"{n}名分を送信しました。「送信」をもう一度タップしてください。",
     reset:"画面をタップすると次の受付を始められます · {n}秒後に戻ります", idle_t:"操作を続けますか？", idle_s:"プライバシー保護のため、{n}秒後にリセットされます。",
     idle_b:"続ける", back:"戻る", next:"次へ", startover:"最初から"},
   zh:{welcome:"欢迎", welcome_sub:"滑雪板与单板寄存 — 自助登记。请选择语言开始。",
@@ -374,8 +405,11 @@ const T = {
     equipment:"装备", edit:"修改", send:"提交", sending:"提交中…",
     err_net:"无法连接。请重试，或前往寄存柜台。", err:"出现错误。请前往寄存柜台。", busy:"当前使用人数较多，请稍等片刻后再次点击“提交”。",
     done_t:"预登记完成！", done_h:"请携带装备前往寄存柜台，并告知工作人员您的房间号。",
-    add_person:"＋ 添加同房间的其他人（{n} 房）", done_count:"本房间已有 {n} 人完成预登记",
-    next_h:"请输入 {n} 房间下一位客人的姓名。每人分别登记自己的装备。",
+    done_count:"本房间已有 {n} 人完成预登记",
+    grp_t:"有几位要寄存装备？", grp_h:"{n} 房间中要寄存雪鞋、双板或单板的人数。之后每人分别填写自己的姓名和装备。",
+    ppl_1:"人", ppl_n:"人", person_t:"第 {n} 位的姓名（共 {m} 位）", eq_tp:"{n} 要寄存哪些装备？",
+    ph_tp:"{n} 的安全验证照片", rv_hg:"请逐一确认每位的姓名和装备。点击“修改”可更改。",
+    send_all:"全部提交（{n} 位）", sent_part:"已提交 {n} 位。请再次点击“提交”发送其余的。",
     reset:"轻触屏幕即可开始下一位登记 · {n} 秒后返回首页", idle_t:"您还在吗？", idle_s:"为保护您的隐私，{n} 秒后将重置。",
     idle_b:"继续", back:"返回", next:"下一步", startover:"重新开始"},
   ko:{welcome:"환영합니다", welcome_sub:"스키·스노보드 보관 — 셀프 체크인. 언어를 선택해 시작하세요.",
@@ -393,8 +427,11 @@ const T = {
     equipment:"장비", edit:"수정", send:"보내기", sending:"보내는 중…",
     err_net:"연결할 수 없습니다. 다시 시도하시거나 발레 카운터로 가 주세요.", err:"오류가 발생했습니다. 발레 카운터로 가 주세요.", busy:"사용자가 많습니다. 잠시 후 '보내기'를 다시 눌러 주세요.",
     done_t:"사전 등록 완료!", done_h:"장비를 가지고 발레 카운터로 가셔서 직원에게 객실 번호를 말씀해 주세요.",
-    add_person:"+ 같은 객실 일행 추가 ({n}호)", done_count:"이 객실에서 {n}명이 사전 등록했습니다",
-    next_h:"{n}호 다음 분의 성함을 입력하세요. 장비는 한 분씩 등록합니다.",
+    done_count:"이 객실에서 {n}명이 사전 등록했습니다",
+    grp_t:"장비를 맡기실 분은 몇 분인가요?", grp_h:"{n}호에서 부츠, 스키, 스노보드를 맡기실 인원입니다. 이후 한 분씩 성함과 장비를 입력합니다.",
+    ppl_1:"명", ppl_n:"명", person_t:"{n}번째 분 성함 (총 {m}명)", eq_tp:"{n} 님이 맡기실 장비는?",
+    ph_tp:"{n} 님의 보안용 사진", rv_hg:"한 분씩 성함과 장비를 확인하세요. 변경하려면 '수정'을 누르세요.",
+    send_all:"모두 보내기 ({n}명)", sent_part:"{n}명 전송 완료. '보내기'를 다시 눌러 나머지를 보내세요.",
     reset:"화면을 누르면 다음 접수를 시작합니다 · {n}초 후 처음 화면으로", idle_t:"계속하시겠어요?", idle_s:"개인정보 보호를 위해 {n}초 후 초기화됩니다.",
     idle_b:"계속", back:"이전", next:"다음", startover:"처음부터"}
 };
@@ -405,21 +442,35 @@ const ICON = {
 };
 const ITEMS = ["boots", "skis", "snowboards"];
 const FAMILY_FIRST = ["ja", "zh", "ko"];
-const LAST = 6, PHOTO = 4, IDLE_AFTER = 60, IDLE_GRACE = 15, DONE_RESET = 5;
-const blank = () => ({lang:"en", step:0, room:"", first:"", last:"", dep:"", eq:{boots:0, skis:0, snowboards:0},
-  consent:false, face:null, camErr:false, sending:false, err:"", group:0});
+const MAX_PEOPLE = 8, IDLE_AFTER = 60, IDLE_GRACE = 15, DONE_RESET = 5;
+/* one entry per person of the room who leaves equipment: each is sent as their own pre-check-in,
+   so the valet knows whose each item is at pick-up */
+const person = () => ({first:"", last:"", eq:{boots:0, skis:0, snowboards:0}, consent:false, face:null, sent:false});
+const blank = () => ({lang:"en", pos:0, room:"", dep:"", people:[person()], camErr:false, sending:false, err:"", ret:false});
 let S = blank(), paired = false, code = "", pairing = false;
 
+/* the screens in order: language, room, people + check-out date, then name → equipment → photo
+   for each person, review, done. S.pos is the place in this list. */
+const seq = () => [{s:"0"}, {s:"1"}, {s:"group"},
+  ...S.people.flatMap((_, p) => [{s:"2", p}, {s:"3", p}, {s:"4", p}]), {s:"5"}, {s:"6"}];
+const at = () => seq()[S.pos] || {s:"0"};
+const step = () => at().s;
+const pi = () => at().p ?? 0;
+const P = () => S.people[pi()] || S.people[0];
+const posOf = (st, p) => seq().findIndex(x => x.s === st && (p == null || x.p === p));
+const many = () => S.people.length > 1;
+
 const $ = q => document.querySelector(q);
-const t = (k, n) => (T[S.lang][k] ?? T.en[k]).replace("{n}", n);
+const t = (k, n, m) => (T[S.lang][k] ?? T.en[k]).replace("{n}", n).replace("{m}", m);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-const nameOk = () => !!(S.first.trim() && S.last.trim());
+const nameOk = (x = P()) => !!(x.first.trim() && x.last.trim());
 const isoDay = (n=0) => { const d=new Date(); d.setDate(d.getDate()+n);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const depOk = () => !!S.dep && S.dep >= isoDay(0) && S.dep <= isoDay(180);   // the hotel check-out date is required
-const nameStepOk = () => nameOk() && depOk();
-const fullName = () => (FAMILY_FIRST.includes(S.lang) ? [S.last, S.first] : [S.first, S.last]).map(x => x.trim()).join(" ");
-const total = () => ITEMS.reduce((n, k) => n + S.eq[k], 0);
+const fullName = (x = P()) => (FAMILY_FIRST.includes(S.lang) ? [x.last, x.first] : [x.first, x.last]).map(v => v.trim()).join(" ");
+const total = (x = P()) => ITEMS.reduce((n, k) => n + x.eq[k], 0);
+const complete = x => nameOk(x) && total(x) > 0;
+const eqText = x => ITEMS.filter(k => x.eq[k]).map(k => `${x.eq[k]} × ${t(k)}`).join(" · ");
 
 async function api(path, body){
   const opts = {method: body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", headers: {}};
@@ -472,11 +523,12 @@ function pad(kind, label){
 function render(){
   document.documentElement.lang = S.lang;
   document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
-  const step = paired ? S.step : "setup";
-  document.querySelectorAll(".screen").forEach(el => el.classList.toggle("on", el.dataset.s === String(step)));
-  const mid = paired && S.step > 0 && S.step < LAST;
+  const st = paired ? step() : "setup", x = P(), n = S.people.length, list = seq();
+  document.querySelectorAll(".screen").forEach(el => el.classList.toggle("on", el.dataset.s === st));
+  const mid = paired && st !== "0" && st !== "6";
   $("#restart").style.visibility = mid ? "visible" : "hidden";
-  $("#steps").innerHTML = mid ? [1,2,3,4,5].map(i => `<span class="${i < S.step ? "done" : i === S.step ? "on" : ""}"></span>`).join("") : "";
+  $("#steps").classList.toggle("on", mid);
+  $("#bar").style.width = mid ? Math.round(100 * (S.pos - 1) / (list.length - 3)) + "%" : "0";
   // setup
   $("#codeDisp").textContent = code || "— — — — — —";
   $("#codeDisp").classList.toggle("empty", !code);
@@ -487,52 +539,85 @@ function render(){
   $("#roomDisp").classList.toggle("empty", !S.room);
   $('[data-pad="room"]').innerHTML = pad("room", t("clear"));
   $("#roomNext").disabled = !S.room;
-  // name
-  $("#names").classList.toggle("family-first", FAMILY_FIRST.includes(S.lang));
-  $('[data-s="2"] .sub').textContent = S.group ? t("next_h", S.room) : t("name_h");
+  // people + check-out date
+  $("#grpSub").textContent = t("grp_h", S.room);
+  $("#pplN").textContent = n;
+  $("#pplU").textContent = t(n === 1 ? "ppl_1" : "ppl_n");
+  $('[data-ppl="-1"]').disabled = n <= 1 || S.people.some(y => y.sent);
+  $('[data-ppl="1"]').disabled = n >= MAX_PEOPLE;
   $("#dep").min = isoDay(0); $("#dep").max = isoDay(180);
-  $("#nameNext").disabled = !nameStepOk();
+  $("#grpNext").disabled = !depOk();
+  // name
+  $("#nameTitle").textContent = many() ? t("person_t", pi() + 1, n) : t("name_t");
+  $("#names").classList.toggle("family-first", FAMILY_FIRST.includes(S.lang));
+  $("#nameNext").disabled = !nameOk();
   // equipment
-  $("#eq").innerHTML = ITEMS.map(k => `<div class="card ${S.eq[k] ? "has" : ""}">
+  $("#eqTitle").textContent = many() ? t("eq_tp", x.first.trim()) : t("eq_t");
+  $("#eq").innerHTML = ITEMS.map(k => `<div class="card ${x.eq[k] ? "has" : ""}">
       ${ICON[k]}<b>${t(k)}</b><div class="unit">${t(k + "_u")}</div>
-      <div class="count"><button data-eq="${k}" data-d="-1" ${S.eq[k] ? "" : "disabled"}>−</button>
-      <output>${S.eq[k]}</output><button class="plus" data-eq="${k}" data-d="1" ${S.eq[k] >= 9 ? "disabled" : ""}>+</button></div></div>`).join("");
+      <div class="count"><button data-eq="${k}" data-d="-1" ${x.eq[k] ? "" : "disabled"}>−</button>
+      <output>${x.eq[k]}</output><button class="plus" data-eq="${k}" data-d="1" ${x.eq[k] >= 9 ? "disabled" : ""}>+</button></div></div>`).join("");
   $("#eqNext").disabled = !total();
   $("#eqWarn").textContent = total() ? "" : t("need");
   // photo
-  $("#cam").classList.toggle("live", !!stream && !S.face);
-  $("#cam").classList.toggle("shot", !!S.face);
-  $("#faceImg").src = S.face || "";
-  $("#consent").classList.toggle("on", S.consent);
-  $("#shoot").textContent = S.camErr ? t("cam_off") : !S.consent ? t("need_ok") : S.face ? t("retake") : t("take");
-  $("#shoot").disabled = S.camErr || !S.consent || (!S.face && !stream);
-  $("#shoot").className = "btn " + (S.face ? "ghost" : "go");
+  $("#phTitle").textContent = many() ? t("ph_tp", x.first.trim()) : t("ph_t");
+  $("#cam").classList.toggle("live", !!stream && !x.face);
+  $("#cam").classList.toggle("shot", !!x.face);
+  $("#faceImg").src = x.face || "";
+  $("#consent").classList.toggle("on", x.consent);
+  $("#shoot").textContent = S.camErr ? t("cam_off") : !x.consent ? t("need_ok") : x.face ? t("retake") : t("take");
+  $("#shoot").disabled = S.camErr || !x.consent || (!x.face && !stream);
+  $("#shoot").className = "btn " + (x.face ? "ghost" : "go");
   $("#privacy").textContent = t("privacy");
-  $("#photoNext").textContent = S.face ? t("next") : t("skip");
-  $("#photoNext").className = "btn " + (S.face ? "go" : "ghost");
-  // review
-  const eqTxt = ITEMS.filter(k => S.eq[k]).map(k => `${S.eq[k]} × ${t(k)}`).join(" · ");
-  $("#sum").innerHTML = [
-    ["room", S.room, 1], ["name", fullName(), 2], ["equipment", eqTxt, 3],
-    ["photo", S.face ? t("photo_ok") : t("photo_no"), PHOTO, S.face ? `<img class="face" src="${S.face}" alt="">` : ""],
-    ...(S.dep ? [["leave", new Date(S.dep + "T00:00").toLocaleDateString(S.lang, {month:"short", day:"numeric"}), 2]] : [])
-  ].map(([k, v, s, pre]) => `<div class="it">${pre || ""}<div><span>${t(k)}</span><b>${esc(v)}</b></div>
-      <button class="edit" data-jump="${s}">${t("edit")}</button></div>`).join("");
-  $("#send").textContent = S.sending ? t("sending") : t("send");
+  $("#photoNext").textContent = x.face ? t("next") : t("skip");
+  $("#photoNext").className = "btn " + (x.face ? "go" : "ghost");
+  // review: the room, then one card per person with their own equipment
+  const locked = S.people.some(y => y.sent), left = S.people.filter(y => !y.sent).length;
+  const edit = attr => locked ? "" : `<button class="edit" ${attr}>${t("edit")}</button>`;
+  $("#rvSub").textContent = many() ? t("rv_hg") : t("rv_h");
+  $("#sum").innerHTML = `<div class="it"><div><span>${t("room")}</span><b>${esc(S.room)}</b></div>${edit('data-edit="1"')}</div>
+    <div class="it"><div><span>${t("leave")}</span><b>${S.dep ? esc(new Date(S.dep + "T00:00").toLocaleDateString(S.lang, {month:"short", day:"numeric"})) : ""}</b></div>${edit('data-edit="group"')}</div>`
+    + S.people.map((y, i) => `<div class="it person">${y.face ? `<img class="face" src="${y.face}" alt="">` : `<div class="ini">${esc((y.first.trim()[0] || "?").toUpperCase())}</div>`}
+      <div><span>${t("name")}${y.face ? " · " + t("photo_ok") : ""}</span><b>${esc(fullName(y))}${y.sent ? " ✓" : ""}</b><em>${esc(eqText(y))}</em></div>
+      ${y.sent ? "" : `<button class="edit" data-editp="${i}">${t("edit")}</button>`}</div>`).join("");
+  $("#send").textContent = S.sending ? t("sending") : many() ? t("send_all", left) : t("send");
   $("#send").disabled = S.sending;
   $("#sendWarn").textContent = S.err;
+  // done
   $("#doneRoom").textContent = S.room;
-  $("#doneCount").textContent = S.group > 1 ? t("done_count", S.group) : "";
-  $("#addPerson").textContent = t("add_person", S.room);
+  $("#doneCount").textContent = n > 1 ? t("done_count", n) : "";
 }
 
-function go(step){
-  S.step = Math.max(0, Math.min(LAST, step));
+function go(pos){
+  S.pos = Math.max(0, Math.min(seq().length - 1, pos));
   S.err = "";
-  if(S.step === PHOTO) startCam(); else stopCam();
+  const st = step(), x = P();
+  if(st === "4") startCam(); else stopCam();
+  if(st === "2"){
+    // a family: the next person usually shares the last name
+    if(!x.last && pi() > 0) x.last = S.people[pi() - 1].last;
+    $("#first").value = x.first; $("#last").value = x.last;
+  }
   render();
-  if(S.step === 2) setTimeout(() => $(FAMILY_FIRST.includes(S.lang) ? "#last" : "#first").focus(), 50);
-  if(S.step === LAST) doneCountdown();
+  if(st === "2") setTimeout(() => $(FAMILY_FIRST.includes(S.lang) ? "#last" : "#first").focus(), 50);
+  if(st === "6") doneCountdown();
+}
+/* Next. When the guest came from the review to change something, they go back to it as soon as
+   that part is done (a person added meanwhile is entered first). */
+function next(){
+  const list = seq(), cur = list[S.pos], nx = list[S.pos + 1];
+  if(S.ret && !(cur.p != null && nx && nx.p === cur.p)){
+    const i = S.people.findIndex(y => !complete(y));
+    if(i >= 0 && cur.p !== i) return go(posOf("2", i));
+    S.ret = false;
+    return go(posOf("5"));
+  }
+  go(S.pos + 1);
+}
+function back(){
+  const st = step();
+  if(S.ret && (st === "1" || st === "group" || st === "2")){ S.ret = false; return go(posOf("5")); }
+  go(S.pos - 1);
 }
 function resetAll(){
   clearInterval(doneTimer);
@@ -543,26 +628,14 @@ function resetAll(){
   hideIdle(); go(0);
 }
 
-/* a family or group: the next person of the same room starts at the name step, with the room
-   and check-out date already filled in. Each person is sent as their own pre-check-in, so the
-   valet knows whose equipment is whose; the staff app groups them by room. */
-function addPerson(){
-  clearInterval(doneTimer);
-  const keep = {lang:S.lang, room:S.room, dep:S.dep, group:S.group};
-  stopCam();
-  S = Object.assign(blank(), keep);
-  $("#first").value = ""; $("#last").value = ""; $("#dep").value = S.dep; depShown();
-  go(2);
-}
-
 /* camera: front camera, live only while the guest has agreed and is on the photo step */
 let stream = null;
 async function startCam(){
-  if(stream || S.face || !S.consent || S.camErr) return;
+  if(stream || P().face || !P().consent || S.camErr) return;
   try{
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no camera");
     const st = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user", width:{ideal:960}, height:{ideal:960}}, audio:false});
-    if(S.step !== PHOTO || !S.consent || S.face){ st.getTracks().forEach(x => x.stop()); return; }   // the guest moved on meanwhile
+    if(step() !== "4" || !P().consent || P().face){ st.getTracks().forEach(x => x.stop()); return; }   // the guest moved on meanwhile
     stream = st;
     const v = $("#video"); v.srcObject = stream; await v.play();
   }catch(_){ S.camErr = true; stopCam(); }
@@ -578,7 +651,7 @@ function shoot(){
   const n = Math.min(v.videoWidth, v.videoHeight), c = document.createElement("canvas");
   c.width = c.height = 480;                          // a square crop is plenty to recognise a face
   c.getContext("2d").drawImage(v, (v.videoWidth - n) / 2, (v.videoHeight - n) / 2, n, n, 0, 0, 480, 480);
-  S.face = c.toDataURL("image/jpeg", 0.8);
+  P().face = c.toDataURL("image/jpeg", 0.8);
   const f = $("#flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
   stopCam(); render();
 }
@@ -587,14 +660,20 @@ async function send(){
   if(S.sending) return;
   S.sending = true; S.err = ""; render();
   try{
-    const r = await api("/api/kiosk/precheck", {room_number:S.room, first_name:S.first, last_name:S.last,
-      departure:S.dep || null, lang:S.lang, ...S.eq,
-      ...(S.face && S.consent ? {face_photo:S.face, consent:true} : {})});
-    S.room = r.room_number; S.sending = false; S.group++; go(LAST);
+    for(const y of S.people){
+      if(y.sent) continue;
+      const r = await api("/api/kiosk/precheck", {room_number:S.room, first_name:y.first, last_name:y.last,
+        departure:S.dep || null, lang:S.lang, ...y.eq,
+        ...(y.face && y.consent ? {face_photo:y.face, consent:true} : {})});
+      S.room = r.room_number; y.sent = true;
+    }
+    S.sending = false; go(posOf("6"));
   }catch(e){
     S.sending = false;
     if(e.status === 401){ paired = false; resetAll(); return; }      // the admin removed this screen
-    S.err = e.offline ? t("err_net") : e.status === 429 ? t("busy") : e.status === 400 ? e.message : t("err");
+    const msg = e.offline ? t("err_net") : e.status === 429 ? t("busy") : e.status === 400 ? e.message : t("err");
+    const sent = S.people.filter(y => y.sent).length;
+    S.err = sent ? t("sent_part", sent) + " " + msg : msg;
     render();
   }
 }
@@ -626,7 +705,7 @@ function showIdle(){
   idleTimer = setInterval(() => { n--; $("#idleSub").textContent = t("idle_s", n); if(n <= 0) resetAll(); }, 1000);
 }
 setInterval(() => {
-  if(!paired || S.step === 0 || S.step === LAST || idleTimer || S.sending) return;
+  if(!paired || step() === "0" || step() === "6" || idleTimer || S.sending) return;
   if(Date.now() - idleAt > IDLE_AFTER * 1000) showIdle();
 }, 1000);
 
@@ -663,32 +742,33 @@ document.addEventListener("pointerdown", poke);
 document.addEventListener("keydown", poke);
 document.addEventListener("contextmenu", e => e.preventDefault());
 document.addEventListener("click", e => {
-  if(paired && S.step === LAST){                           // the next guest need not wait
-    if(e.target.closest("#addPerson")) addPerson(); else resetAll();
-    return;
-  }
+  if(paired && step() === "6"){ resetAll(); return; }     // the next guest need not wait
   const b = e.target.closest("button"); if(!b) return;
   const d = b.dataset;
   if(d.lang){ S.lang = d.lang; go(1); }
-  else if(d.go) go(S.step + +d.go);
-  else if(d.jump) go(+d.jump);
+  else if(d.go) (+d.go > 0 ? next() : back());
+  else if(d.edit){ S.ret = true; go(posOf(d.edit)); }
+  else if(d.editp){ S.ret = true; go(posOf("2", +d.editp)); }
+  else if(d.ppl){ const n = Math.max(1, Math.min(MAX_PEOPLE, S.people.length + +d.ppl));
+    while(S.people.length < n) S.people.push(person());
+    S.people.length = n; render(); }
   else if(d.room){ S.room = d.room === "c" ? "" : d.room === "b" ? S.room.slice(0, -1) : (S.room + d.room).slice(0, 6); render(); }
   else if(d.code){ code = d.code === "c" ? "" : d.code === "b" ? code.slice(0, -1) : (code + d.code).slice(0, 6); render(); }
-  else if(d.eq){ S.eq[d.eq] = Math.max(0, Math.min(9, S.eq[d.eq] + +d.d)); render(); }
+  else if(d.eq){ const x = P(); x.eq[d.eq] = Math.max(0, Math.min(9, x.eq[d.eq] + +d.d)); render(); }
   else if(b.id === "send") send();
-  else if(b.id === "consent"){ S.consent = !S.consent; if(!S.consent){ S.face = null; stopCam(); render(); } else { render(); startCam(); } }
-  else if(b.id === "shoot"){ if(S.face){ S.face = null; render(); startCam(); } else shoot(); }
+  else if(b.id === "consent"){ const x = P(); x.consent = !x.consent; if(!x.consent){ x.face = null; stopCam(); render(); } else { render(); startCam(); } }
+  else if(b.id === "shoot"){ const x = P(); if(x.face){ x.face = null; render(); startCam(); } else shoot(); }
   else if(b.id === "pairBtn") pair();
   else if(b.id === "installBtn") installApp();
   else if(b.id === "fsBtn") goFullscreen();
   else if(b.id === "restart") resetAll();
   else if(b.id === "stay") hideIdle();
 });
-["first", "last"].forEach(k => $("#" + k).addEventListener("input", e => { S[k] = e.target.value; $("#nameNext").disabled = !nameStepOk(); }));
-["input", "change"].forEach(ev => $("#dep").addEventListener(ev, e => { S.dep = e.target.value; depShown(); $("#nameNext").disabled = !nameStepOk(); }));
+["first", "last"].forEach(k => $("#" + k).addEventListener("input", e => { P()[k] = e.target.value; $("#nameNext").disabled = !nameOk(); }));
+["input", "change"].forEach(ev => $("#dep").addEventListener(ev, e => { S.dep = e.target.value; depShown(); $("#grpNext").disabled = !depOk(); }));
 $("#dep").addEventListener("click", e => { try{ e.target.showPicker(); }catch(_){} });   // the whole box opens the calendar
 $("#first").addEventListener("keydown", e => { if(e.key === "Enter") $(FAMILY_FIRST.includes(S.lang) ? "#first" : "#last").focus(); });
-$("#last").addEventListener("keydown", e => { if(e.key === "Enter" && nameStepOk()) go(3); });
+$("#last").addEventListener("keydown", e => { if(e.key === "Enter" && nameOk()) next(); });
 
 (async () => {
   fit(); render(); fsShown();
