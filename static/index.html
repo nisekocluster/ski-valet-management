@@ -201,6 +201,14 @@ h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
 .co-face{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--glacier);flex:none;background:var(--night)}
 .panel.id-check .eyebrow{color:var(--glacier)}
 .panel.id-check .row{gap:10px;margin-top:8px;flex-wrap:wrap}
+.id-face{margin:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.id-face figcaption{font-size:12px;color:var(--mist);max-width:96px;text-align:center;line-height:1.2}
+.pick-head .who{display:flex;align-items:center;gap:10px}
+.pick-head .who img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid var(--glacier)}
+.own-chips{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 8px}
+.own-chips button{border:1px solid var(--line);background:transparent;color:var(--mist);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.own-chips button.on{background:var(--glacier);border-color:var(--glacier);color:#07121c;font-weight:700}
+.ci-item.need-owner input[data-ci="owner"]{border-color:var(--st-attention);box-shadow:0 0 0 2px color-mix(in srgb,var(--st-attention) 35%,transparent)}
 .panel.id-check img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--glacier);background:var(--night)}
 .alert + .alert{margin-top:8px}
 .alert b{font-family:var(--display);letter-spacing:1px;text-transform:uppercase;font-size:15px;display:block}
@@ -637,8 +645,11 @@ const pcGroupItems = g => { const t={boots:0,skis:0,snowboards:0};
 const pcGuest = p => [p.first_name,p.last_name].map(x=>String(x||"").trim()).filter(Boolean).join(" ");
 /* the guest's ID photos taken at the kiosk; the server deletes them at check-out */
 const idPhotos = r => r && r.status!=="checked_out" ? (r.face_photo_ids||[]) : [];
+/* A · each kiosk ID photo belongs to one person of the room (room.face_names: photo id → name) */
+const faceName = (r,id) => String((r&&r.face_names||{})[id]||"");
+const faceOf = (r,owner) => { const k=normName(owner); return k ? idPhotos(r).find(id=>normName(faceName(r,id))===k) : undefined; };
 const idCheck = r => idPhotos(r).length ? `<div class="panel id-check"><div class="eyebrow">Check it's the guest</div>
-  <div class="row">${idPhotos(r).map(id=>`<img src="${photoUrl(id)}" alt="Guest ID photo">`).join("")}</div></div>` : "";
+  <div class="row">${idPhotos(r).map(id=>`<figure class="id-face"><img src="${photoUrl(id)}" alt="Guest ID photo">${faceName(r,id)?`<figcaption>${esc(faceName(r,id))}</figcaption>`:""}</figure>`).join("")}</div></div>` : "";
 const pcItems = p => PC_ITEMS.filter(([f])=>+p[f]>0).map(([f,k])=>`${+p[f]} × ${catInfo(k).short||catInfo(k).label}`).join(" · ");
 const cardsOfRoom    = id => DB.cards.filter(c=>c.room_id===id);
 const eqOf   = id => DB.equipment.filter(e=>e.storage_id===id);
@@ -1504,8 +1515,8 @@ function usePrecheck(id){
   if(d.pcs.includes(pc.id)) return;
   if(!p.room_id && !d.pcs.length){ d.room=pc.room_number; d.guest=pcGuest(pc); if(pc.departure) d.dep=pc.departure; }
   d.pcs.push(pc.id);
-  // the kiosk registers each person of the room on their own, so every item is theirs
-  const owner = String(pc.first_name||"").trim();
+  // the kiosk registers each person of the room on their own, so every item is theirs (full name)
+  const owner = pcGuest(pc);
   PC_ITEMS.forEach(([f,k])=>{ for(let n=0;n<(+pc[f]||0);n++) d.items.push({...newItem(k),owner,pc:pc.id}); });
   render();
 }
@@ -1526,6 +1537,16 @@ function dismissPrecheck(id){
     <div class="btn-grid"><button class="btn" data-act="close-sheet">Cancel</button><button class="btn danger" data-act="pc-dismiss-ok" data-id="${pc.id}">Dismiss</button></div>`);
 }
 
+/* C · several guests in the room: every item needs its owner, so at pick-up "Select Tom's" is complete.
+   Several = two or more pre-check-ins, a room whose items already have owners, or two owners in this form. */
+const SHARED = "Shared";
+function multiGuest(p){
+  const d=p.d, used=(d.pcs||[]).map(precheck).filter(Boolean);
+  if(used.length>=2) return true;
+  const r=room(p.room_id)||(d.room.trim()?roomByNumber(d.room):null);
+  if(r && r.status!=="checked_out" && ownersOfRoom(r.id).length) return true;
+  return new Set(d.items.map(i=>normName(i.owner)).filter(k=>k&&k!==normName(SHARED))).size>=2;
+}
 function drawItems(){
   drawPc();
   const p=stowParams(), box=$("#ciItems"); if(!p||!box) return;
@@ -1533,6 +1554,9 @@ function drawItems(){
   const freeAll=DB.storages.filter(isFree).sort(byNumber);
   const r=room(p.room_id)||(d.room.trim()?roomByNumber(d.room):null);
   const names=r?ownersOfRoom(r.id,d.items.map(i=>i.owner)):[...new Set(d.items.map(i=>String(i.owner||"").trim()).filter(Boolean))];
+  // the names to tap: the room's people (from pre-check-ins and earlier items), then Shared
+  const multi=multiGuest(p), people=[...new Set([...(d.pcs||[]).map(precheck).filter(Boolean).map(pcGuest),...names]
+    .map(x=>String(x||"").trim()).filter(x=>x&&normName(x)!==normName(SHARED)))];
   box.innerHTML = itemsSummary(d) + ownerList("ciOwners",names) + d.items.map((i,n)=>{
     const c=catInfo(i.category), dest=stor(i.storage_id||i.auto);
     // items from the kiosk come one person after another: a heading per person
@@ -1541,10 +1565,14 @@ function drawItems(){
     const free=freeAll.filter(s=>fitsItem(i,s,d.vip)), areas=[...new Set(free.map(s=>s.section||"Unassigned area"))];
     const want=kindsFor(i,false).map(k=>KINDS[k]).join(" / ");
     const usedByOthers=new Set(d.items.filter(x=>x!==i).map(x=>x.storage_id||x.auto).filter(Boolean));
-    return `${head}<div class="ci-item" data-key="${i.key}">
+    const own=String(i.owner||"").trim();
+    const chips=(multi||people.length>1)?`<div class="own-chips">${[...people,SHARED].map(nm=>
+      `<button type="button" class="${normName(own)===normName(nm)?"on":""}" data-act="ci-owner" data-key="${i.key}" data-v="${esc(nm)}">${esc(nm)}</button>`).join("")}</div>`:"";
+    return `${head}<div class="ci-item${d.ownerErr&&multi&&!own?" need-owner":""}" data-key="${i.key}">
       <div class="hd"><span style="font-size:22px">${c.ic}</span><b>${esc(c.label)}</b>
         <button class="btn sm ghost" data-act="ci-del" data-key="${i.key}" aria-label="Remove">✕</button></div>
-      <input class="input" data-ci="owner" value="${esc(i.owner||"")}" list="ciOwners" placeholder="Whose is it? e.g. Maria, Dad, red jacket" autocomplete="off" style="margin-bottom:8px">
+      <input class="input" data-ci="owner" value="${esc(i.owner||"")}" list="ciOwners" placeholder="${multi?"Whose is it? (required)":"Whose is it? e.g. Maria, Dad, red jacket"}" autocomplete="off" style="margin-bottom:8px">
+      ${chips}
       ${!d.vip&&(i.category==="skis"||i.category==="snowboard")?`<label class="check"><input type="checkbox" data-ci="kids" ${i.kids?"checked":""}> Kids use — goes to the Kids area</label>`:""}
       <div class="ci-photo">
         ${i.photo?`<img src="${i.photo}" alt="" data-act="ci-cam" data-key="${i.key}" style="cursor:pointer">`:""}
@@ -1585,6 +1613,14 @@ async function stowSave(){
   // C: every stay needs its departure date, so Departing today and Overdue catch every guest
   const known=r||(d.room.trim()?roomByNumber(d.room):null);
   if(!d.dep && !(known && known.status!=="checked_out" && known.departure)){ toast("Enter the guest's hotel departure date","err"); $("#ciDep")?.focus(); return; }
+  // C · whose is each item: required with several guests; with one guest it is theirs
+  if(multiGuest(p)){
+    const miss=d.items.filter(i=>!String(i.owner||"").trim()).length;
+    if(miss){ d.ownerErr=true; drawItems(); toast(`Room ${(r||known)?.room_number||d.room.trim()} has several guests — choose whose each item is (${miss} without a name)`,"err"); return; }
+  }else{
+    const one=d.guest.trim()||guestOf(known)||((d.pcs||[]).map(precheck).filter(Boolean).map(pcGuest)[0])||"";
+    if(one) d.items.forEach(i=>{ if(!String(i.owner||"").trim()) i.owner=one; });
+  }
   autoAssign(d.items,d.vip);
   const lost=d.items.find(i=>!fitsItem(i,stor(i.storage_id||i.auto),d.vip));
   if(lost){ toast(`No free location for ${catInfo(lost.category).label.toLowerCase()} — free one or pick another area`,"err"); drawItems(); return; }
@@ -1605,7 +1641,8 @@ async function stowSave(){
     if(!guestOf(r)){ r.guest_name=pcGuest(pc); r.updated_at=now(); }
     if(!r.departure && pc.departure){ r.departure=pc.departure; r.updated_at=now(); }
     // the guest's ID photo stays with the room until check-out (the server deletes it then)
-    if(pc.face_photo_id){ r.face_photo_ids=[...new Set([...(r.face_photo_ids||[]),pc.face_photo_id])]; r.updated_at=now(); }
+    if(pc.face_photo_id){ r.face_photo_ids=[...new Set([...(r.face_photo_ids||[]),pc.face_photo_id])];
+      r.face_names={...(r.face_names||{}),[pc.face_photo_id]:pcGuest(pc)}; r.updated_at=now(); }
     log("Pre-check-in confirmed",{room_id:r.id,
       notes:`${pcGuest(pc)} · declared ${pcItems(pc)} · room checked in with ${d.items.length} item${d.items.length===1?"":"s"}`});
   });
@@ -1976,7 +2013,7 @@ VIEWS.room = (p) => {
         ${r.vip&&r.status!=="checked_out"?`<span class="chip solid s-preparing">VIP</span>`:""}</div>
       <div style="margin-top:12px">
         <div class="kv"><span>Guest</span><b>${esc(guestOf(r)||"—")}</b></div>
-        ${idPhotos(r).length?`<div class="kv"><span>ID photo</span><b class="row" style="gap:6px;justify-content:flex-end">${idPhotos(r).map(id=>thumb(id,"ID photo · Room "+r.room_number)).join("")}</b></div>`:""}
+        ${idPhotos(r).length?`<div class="kv"><span>ID photo</span><b class="row" style="gap:6px;justify-content:flex-end">${idPhotos(r).map(id=>thumb(id,"ID photo · "+(faceName(r,id)||"Room "+r.room_number))).join("")}</b></div>`:""}
         <div class="kv"><span>Departure</span><b>${r.departure?fmtDay(r.departure)+(daysTo(r.departure)===0?" · today":daysTo(r.departure)<0?" · overdue":""):"Not set"}</b></div>
         <div class="kv"><span>Locations</span><b>${sts.map(s=>esc(s.storage_number)).join(", ")||"—"}</b></div>
         <div class="kv"><span>Equipment</span><b>${items} item${items===1?"":"s"}${out.length?` · ${out.length} with the guest`:""}</b></div>
@@ -2048,13 +2085,14 @@ function doChangeRoom(id){
   const from=r.room_number, faces=r.face_photo_ids||[];
   Object.assign(t,{status:"staying",guest_name:r.guest_name||"",departure:r.departure||"",vip:!!r.vip,updated_at:now()});
   if(faces.length) t.face_photo_ids=[...faces]; else delete t.face_photo_ids;
+  if(r.face_names) t.face_names={...r.face_names}; else delete t.face_names;
   storagesOfRoom(r.id).forEach(s=>{ s.room_id=t.id; s.updated_at=now(); });
   // the old room's key cards no longer open anything
   cardsOfRoom(r.id).forEach(c=>{ c.last_room_id=r.id; c.last_storage_id=c.storage_id;
     c.room_id=null; c.storage_id=null; c.status="released"; c.released_at=now(); c.updated_at=now(); });
   // a confirmed pre-check-in follows the guest (it is deleted when the new room checks out)
   DB.prechecks.filter(p=>p.room_id===r.id&&p.status==="confirmed").forEach(p=>{ p.room_id=t.id; p.updated_at=now(); });
-  delete r.face_photo_ids; r.vip=false;
+  delete r.face_photo_ids; delete r.face_names; r.vip=false;
   freeRoom(r);
   log("Room changed",{room_id:r.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)});
   log("Room changed",{room_id:t.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)});
@@ -2080,14 +2118,15 @@ function doEditRoom(id){
 /* a family may come one at a time: the valet ticks the locations that go now
    (nothing is ticked at first, unless there is only one) */
 const ownerOf = s => String(eqOf(s.id).map(e=>e.owner).find(Boolean)||"").trim();
-const pickList = sts => {
+const pickList = (sts,r=room(sts[0]&&sts[0].room_id)) => {
   const groups=new Map();
-  [...sts].sort((a,b)=>(ownerOf(a)?0:1)-(ownerOf(b)?0:1)||ownerOf(a).localeCompare(ownerOf(b))||byNumber(a,b))
+  const rank=s=>!ownerOf(s)?2:normName(ownerOf(s))===normName(SHARED)?1:0;     // people first, then Shared, then no name
+  [...sts].sort((a,b)=>rank(a)-rank(b)||ownerOf(a).localeCompare(ownerOf(b))||byNumber(a,b))
     .forEach(s=>{ const o=ownerOf(s); if(!groups.has(o)) groups.set(o,[]); groups.get(o).push(s); });
   const named=[...groups.keys()].some(Boolean);
   return `<div class="pick-list">${[...groups].map(([o,list])=>`
-    ${named?`<div class="row between pick-head"><b>${o?esc(o):"No name"}</b>
-      <button class="btn sm" style="width:auto" data-act="pick-owner" data-ids="${list.map(s=>s.id).join(",")}">Select ${o?esc(o)+"’s":"these"}</button></div>`:""}
+    ${named?`<div class="row between pick-head"><span class="who">${faceOf(r,o)?`<img src="${photoUrl(faceOf(r,o))}" alt="ID photo · ${esc(o)}">`:""}<b>${o?esc(o):"No name"}</b></span>
+      <button class="btn sm" style="width:auto" data-act="pick-owner" data-ids="${list.map(s=>s.id).join(",")}">${!o?"Select these":normName(o)===normName(SHARED)?"Select shared":"Select "+esc(o)+"’s"}</button></div>`:""}
     <div class="pick-grid">${list.map(s=>pickTile(s,sts.length===1)).join("")}</div>`).join("")}</div>`;
 };
 /* one big photo per location: the guest points at their gear, the valet taps it */
@@ -2681,6 +2720,8 @@ document.addEventListener("click", e=>{
     case "nav-stow": go("stow",{room_id:+el.dataset.room}); break;
     case "ci-add": { const p=stowParams(); if(!p) break; p.d.items.push(newItem(el.dataset.k)); drawItems();
       const last=$$(".ci-item").pop(); if(last) last.scrollIntoView({block:"nearest",behavior:"smooth"}); break; }
+    case "ci-owner": { const p=stowParams(); if(!p) break; const i=p.d.items.find(x=>x.key===+el.dataset.key); if(!i) break;
+      i.owner=el.dataset.v; p.d.touched=true; drawItems(); break; }
     case "ci-del": { const p=stowParams(); if(!p) break; p.d.touched=true; p.d.items=p.d.items.filter(i=>i.key!==+el.dataset.key); drawItems(); break; }
     case "ci-cam": itemCamera(+el.dataset.key); break;
     case "eq-cam": eqCamera(); break;

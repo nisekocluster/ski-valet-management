@@ -307,8 +307,9 @@ const KINDS = {boots:"Boots", ski:"Ski", ski_kids:"Kids", snowboard:"Snowboard",
 const photoUrl = id => "/api/photos/"+encodeURIComponent(id);
 /* the guest's ID photos from the kiosk; the server deletes them when the room checks out */
 const idPhotos = r => r && r.status!=="checked_out" ? (r.face_photo_ids||[]) : [];
+const faceName = (r,id) => String((r&&r.face_names||{})[id]||"");      // whose face each kiosk photo is
 const idLinks = r => idPhotos(r).map(id=>`<a class="id-ph" href="${photoUrl(id)}" target="_blank" rel="noopener" title="Guest ID photo · open full size">
-  <img src="${photoUrl(id)}" alt="Guest ID photo"><span>Guest ID</span></a>`).join("");
+  <img src="${photoUrl(id)}" alt="Guest ID photo"><span>${esc(faceName(r,id)||"Guest ID")}</span></a>`).join("");
 const photoImg = id => id?`<a href="${photoUrl(id)}" target="_blank" rel="noopener"><img src="${photoUrl(id)}" alt="Equipment photo" loading="lazy" style="width:100%;max-width:360px;border-radius:10px;display:block;margin:6px 0 12px"></a>`:"";
 const EQ_STATUS = {stored:"Stored"};
 const COLLECTIONS = ["rooms","storages","cards","equipment","users","history"];
@@ -1219,11 +1220,12 @@ function doChangeRoom(id){
     const faces=r.face_photo_ids||[];
     Object.assign(t,{status:"staying",guest_name:r.guest_name||"",departure:r.departure||"",vip:!!r.vip,updated_at:now()});
     if(faces.length) t.face_photo_ids=[...faces]; else delete t.face_photo_ids;
+    if(r.face_names) t.face_names={...r.face_names}; else delete t.face_names;
     storagesOfRoom(r.id).forEach(s=>{ s.room_id=t.id; s.updated_at=now(); });
     cardsOfRoom(r.id).forEach(c=>{ c.last_room_id=r.id; c.last_storage_id=c.storage_id;
       c.room_id=null; c.storage_id=null; c.status="released"; c.released_at=now(); c.updated_at=now(); });
     (DB.prechecks||[]).filter(p=>p.room_id===r.id&&p.status==="confirmed").forEach(p=>{ p.room_id=t.id; p.updated_at=now(); });
-    delete r.face_photo_ids;
+    delete r.face_photo_ids; delete r.face_names;
     Object.assign(r,{status:"checked_out",guest_name:"",departure:"",vip:false,updated_at:now()});
     log("Room changed",{room_id:t.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)});
   },()=>({action:"Room changed",room_id:r.id,prev:"Room "+from,next:"Room "+n,notes:guestOf(t)}));
