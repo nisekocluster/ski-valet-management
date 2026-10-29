@@ -971,8 +971,8 @@ VIEWS.dash = () => {
     <div class="stats">
       <button class="stat" style="--c:var(--st-occupied)" data-act="nav" data-view="active"><b class="num">${occ}</b><span>Occupied storages</span></button>
       <button class="stat" style="--c:var(--st-available)" data-act="nav" data-view="storages"><b class="num">${avail}</b><span>Available of ${total}</span></button>
-      <button class="stat" style="--c:var(--st-occupied)" data-act="nav" data-view="history"><b class="num">${checkinsToday()}</b><span>Checked in today</span></button>
-      <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="departures"><b class="num">${checkoutsToday().length}</b><span>Checked out today</span></button>
+      <button class="stat" style="--c:var(--st-occupied)" data-act="nav" data-view="today" data-mode="in"><b class="num">${checkinsToday()}</b><span>Checked in today</span></button>
+      <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="today" data-mode="out"><b class="num">${checkoutsToday().length}</b><span>Checked out today</span></button>
       <button class="stat" style="--c:var(--glacier)" data-act="nav" data-view="storages"><b class="num">${stored}</b><span>Items in the hall</span></button>
       <button class="stat" style="--c:var(--st-guest)" data-act="nav" data-view="active"><b class="num">${DB.storages.filter(s=>s.status==="guest_using").reduce((a,s)=>a+eqCount(s.id),0)}</b><span>Guest using</span></button>
       <button class="stat" style="--c:var(--signal)" data-act="nav" data-view="rooms"><b class="num">${guests}</b><span>Rooms using valet</span></button>
@@ -1919,7 +1919,7 @@ function doFinalOut(id,next){
   const list=manifest(s)||"no items";
   const prev=stInfo(s.status).label, roomId=s.room_id;
   const n=releaseAll(s,next);
-  log("Checked out & released",{storage_id:s.id,room_id:roomId,prev,next:stInfo(next).label,departure:dep,
+  log("Checked out & released",{storage_id:s.id,room_id:roomId,prev,next:stInfo(next).label,departure:dep,guest,
     notes:`${list} · ${n} card${n===1?"":"s"} released${r?" · room "+r.room_number:""}${guest?" · "+guest:""}`});
   save(); closeSheet(); toast("Checked out · "+s.storage_number+" released");
   home();
@@ -2216,7 +2216,7 @@ function doRoomOut(id,next){
   sts.forEach(s=>{
     const list=manifest(s)||"no items", prev=stInfo(s.status).label;
     const c=releaseAll(s,next); n+=c;
-    log("Checked out & released",{storage_id:s.id,room_id:id,prev,next:stInfo(next).label,departure:dep,
+    log("Checked out & released",{storage_id:s.id,room_id:id,prev,next:stInfo(next).label,departure:dep,guest,
       notes:`${list}${c?` · ${c} card${c===1?"":"s"} released`:""} · room ${num}${guest?" · "+guest:""}`});
   });
   save(); closeSheet(); toast(`Room ${num} checked out · ${sts.length} location${sts.length===1?"":"s"} released`);
@@ -2356,21 +2356,48 @@ function coRow(r){
 /* rooms that finished check-out today: their last location was released today */
 const isoOf = ts => { const d=new Date(ts); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 function checkoutsToday(){
-  const t=todayISO(), seen=new Map();
-  DB.history.forEach(h=>{ if(h.action==="Checked out & released" && h.room_id!=null && h.timestamp && isoOf(h.timestamp)===t && !seen.has(h.room_id)) seen.set(h.room_id,h); });
-  return [...seen].filter(([rid])=>!storagesOfRoom(rid).length).map(([rid,h])=>({room_id:rid, departure:h.departure||null}));
+  const t=todayISO(), seen=new Map(), n=new Map();
+  DB.history.forEach(h=>{ if(h.action==="Checked out & released" && h.room_id!=null && h.timestamp && isoOf(h.timestamp)===t){
+    if(!seen.has(h.room_id)) seen.set(h.room_id,h); n.set(h.room_id,(n.get(h.room_id)||0)+1); } });
+  return [...seen].filter(([rid])=>!storagesOfRoom(rid).length)
+    .map(([rid,h])=>({room_id:rid, departure:h.departure||null, h, places:n.get(rid),
+      guest:h.guest||((String(h.notes||"").match(/· room [^·]+ · (.+)$/)||[])[1]||"")}));
 }
 /* rooms whose stay in the valet started today: equipment added today to a room that was
    already in the hall since an earlier day does not count again */
 const tsMs = v => typeof v==="number" ? v : (+v || Date.parse(v) || 0);
-function checkinsToday(){
-  const t=todayISO(), rooms=new Set();
-  DB.history.forEach(h=>{ if(h.action==="Equipment checked in" && h.room_id!=null && h.timestamp && isoOf(h.timestamp)===t) rooms.add(h.room_id); });
-  return [...rooms].filter(rid=>{
+function checkinsTodayList(){
+  const t=todayISO(), first=new Map(), n=new Map();
+  // the history is newest first: the last entry seen for a room is its first check-in of the day
+  DB.history.forEach(h=>{ if(h.action==="Equipment checked in" && h.room_id!=null && h.timestamp && isoOf(h.timestamp)===t){
+    first.set(h.room_id,h); n.set(h.room_id,(n.get(h.room_id)||0)+1); } });
+  return [...first].filter(([rid])=>{
     const eq=storagesOfRoom(rid).flatMap(s=>eqOf(s.id)).map(e=>tsMs(e.created_at)).filter(Boolean);
     return !eq.length || isoOf(Math.min(...eq))===t;      // already gone again today: it still checked in today
-  }).length;
+  }).map(([rid,h])=>({room_id:rid, h, items:n.get(rid)})).sort((a,b)=>tsMs(b.h.timestamp)-tsMs(a.h.timestamp));
 }
+const checkinsToday = () => checkinsTodayList().length;
+/* the rooms behind the Checked in today / Checked out today counters */
+VIEWS.today = (p={}) => {
+  const mode=p.mode==="out"?"out":"in", ins=checkinsTodayList(), outs=checkoutsToday(), rows=mode==="in"?ins:outs;
+  const hhmm = ts => new Date(tsMs(ts)).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  const who = h => h.user_id!=null&&user(h.user_id)?firstName(user(h.user_id)):"—";
+  const line = x => { const r=room(x.room_id), num=r?r.room_number:"#"+x.room_id;
+    // a room that already left today has no guest any more: the name kept with its check-out is used
+    const guest = mode==="in" ? (guestOf(r)||(outs.find(o=>o.room_id===x.room_id)||{}).guest||"") : x.guest;
+    const what = mode==="in" ? `${x.items} item${x.items===1?"":"s"} checked in` : `${x.places} location${x.places===1?"":"s"} released`;
+    const dep = mode==="in" ? (r&&r.departure?` · leaves ${fmtDay(r.departure)}`:"") : (x.departure?` · was due ${fmtDay(x.departure)}`:"");
+    return `<button class="panel" style="width:100%;text-align:left;margin-bottom:10px" data-act="nav" data-view="room" data-id="${x.room_id}">
+      <div class="row between" style="gap:8px;flex-wrap:wrap"><b class="num" style="font-size:24px">Room ${esc(num)}</b>
+        <span class="chip">${esc(hhmm(x.h.timestamp))} · ${esc(who(x.h))}</span></div>
+      ${guest?`<div style="margin-top:4px"><b>${esc(guest)}</b></div>`:""}
+      <div class="muted tiny" style="margin-top:2px">${esc(what+dep)}</div></button>`; };
+  return {title:mode==="in"?"Checked in today":"Checked out today", sub:`${fmtDay(todayISO())} · ${rows.length} room${rows.length===1?"":"s"}`,
+  body:`<div class="rolebar" style="margin-bottom:14px">
+      <button class="${mode==="in"?"on":""}" data-act="today-tab" data-mode="in">Checked in · ${ins.length}</button>
+      <button class="${mode==="out"?"on":""}" data-act="today-tab" data-mode="out">Checked out · ${outs.length}</button></div>
+    ${rows.map(line).join("")||`<div class="empty"><span class="ic">${mode==="in"?"⬇️":"⬆️"}</span>${mode==="in"?"No rooms checked in today yet.":"No rooms checked out today yet."}</div>`}`};
+};
 /* rooms leaving today: those still in the hall plus those already checked out today.
    At the end of the day both counters match, unless a guest extended the stay. */
 /* rooms leaving today that still have equipment in the hall: it goes down to 0 as they check out
@@ -2686,7 +2713,8 @@ document.addEventListener("click", e=>{
     /* nav */
     case "back": back(); break;
     case "home": home(); break;
-    case "nav": go(el.dataset.view, id?{id}:{}); break;
+    case "nav": go(el.dataset.view, {...(id?{id}:{}), ...(el.dataset.mode?{mode:el.dataset.mode}:{})}); break;
+    case "today-tab": replaceView("today",{mode:el.dataset.mode}); break;
     case "nav-sheet": closeSheet(); go(el.dataset.view,{}); break;
     case "account": openAccount(); break;
     case "signout": signOut(); break;
