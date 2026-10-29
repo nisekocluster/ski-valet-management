@@ -51,6 +51,11 @@ Si no defines `SECRET_KEY`, se genera una y se guarda en la base de datos.
    compartido y toca su nombre.
 
 La consola de administración está en `/admin` (misma sesión que la app).
+- **Data health** (menú del admin): revisa los enlaces entre habitaciones, ubicaciones, tarjetas y equipos
+  (números de habitación repetidos, equipos sin habitación, ubicaciones ocupadas vacías…) y ofrece *Fix* cuando
+  es seguro. El número rojo junto al menú indica cuántos problemas hay.
+- **Borrar una habitación con equipos:** el admin avisa de cuántos equipos tiene y en qué ubicaciones, y pide
+  confirmar con *Delete anyway*. Lo correcto es hacer *Check out & release* en la app del valet.
 
 ## En local
 
