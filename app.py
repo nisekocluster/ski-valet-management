@@ -1127,8 +1127,18 @@ def kiosk_precheck(cur, k):
     face = decode_photo(b.get("face_photo")) if b.get("face_photo") else None
     if face and b.get("consent") is not True:
         raise ApiError(400, "The guest has to agree before a photo is kept")
+    # the kiosk gives every person one id and sends it again on a retry: a lost answer never makes a duplicate
+    sid = str(b.get("submission_id") or "")
+    if sid and not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", sid):
+        raise ApiError(400, "Bad submission id")
 
     write_lock(cur)
+    if sid:
+        cur.execute("SELECT id, room_number FROM prechecks WHERE kiosk_id = %s AND extra->>'submission_id' = %s",
+                    (k["id"], sid))
+        done = cur.fetchone()
+        if done:
+            return jsonify(id=done["id"], room_number=done["room_number"], repeated=True)
     cur.execute("SELECT count(*) AS n FROM prechecks WHERE kiosk_id = %s AND created_at > now() - interval '1 minute'",
                 (k["id"],))
     if cur.fetchone()["n"] >= PRECHECK_PER_MINUTE:
@@ -1149,7 +1159,7 @@ def kiosk_precheck(cur, k):
                 status="pending", kiosk_id=k["id"], face_photo_id=face_id, consent_at=now if face else None,
                 created_at=now, updated_at=now)
     pid = new_id()
-    insert_rows(cur, "prechecks", [(pid, vals, {})], "insert")
+    insert_rows(cur, "prechecks", [(pid, vals, {"submission_id": sid} if sid else {})], "insert")
     return jsonify(id=pid, room_number=room)
 
 
