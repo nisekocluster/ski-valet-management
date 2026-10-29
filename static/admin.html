@@ -444,7 +444,7 @@ function checkIntegrity(){
     if(s.status==="available" && s.room_id!=null && room(s.room_id)) add(false,"Available storage has a room",`${s.storage_number} is Available but still linked to room ${room(s.room_id).room_number}.`,()=>{ s.status="occupied"; });
     if(["occupied","guest_using"].includes(s.status) && s.room_id==null && !items && !cardsOfStorage(s.id).length)
       add(false,"Empty storage marked in use",`${s.storage_number} is "${STATUS[s.status]}" with no room, cards or equipment.`,()=>{ s.status="available"; });
-    if(!s.room_id && items) add(false,"Equipment without a room",`${s.storage_number} holds ${items} items but no room is assigned — guests can't find it by room.`,null,{view:"trace",q:s.storage_number});
+    if(!s.room_id && items) add(false,"Equipment without a room",`${s.storage_number} holds ${items} item${items===1?"":"s"} but no room is assigned — guests can't find it by room.`,null,{view:"trace",q:s.storage_number});
     if(!s.section) add(false,"Storage without area",`${s.storage_number} has no area; it won't appear on the map.`,()=>{ s.section="Unassigned area"; });
   });
 
@@ -467,7 +467,7 @@ function checkIntegrity(){
    ========================================================================== */
 const V = {};
 const NAV = [
-  ["overview","Overview"],["trace","Trace / find"],["rooms","Rooms"],["storages","Storages"],["map","Storage map"],
+  ["overview","Overview"],["health","Data health"],["trace","Trace / find"],["rooms","Rooms"],["storages","Storages"],["map","Storage map"],
   ["cards","Key cards"],["equipment","Equipment"],["users","Staff & access"],["kiosks","Kiosks"],["history","History"],["analytics","Analytics"],["data","Backup & data"]
 ];
 function go(v,p={}){ view=v; params=p; render(); window.scrollTo(0,0); }
@@ -487,7 +487,7 @@ function render(){
     </header>
     <div class="layout">
       <nav class="side">${NAV.map(([k,l])=>`<button class="${view===k?"on":""}" data-act="go" data-view="${k}">${l}
-        ${k==="overview"&&issues?`<span class="cnt bad">${issues}</span>`:counts[k]!=null?`<span class="cnt">${counts[k]}</span>`:""}</button>`).join("")}</nav>
+        ${k==="health"&&issues?`<span class="cnt bad">${issues}</span>`:counts[k]!=null?`<span class="cnt">${counts[k]}</span>`:""}</button>`).join("")}</nav>
       <main>${out.body}</main>
     </div>`;
   if(out.after) out.after();
@@ -543,15 +543,26 @@ V.overview = () => {
       ${S(DB.history.length,"History records","var(--dim)","history")}
     </div>
     <h2 class="sec">Data health · ${issues.length?issues.length+" issue"+(issues.length===1?"":"s"):"clean"}</h2>
-    ${issues.length?`<div class="row" style="margin-bottom:10px"><span class="muted tiny grow">Each fix takes a snapshot first — you can undo it from <span class="lnk" data-act="go" data-view="data">Backup &amp; data</span>.</span>
+    ${healthList(issues,fixable)}
+    <h2 class="sec">Latest activity</h2>
+    <div class="hist">${DB.history.slice(0,8).map(histEvent).join("")||`<div class="dim">Nothing yet.</div>`}</div>`,
+  after(){ const i=$("#ovQ"); i.addEventListener("keydown",e=>{ if(e.key==="Enter"&&i.value.trim()) go("trace",{q:i.value.trim()}); }); }};
+};
+
+/* ---------- data health: the integrity check, with a fix where one is safe ---------- */
+function healthList(issues,fixable){
+  return `${issues.length?`<div class="row" style="margin-bottom:10px"><span class="muted tiny grow">Each fix takes a snapshot first — you can undo it from <span class="lnk" data-act="go" data-view="data">Backup &amp; data</span>.</span>
       ${fixable?`<button class="btn primary sm" data-act="fix-all">Fix all ${fixable} automatic</button>`:""}</div>`:""}
     ${issues.map((i,n)=>`<div class="issue ${i.hot?"hot":""}"><div class="grow"><b>${esc(i.t)}</b><p>${esc(i.p)}</p></div>
       ${i.fix?`<button class="btn sm" data-act="fix" data-n="${n}">Fix</button>`:""}
       ${i.go?`<button class="btn sm ghost" data-act="go" data-view="${i.go.view}" data-q="${esc(i.go.q||"")}">Open</button>`:""}</div>`).join("")
-      ||`<div class="panel muted" style="text-align:center">No broken links. Every card, storage and item points to something that exists.</div>`}
-    <h2 class="sec">Latest activity</h2>
-    <div class="hist">${DB.history.slice(0,8).map(histEvent).join("")||`<div class="dim">Nothing yet.</div>`}</div>`,
-  after(){ const i=$("#ovQ"); i.addEventListener("keydown",e=>{ if(e.key==="Enter"&&i.value.trim()) go("trace",{q:i.value.trim()}); }); }};
+      ||`<div class="panel muted" style="text-align:center">No broken links. Every card, storage and item points to something that exists.</div>`}`;
+}
+V.health = () => {
+  const issues=checkIntegrity(), fixable=issues.filter(i=>i.fix).length;
+  return {body:`<h1>Data health</h1>
+    <p class="lead">Checks the links between rooms, storages, key cards and equipment: duplicate room numbers, equipment left without a room, locations marked in use with nothing in them… ${issues.length?issues.length+" issue"+(issues.length===1?"":"s")+" found.":"Everything is clean."}</p>
+    ${healthList(issues,fixable)}`};
 };
 
 /* ---------- trace ---------- */
@@ -742,7 +753,12 @@ const SCHEMA = {
     text:r=>[r.id,r.room_number,r.guest_name,r.departure,r.status].join(" "),
     sort:byRoom,
     unique:(v,rec)=>roomTaken(v.room_number,rec),
-    del(r){ return {warn:`${storagesOfRoom(r.id).length} storage(s) and ${cardsOfRoom(r.id).length} card(s) will be unlinked from this room.`,
+    del(r){ const sts=storagesOfRoom(r.id), n=sts.reduce((a,s)=>a+eqCount(s.id),0);
+      return {warn: n
+        ? `Room ${r.room_number} still holds ${n} item${n===1?"":"s"}${guestOf(r)?" of "+guestOf(r):""} in ${sts.map(s=>s.storage_number).join(", ")}. If you delete it, the equipment stays in the hall without a room: staff can't find it by room number and those locations stay occupied.`
+        : `${sts.length} storage(s) and ${cardsOfRoom(r.id).length} card(s) will be unlinked from this room.`,
+      danger: n ? `Delete anyway — leave ${n} item${n===1?"":"s"} without a room` : "",
+      tip: n ? `To give the equipment back and free the locations, use Check out & release in the valet app instead.` : "",
       run(){ storagesOfRoom(r.id).forEach(s=>{ s.room_id=null; s.updated_at=now(); }); cardsOfRoom(r.id).forEach(c=>{ c.room_id=null; c.updated_at=now(); });
         DB.rooms=DB.rooms.filter(x=>x!==r); }}; }
   },
@@ -868,10 +884,11 @@ function askBulkDelete(col){
   openSheet(`<h3 style="color:var(--st-attention)">Delete ${ok.length} ${ok.length===1?S.one:S.title.toLowerCase()}</h3>
     <p class="sub">${esc(ok.slice(0,12).map(x=>S.label(x.r)).join(", "))}${ok.length>12?` and ${ok.length-12} more`:""}.</p>
     ${warns.length?`<div class="panel tiny" style="margin-bottom:10px">${warns.slice(0,6).map(w=>`<div>• ${esc(w)}</div>`).join("")}${warns.length>6?`<div class="dim">…and ${warns.length-6} more notes</div>`:""}</div>`:""}
+    ${ok.some(x=>x.d.danger)?`<div class="issue hot" style="margin-bottom:10px"><div class="grow"><b>${ok.filter(x=>x.d.danger).length} of them still hold equipment</b><p>That equipment will stay in the hall without a room. Use Check out &amp; release in the valet app to free it properly.</p></div></div>`:""}
     ${blocked.length?`<p class="warn tiny">${blocked.length} can't be deleted and will be skipped: ${esc(blocked[0].d.block)}</p>`:""}
     <p class="tiny muted">A snapshot is taken first, so everything can be restored.</p>
     <div class="foot"><span class="grow"></span><button class="btn" data-act="close">Cancel</button>
-      <button class="btn danger" data-act="do-bulk-del" data-col="${col}">Delete ${ok.length}</button></div>`);
+      <button class="btn danger" data-act="do-bulk-del" data-col="${col}">${ok.some(x=>x.d.danger)?"Delete anyway":"Delete"} ${ok.length}</button></div>`);
 }
 function doBulkDelete(col){
   const S=SCHEMA[col], recs=DB[col].filter(r=>SEL.ids.has(r.id)).filter(r=>!S.del(r).block);
@@ -1156,7 +1173,7 @@ function openForm(col,id){
   if(col==="rooms"){                       // warn while typing, not only on Save
     const i=$('#frm [name="room_number"]');
     i.insertAdjacentHTML("afterend",`<span class="warn tiny" id="rnWarn" style="display:block;margin-top:6px;text-transform:none;letter-spacing:0;font-family:inherit;font-size:13px;color:var(--st-attention)"></span>`);
-    const chk=()=>{ $("#rnWarn").textContent=roomTaken(i.value,rec); };
+    const chk=()=>{ $("#rnWarn").textContent=roomTaken(i.value,rec)||notHotelRoom(i.value); };
     i.addEventListener("input",chk);
   }
 }
@@ -1184,8 +1201,9 @@ function openChangeRoom(id){
   i.addEventListener("input",()=>{
     const n=i.value.trim(), t=roomByNum(n), busy=roomBusy(t,r);
     const same=n && n.toLowerCase()===String(r.room_number).toLowerCase();
-    hint.textContent = same?"That is the current room." : busy || (n?`Move to room ${n}${t?" (free, reused)":""}`:"");
-    hint.style.color = same||busy ? "var(--st-attention)" : "var(--mist)";
+    const bad=notHotelRoom(n);
+    hint.textContent = same?"That is the current room." : busy || bad || (n?`Move to room ${n}${t?" (free, reused)":""}`:"");
+    hint.style.color = same||busy||bad ? "var(--st-attention)" : "var(--mist)";
     goBtn.disabled = !n || same || !!busy;
   });
   setTimeout(()=>i.focus(),60);
@@ -1213,6 +1231,12 @@ function doChangeRoom(id){
 }
 
 /* a room number another record already uses: two records with one number would get mixed up */
+let HOTEL_ROOMS = null;          // from /api/me
+/* the hotel's rooms come from the server (floors 5–18 without 13, rooms 51–90): any other number gets a warning */
+const notHotelRoom = n => { const R=HOTEL_ROOMS, v=String(n??"").trim(); if(!R||!v) return "";
+  const k=+v, f=Math.floor(k/100), x=k%100;
+  if(/^[1-9]\d{2,3}$/.test(v) && R.floors.includes(f) && x>=R.from && x<=R.to) return "";
+  return `Room ${v} is not a hotel room (floors ${R.floors[0]}–${R.floors[R.floors.length-1]}${R.floors.includes(13)?"":", no 13th floor"}; rooms ${R.from}–${R.to} on each floor). Check the number.`; };
 function roomTaken(num,rec){
   const n=String(num??"").trim().toLowerCase();
   const other=n&&DB.rooms.find(r=>r!==rec&&String(r.room_number??"").trim().toLowerCase()===n);
@@ -1278,10 +1302,12 @@ function askDelete(col,id){
   const S=SCHEMA[col], rec=DB[col].find(x=>x.id===id); if(!rec) return;
   const d=S.del(rec);
   if(d.block){ toast(d.block,"err"); return; }
-  openSheet(`<h3 style="color:var(--st-attention)">Delete ${esc(S.label(rec))}</h3>
-    <p class="sub">${esc(d.warn||"This record will be removed.")} A snapshot is taken first, so it can be restored.</p>
-    <div class="foot"><button class="btn" data-act="close">Cancel</button>
-      <button class="btn danger" data-act="do-del" data-col="${col}" data-id="${id}">Delete</button></div>`);
+  openSheet(`<h3 style="color:var(--st-attention)">${d.danger?"This room has equipment":"Delete "+esc(S.label(rec))}</h3>
+    ${d.danger?`<div class="issue hot" style="margin:6px 0 10px"><div class="grow"><b>Are you sure you want to delete ${esc(S.label(rec))}?</b><p>${esc(d.warn)}</p></div></div>
+      <p class="sub">${esc(d.tip)} A snapshot is taken first, so it can be restored.</p>`
+      :`<p class="sub">${esc(d.warn||"This record will be removed.")} A snapshot is taken first, so it can be restored.</p>`}
+    <div class="foot"><button class="btn ${d.danger?"primary":""}" data-act="close">Cancel</button>
+      <button class="btn danger" data-act="do-del" data-col="${col}" data-id="${id}">${esc(d.danger||"Delete")}</button></div>`);
 }
 function doDelete(col,id){
   const S=SCHEMA[col], rec=DB[col].find(x=>x.id===id); if(!rec) return;
@@ -1883,6 +1909,7 @@ SkiSync.init({
   DB=normalise(null);
   try{
     const me=await API("/api/me");
+    HOTEL_ROOMS=me.hotel_rooms||null;
     if(me.user && me.user.role==="admin"){ await SkiSync.start(); SESSION=user(me.user.id)||null; }
   }catch(e){ toast(e.message,"err"); }
   render();

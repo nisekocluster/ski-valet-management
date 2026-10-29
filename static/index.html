@@ -1369,12 +1369,19 @@ VIEWS.stow = (p) => {
 };
 const newItem = k => ({key:uid(), category:k, kids:false, owner:"", size:"", note:"", storage_id:null, photo:null, photo_id:null});
 const stowParams = () => current().view==="stow" ? current().params : null;
+/* the hotel's rooms come from the server (floors 5–18 without 13, rooms 51–90): any other number gets a warning */
+const notHotelRoom = n => { const R=AUTH.hotel_rooms, v=String(n??"").trim(); if(!R||!v) return "";
+  const k=+v, f=Math.floor(k/100), x=k%100;
+  if(/^[1-9]\d{2,3}$/.test(v) && R.floors.includes(f) && x>=R.from && x<=R.to) return "";
+  return `Room ${v} is not a hotel room (floors ${R.floors[0]}–${R.floors[R.floors.length-1]}${R.floors.includes(13)?"":", no 13th floor"}; rooms ${R.from}–${R.to} on each floor). Check the number.`; };
 function roomHint(){
   drawPc();
   const el=$("#ciRoomHint"), d=stowParams()?.d; if(!el||!d) return;
   const r=d.room.trim()?roomByNumber(d.room):null;
-  el.textContent = r && r.status!=="checked_out" && storagesOfRoom(r.id).length
-    ? `Room ${r.room_number} already has ${storagesOfRoom(r.id).length} location(s) — these items are added to it.` : "";
+  const bad=notHotelRoom(d.room);
+  el.textContent = bad || (r && r.status!=="checked_out" && storagesOfRoom(r.id).length
+    ? `Room ${r.room_number} already has ${storagesOfRoom(r.id).length} location(s) — these items are added to it.` : "");
+  el.style.color = bad ? "var(--st-attention)" : "";
 }
 /* the pre-check-ins used for this check-in (a family may send one each), and
    any others still waiting for the same room */
@@ -2026,8 +2033,9 @@ function openChangeRoom(id){
   i.addEventListener("input",()=>{
     const n=i.value.trim(), t=n?roomByNumber(n):null, busy=roomBusy(t,r);
     const same=n && n.toLowerCase()===String(r.room_number).toLowerCase();
-    hint.textContent = same?"That is the current room." : busy || (n?`Move to room ${n}`:"");
-    hint.style.color = same||busy ? "var(--st-attention)" : "";
+    const bad=notHotelRoom(n);
+    hint.textContent = same?"That is the current room." : busy || bad || (n?`Move to room ${n}`:"");
+    hint.style.color = same||busy||bad ? "var(--st-attention)" : "";
     goBtn.disabled = !n || same || !!busy;
   });
   setTimeout(()=>i.focus(),60);
