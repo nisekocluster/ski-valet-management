@@ -139,6 +139,10 @@ python app.py                   # http://localhost:5000
   caduca o se descarta sin confirmar.
 - **Pantalla completa:** el primer toque (dedo, lápiz, ratón o tecla) la activa. Mientras no está a pantalla
   completa se ve un botón ⛶ arriba a la derecha para activarla a mano.
+- **Varias personas de la misma habitación:** al terminar, la pantalla final ofrece *+ Add another person in room N*.
+  La siguiente persona empieza en el nombre, con la habitación y la fecha de salida ya puestas, y registra
+  sus propios equipos (y su foto, si quiere). Cada persona se envía como un pre-check-in aparte, así el valet
+  sabe de quién es cada equipo; en la app del staff salen juntas en la tarjeta de la habitación.
 - Tras cada registro la pantalla vuelve al inicio a los 5 s (o al tocarla); si nadie la toca durante 60 s avisa y
   se reinicia 15 s después, para que el siguiente cliente no vea datos del anterior.
 
