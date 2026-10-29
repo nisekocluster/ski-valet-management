@@ -1115,7 +1115,7 @@ def kiosk_precheck(cur, k):
     if not re.fullmatch(r"[0-9A-Z-]{1,8}", room):
         raise ApiError(400, "Enter the room number")
     if not hotel_room(room):
-        raise ApiError(400, f"Room {room} does not exist. Check the number on your room key.")
+        raise ApiError(400, f"Room {room} does not exist. Check your room number.")
     if not first or not last:
         raise ApiError(400, "Enter the first and last name")
     if any(n < 0 or n > 9 for n in counts.values()) or not sum(counts.values()):
