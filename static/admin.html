@@ -401,8 +401,15 @@ function checkIntegrity(){
     `Card ${code} exists ${list.length} times — the scanner only ever finds the first one.`,null,{view:"cards",q:code}));
   dup(DB.storages,s=>normCode(s.storage_number)).forEach(([n,list])=>add(true,"Duplicate storage number",
     `${list[0].storage_number} exists ${list.length} times.`,null,{view:"storages",q:list[0].storage_number}));
-  dup(DB.rooms,r=>String(r.room_number??"").trim().toLowerCase()).forEach(([n,list])=>add(false,"Duplicate room number",
-    `Room ${list[0].room_number} exists ${list.length} times.`,null,{view:"rooms",q:list[0].room_number}));
+  // two records for one room number hide each other in the valet app: the empty ones can go
+  dup(DB.rooms,r=>String(r.room_number??"").trim().toLowerCase()).forEach(([n,list])=>{
+    const used=list.filter(r=>storagesOfRoom(r.id).length||cardsOfRoom(r.id).length), spare=list.filter(r=>!used.includes(r));
+    add(true,"Duplicate room number",
+      `Room ${list[0].room_number} exists ${list.length} times${used.length?` (${used.length} with equipment or key cards)`:""}. `
+      +(used.length<=1?"Fix removes the empty duplicate record(s); history is kept.":"More than one has equipment — open the rooms and move or check out one of them."),
+      used.length<=1 ? ()=>{ const keep=used[0]||list.reduce((a,b)=>(+b.updated_at||0)>(+a.updated_at||0)?b:a); const drop=new Set(list.filter(r=>r!==keep).map(r=>r.id));
+        DB.rooms=DB.rooms.filter(r=>!drop.has(r.id)); } : null,
+      {view:"rooms",q:list[0].room_number}); });
 
   DB.cards.forEach(c=>{
     if(!c.card_code) add(true,"Card without code",`Card record #${c.id} has an empty code and can never be scanned.`,()=>{ DB.cards=DB.cards.filter(x=>x!==c); });
@@ -1155,7 +1162,9 @@ function openForm(col,id){
 }
 /* ---- Change room: same as in the valet app. Everything follows the guest to the new
    room, the equipment stays in its locations, the old room is left free. ---- */
-const roomByNum = n => { const k=String(n??"").trim().toLowerCase(); return k?DB.rooms.find(r=>String(r.room_number??"").trim().toLowerCase()===k):null; };
+const roomByNum = n => { const k=String(n??"").trim().toLowerCase(); if(!k) return null;   // the room in use wins over an old duplicate
+  const all=DB.rooms.filter(r=>String(r.room_number??"").trim().toLowerCase()===k), live=all.filter(r=>r.status!=="checked_out");
+  return live.find(r=>storagesOfRoom(r.id).length||cardsOfRoom(r.id).length) || live[0] || all[0] || null; };
 function roomBusy(target, from){
   if(!target || target===from) return "";
   if(storagesOfRoom(target.id).length) return `Room ${target.room_number} still has equipment in the valet — check it out first.`;

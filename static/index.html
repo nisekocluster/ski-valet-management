@@ -599,7 +599,12 @@ const room   = id => DB.rooms.find(r=>r.id===id);
 const stor   = id => DB.storages.find(s=>s.id===id);
 const card   = id => DB.cards.find(c=>c.id===id);
 const user   = id => DB.users.find(u=>u.id===id);
-const roomByNumber = n => DB.rooms.find(r=>String(r.room_number??"").trim().toLowerCase()===String(n).trim().toLowerCase());
+/* the same number may exist twice (an old or empty record): the room in use wins, so its guest,
+   equipment and warnings are always the ones shown */
+const roomByNumber = n => { const k=String(n??"").trim().toLowerCase(); if(!k) return undefined;
+  const all=DB.rooms.filter(r=>String(r.room_number??"").trim().toLowerCase()===k);
+  const live=all.filter(r=>r.status!=="checked_out");
+  return live.find(r=>storagesOfRoom(r.id).length||cardsOfRoom(r.id).length) || live[0] || all[0]; };
 /* "S-127", "s127" and "S 127" are the same location */
 const storByNumber = n => { const k=normCode(n); return k ? DB.storages.find(s=>normCode(s.storage_number)===k) : undefined; };
 const cardByCode   = c => { const k=normCode(c); return k ? DB.cards.find(x=>normCode(x.card_code)===k) : undefined; };
