@@ -2348,17 +2348,24 @@ function checkoutsToday(){
   DB.history.forEach(h=>{ if(h.action==="Checked out & released" && h.room_id!=null && h.timestamp && isoOf(h.timestamp)===t && !seen.has(h.room_id)) seen.set(h.room_id,h); });
   return [...seen].filter(([rid])=>!storagesOfRoom(rid).length).map(([rid,h])=>({room_id:rid, departure:h.departure||null}));
 }
-/* rooms that checked equipment in today (one per room, however many items) */
+/* rooms whose stay in the valet started today: equipment added today to a room that was
+   already in the hall since an earlier day does not count again */
+const tsMs = v => typeof v==="number" ? v : (+v || Date.parse(v) || 0);
 function checkinsToday(){
   const t=todayISO(), rooms=new Set();
   DB.history.forEach(h=>{ if(h.action==="Equipment checked in" && h.room_id!=null && h.timestamp && isoOf(h.timestamp)===t) rooms.add(h.room_id); });
-  return rooms.size;
+  return [...rooms].filter(rid=>{
+    const eq=storagesOfRoom(rid).flatMap(s=>eqOf(s.id)).map(e=>tsMs(e.created_at)).filter(Boolean);
+    return !eq.length || isoOf(Math.min(...eq))===t;      // already gone again today: it still checked in today
+  }).length;
 }
 /* rooms leaving today: those still in the hall plus those already checked out today.
    At the end of the day both counters match, unless a guest extended the stay. */
+/* rooms leaving today that still have equipment in the hall: it goes down to 0 as they check out
+   (they move to Checked out today), so the list under Departures always shows the same number */
 function departingTodayCount(){
   const t=todayISO();
-  return departingRooms().filter(x=>x.r.departure===t).length + checkoutsToday().filter(x=>x.departure===t).length;
+  return departingRooms().filter(x=>x.r.departure===t).length;
 }
 function departingRooms(){
   return DB.rooms.filter(r=>r.departure && r.status!=="checked_out" && storagesOfRoom(r.id).length)
