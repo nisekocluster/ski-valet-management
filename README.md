@@ -78,6 +78,12 @@ python app.py                   # http://localhost:5000
 - **Números de habitación repetidos:** si un número existe dos veces (un registro antiguo o vacío), la app
   usa siempre el que tiene equipos o tarjetas, así el aviso de habitación ocupada sale igual. En Admin →
   *Overview* → *Data health* aparece *Duplicate room number* con *Fix*, que borra los registros vacíos.
+- **De quién es cada equipo:** cada equipo lleva el **nombre completo** de su dueño. Con un solo cliente en la
+  habitación se pone solo. Con varios (dos o más pre-check-ins, o una habitación cuyos equipos ya tienen dueño),
+  *Check in* no guarda hasta que cada equipo tiene dueño: debajo de cada uno hay botones con los nombres de la
+  habitación y *Shared* para lo compartido. En *Hand to guest*, *Return* y *Check out* los equipos salen agrupados
+  por persona, con su **foto de identificación** al lado del nombre (la foto del kiosko queda ligada a quien la
+  hizo) y el botón *Select Tom Becker's*.
 - **Equipos no devueltos:** si unos equipos entregados el día X siguen con el cliente a las 11:00 del día
   X+1 (hora de check-out del hotel), sale un aviso en *Attention*; al tocarlo se abre *Check out & release*.
   No hay check-out automático: el staff confirma con recepción que el cliente se fue.

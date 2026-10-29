@@ -456,8 +456,8 @@ def purge_guest_data(cur):
     cur.execute("""DELETE FROM prechecks c WHERE c.status = 'confirmed'
                      AND NOT EXISTS (SELECT 1 FROM rooms r WHERE r.id = c.room_id
                                        AND r.status IS DISTINCT FROM 'checked_out')""")
-    cur.execute("""UPDATE rooms SET extra = extra - 'face_photo_ids', updated_at = now()
-                   WHERE status = 'checked_out' AND extra ? 'face_photo_ids'""")
+    cur.execute("""UPDATE rooms SET extra = extra - 'face_photo_ids' - 'face_names', updated_at = now()
+                   WHERE status = 'checked_out' AND (extra ? 'face_photo_ids' OR extra ? 'face_names')""")
     cur.execute("""DELETE FROM photos p WHERE p.kind = 'face'
                      AND NOT EXISTS (SELECT 1 FROM prechecks c WHERE c.status = 'pending' AND c.face_photo_id = p.id)
                      AND NOT EXISTS (SELECT 1 FROM rooms r WHERE r.status IS DISTINCT FROM 'checked_out'
