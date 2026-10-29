@@ -442,7 +442,9 @@ const ICON = {
 };
 const ITEMS = ["boots", "skis", "snowboards"];
 const FAMILY_FIRST = ["ja", "zh", "ko"];
-const MAX_PEOPLE = 8, IDLE_AFTER = 60, IDLE_GRACE = 15, DONE_RESET = 5;
+const MAX_PEOPLE = 8, IDLE_AFTER = 60, IDLE_GRACE = 15, DONE_RESET = 5, SEND_TIMEOUT = 15000;
+const newSid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+  : Date.now().toString(36) + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 12);
 /* one entry per person of the room who leaves equipment: each is sent as their own pre-check-in,
    so the valet knows whose each item is at pick-up */
 const person = () => ({first:"", last:"", eq:{boots:0, skis:0, snowboards:0}, consent:false, face:null, sent:false});
@@ -478,12 +480,17 @@ const total = (x = P()) => ITEMS.reduce((n, k) => n + x.eq[k], 0);
 const complete = x => nameOk(x) && total(x) > 0;
 const eqText = x => ITEMS.filter(k => x.eq[k]).map(k => `${x.eq[k]} × ${t(k)}`).join(" · ");
 
-async function api(path, body){
+async function api(path, body, timeoutMs){
   const opts = {method: body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", headers: {}};
   if(body){ opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+  // a request that hangs (weak Wi-Fi) gives up after timeoutMs: the guest can tap Send again
+  const ctl = timeoutMs && window.AbortController ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
+  if(ctl) opts.signal = ctl.signal;
   let r;
   try{ r = await fetch(path, opts); }
   catch(_){ const e = new Error("offline"); e.offline = true; throw e; }
+  finally{ if(timer) clearTimeout(timer); }
   let data = null; try{ data = await r.json(); }catch(_){}
   if(!r.ok){ const e = new Error((data && data.error) || "Server error " + r.status); e.status = r.status; throw e; }
   return data;
@@ -532,7 +539,7 @@ function render(){
   const st = paired ? step() : "setup", x = P(), n = S.people.length, list = seq();
   document.querySelectorAll(".screen").forEach(el => el.classList.toggle("on", el.dataset.s === st));
   const mid = paired && st !== "0" && st !== "6";
-  $("#restart").style.visibility = mid ? "visible" : "hidden";
+  $("#restart").style.visibility = mid && !S.sending ? "visible" : "hidden";
   $("#steps").classList.toggle("on", mid);
   $("#bar").style.width = mid ? Math.round(100 * (S.pos - 1) / (list.length - 3)) + "%" : "0";
   // setup
@@ -666,22 +673,26 @@ function shoot(){
 
 async function send(){
   if(S.sending) return;
-  S.sending = true; S.err = ""; render();
+  const sess = S;                  // this guest's session: answers are only ever applied to it
+  sess.sending = true; sess.err = ""; render();
   try{
-    for(const y of S.people){
+    for(const y of sess.people){
       if(y.sent) continue;
-      const r = await api("/api/kiosk/precheck", {room_number:S.room, first_name:y.first, last_name:y.last,
-        departure:S.dep || null, lang:S.lang, ...y.eq,
-        ...(y.face && y.consent ? {face_photo:y.face, consent:true} : {})});
-      S.room = r.room_number; y.sent = true;
+      y.sid = y.sid || newSid();     // the same id on a retry: the server does not create it twice
+      const r = await api("/api/kiosk/precheck", {room_number:sess.room, first_name:y.first, last_name:y.last,
+        departure:sess.dep || null, lang:sess.lang, ...y.eq, submission_id:y.sid,
+        ...(y.face && y.consent ? {face_photo:y.face, consent:true} : {})}, SEND_TIMEOUT);
+      if(S !== sess) return;         // the screen was reset meanwhile: stop, touch nothing
+      sess.room = r.room_number; y.sent = true;
     }
-    S.sending = false; go(posOf("6"));
+    sess.sending = false; go(posOf("6"));
   }catch(e){
-    S.sending = false;
+    sess.sending = false;
+    if(S !== sess) return;
     if(e.status === 401){ paired = false; resetAll(); return; }      // the admin removed this screen
     const msg = e.offline ? t("err_net") : e.status === 429 ? t("busy") : e.status === 400 ? e.message : t("err");
-    const sent = S.people.filter(y => y.sent).length;
-    S.err = sent ? t("sent_part", sent) + " " + msg : msg;
+    const sent = sess.people.filter(y => y.sent).length;
+    sess.err = sent ? t("sent_part", sent) + " " + msg : msg;
     render();
   }
 }
@@ -751,6 +762,7 @@ document.addEventListener("pointerdown", poke);
 document.addEventListener("keydown", poke);
 document.addEventListener("contextmenu", e => e.preventDefault());
 document.addEventListener("click", e => {
+  if(S.sending && !e.target.closest("#fsBtn")) return;    // nothing changes while the details are being sent
   if(paired && step() === "6"){ resetAll(); return; }     // the next guest need not wait
   const b = e.target.closest("button"); if(!b) return;
   const d = b.dataset;

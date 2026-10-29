@@ -58,8 +58,9 @@ const SkiSync = (() => {
   const histSort = (a,b) => (b.timestamp||0) - (a.timestamp||0) || (b.id||0) - (a.id||0);
 
   /* ---------- status pill ---------- */
-  let pill = null;
+  let pill = null, pillTimer = null;
   function status(kind, text){
+    clearTimeout(pillTimer);
     if(!pill){
       pill = document.createElement("div");
       pill.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));" +
@@ -69,9 +70,10 @@ const SkiSync = (() => {
     }
     if(kind === "ok"){ pill.style.opacity = "0"; return; }
     pill.style.opacity = "1";
-    pill.style.background = kind === "offline" ? "#FF4D4D" : "#1D2C3B";
-    pill.style.color = kind === "offline" ? "#fff" : "#90A4B8";
+    pill.style.background = kind === "offline" ? "#FF4D4D" : kind === "saved" ? "#1E5B3A" : "#1D2C3B";
+    pill.style.color = kind === "offline" || kind === "saved" ? "#fff" : "#90A4B8";
     pill.textContent = text;
+    if(kind === "saved") pillTimer = setTimeout(() => { pill.style.opacity = "0"; }, 1500);   // the server has it
   }
 
   /* ---------- load ---------- */
@@ -189,7 +191,7 @@ const SkiSync = (() => {
       try{
         const res = await API("/api/sync", body);
         applyPull(res, d.sent, d.sentHist);
-        S.retry = 0; status("ok");
+        S.retry = 0; status(S.dirty ? "saving" : "saved", S.dirty ? "Saving…" : "Saved ✓");
       }catch(e){
         if(e.status === 409){
           const msg = e.data && e.data.reason === "conflict" ? "Another device changed the same record at the same time. The latest data is loaded — please check and repeat the action."
@@ -204,7 +206,7 @@ const SkiSync = (() => {
         } else {
           S.dirty = true; if(snap && !S.snap) S.snap = snap;
           S.retry = Math.min(S.retry + 1, 6); again = 1000 * Math.min(30, 2 ** S.retry);
-          status("offline", "Offline — changes are kept on this screen and will sync");
+          status("offline", "Not saved yet — retrying. The changes are kept on this screen");
         }
       }finally{
         S.inflight = null;

@@ -2045,8 +2045,10 @@ VIEWS.room = (p) => {
     <h2 class="sec">Room history</h2>
     <div class="hist">${DB.history.filter(h=>h.room_id===r.id).slice(0,8).map(histEvent).join("")||`<div class="muted">Nothing logged yet.</div>`}</div>`,
   after(){
+    // scanned at Check out: with equipment both out and in the hall, the valet says which it is
     if(p.intent==="checkout"){ p.intent=null;
-      if(out.length) confirmRoomReturn(r.id); else if(inHall.length) confirmRoomHand(r.id); }
+      if(out.length && inHall.length) chooseRoomAction(r.id);
+      else if(out.length) confirmRoomReturn(r.id); else if(inHall.length) confirmRoomHand(r.id); }
   }};
 };
 /* ---- whole-room actions: the guest's items sit in several locations ---- */
@@ -2153,6 +2155,16 @@ document.addEventListener("change",e=>{          // "Handed over · 2" follows t
   if(b) b.textContent = n ? `Handed over · ${n}` : "Handed over";
 });
 const picked = sts => { const on=new Set($$("[data-pick]").filter(c=>c.checked).map(c=>+c.dataset.pick)); return sts.filter(s=>on.has(s.id)); };
+/* a family: one person may come to collect while another brings equipment back */
+function chooseRoomAction(id){
+  const r=room(id); if(!r) return;
+  const sts=storagesOfRoom(id).filter(s=>eqCount(s.id)), out=sts.filter(s=>s.status==="guest_using"), inHall=sts.filter(s=>s.status!=="guest_using");
+  const n=list=>list.reduce((a,s)=>a+eqCount(s.id),0);
+  openSheet(`<h3>Room ${esc(r.room_number)}</h3>
+    <p class="sub">Some equipment is with the guests and some is in the hall. Is the guest collecting or bringing equipment back?</p>
+    <div class="btn-grid"><button class="btn primary" data-act="room-hand" data-id="${r.id}">Collect equipment · ${n(inHall)}</button>
+      <button class="btn" data-act="room-return" data-id="${r.id}">Return equipment · ${n(out)}</button></div>`);
+}
 function confirmRoomHand(id){
   const r=room(id), sts=storagesOfRoom(id).filter(s=>s.status!=="guest_using"&&eqCount(s.id)).sort(byNumber);
   if(!sts.length) return;
